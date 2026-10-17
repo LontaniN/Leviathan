@@ -10,13 +10,12 @@ import '../state/notes_controller.dart';
 import '../state/settings.dart';
 import 'calendar_screen.dart';
 import 'graph_screen.dart';
+import 'lists_screen.dart';
 import 'note_editor.dart';
 import 'note_screen.dart';
 import 'search_screen.dart';
 import 'settings_screen.dart';
-import 'sources_screen.dart';
 import 'task_check.dart';
-import 'tasks_screen.dart';
 import 'chip_input.dart';
 import 'theme.dart';
 import 'workspace_name_form.dart';
@@ -67,16 +66,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _openSources() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => SourcesScreen(notes: _notes)),
-    );
-  }
-
-  void _openTasks() {
+  void _openLists() {
     Navigator.of(
       context,
-    ).push(MaterialPageRoute<void>(builder: (_) => TasksScreen(notes: _notes)));
+    ).push(MaterialPageRoute<void>(builder: (_) => ListsScreen(notes: _notes)));
   }
 
   void _openCalendar() {
@@ -132,16 +125,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       onPressed: _openGraph,
                     ),
                     IconButton(
-                      key: const Key('sources-button'),
-                      tooltip: 'Fonti',
-                      icon: const Icon(Icons.person),
-                      onPressed: _openSources,
-                    ),
-                    IconButton(
-                      key: const Key('tasks-button'),
-                      tooltip: 'Task',
+                      key: const Key('lists-button'),
+                      tooltip: 'Task e note',
                       icon: const Icon(Icons.checklist),
-                      onPressed: _openTasks,
+                      onPressed: _openLists,
                     ),
                     IconButton(
                       key: const Key('calendar-button'),

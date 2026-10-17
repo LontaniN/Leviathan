@@ -285,11 +285,20 @@ void main() {
     await tester.pumpWidget(LeviathanApp(state: AppState(_FakeStorage(root))));
     await settle(tester);
 
-    await tester.tap(find.byKey(const Key('tasks-button')));
+    await tester.tap(find.byKey(const Key('lists-button')));
     await settle(tester);
     expect(find.text('1 task da fare'), findsOneWidget);
     expect(find.text('universita'), findsOneWidget);
+
+    // Il riquadro del tag mostra i task da fare; toccandolo si apre
+    // l'elenco.
     expect(find.text('Esame'), findsOneWidget);
+    await tester.tap(find.text('universita'));
+    await settle(tester);
+    expect(find.text('1 TASK · 1 DA FARE'), findsOneWidget);
+    expect(find.text('Esame'), findsOneWidget);
+    await tester.pageBack();
+    await settle(tester);
 
     await tester.tap(find.text('Per fonte'));
     await settle(tester);
@@ -394,7 +403,9 @@ void main() {
     );
   });
 
-  testWidgets('fonti: elenco, ricerca e note di una persona', (tester) async {
+  testWidgets('vista note: raggruppa per tag o per fonte, senza i task', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(1080, 2424);
     tester.view.devicePixelRatio = 2.625;
     addTearDown(tester.view.reset);
@@ -402,40 +413,62 @@ void main() {
     await tester.runAsync(() async {
       await WorkspaceRepository(root).createWorkspace('Lavoro');
       final dir = '${root.path}/Lavoro';
-      void write(String id, String title, String sources) =>
-          File('$dir/$id.md').writeAsStringSync(
-            '---\ntitle: "$title"\nsources: $sources\n'
-            'created: "2026-01-0${id}T00:00:00.000"\n---\n',
-          );
-      write('1', 'Consiglio sul tempo', '["Mario Rossi"]');
-      write('2', 'Ricetta', '["Anna", "Mario Rossi"]');
-      write('3', 'Libro', '["Anna"]');
-      write('4', 'Viaggio', '["Giulia"]');
+      void write(
+        String id,
+        String title,
+        String tags,
+        String sources, {
+        bool task = false,
+      }) => File('$dir/$id.md').writeAsStringSync(
+        '---\ntitle: "$title"\ntags: $tags\nsources: $sources\n'
+        '${task ? 'type: "task"\n' : ''}'
+        'created: "2026-01-0${id}T00:00:00.000"\n---\n',
+      );
+      write('1', 'Consiglio sul tempo', '["meteo"]', '["Mario Rossi"]');
+      write('2', 'Ricetta', '["cucina"]', '["Anna", "Mario Rossi"]');
+      write('3', 'Libro', '[]', '["Anna"]');
+      write('4', 'Chiamare Giulia', '["meteo"]', '["Giulia"]', task: true);
     });
 
     await tester.pumpWidget(LeviathanApp(state: AppState(_FakeStorage(root))));
     await settle(tester);
-    await tester.tap(find.byKey(const Key('sources-button')));
+    await tester.tap(find.byKey(const Key('lists-button')));
+    await settle(tester);
+    await tester.tap(find.text('Note'));
     await settle(tester);
 
-    // Tutte le fonti, dalla più citata.
-    expect(find.text('3 FONTI'), findsOneWidget);
-    expect(find.text('2 note'), findsNWidgets(2));
-    expect(find.text('Giulia'), findsOneWidget);
+    // Per tag: i task restano nell'altra vista.
+    expect(find.text('3 note'), findsOneWidget);
+    expect(find.text('meteo'), findsOneWidget);
+    expect(find.text('cucina'), findsOneWidget);
+    expect(find.text('Senza tag'), findsOneWidget);
+    expect(find.text('Chiamare Giulia'), findsNothing);
 
-    // La ricerca ignora maiuscole e accenti.
-    await tester.enterText(find.byKey(const Key('sources-search')), 'mario');
-    await tester.pump();
-    expect(find.text('1 FONTE'), findsOneWidget);
+    // Per fonte: una nota con due fonti compare in entrambi i gruppi.
+    await tester.tap(find.text('Per fonte'));
+    await settle(tester);
+    expect(find.text('Mario Rossi'), findsOneWidget);
+    expect(find.text('Anna'), findsOneWidget);
     expect(find.text('Giulia'), findsNothing);
+    expect(find.text('Ricetta'), findsNWidgets(2));
 
-    // Le note di Mario Rossi, anche quella con due fonti.
+    // Il riquadro apre le note della fonte, dalla più recente.
     await tester.tap(find.text('Mario Rossi'));
     await settle(tester);
     expect(find.text('2 NOTE'), findsOneWidget);
-    expect(find.text('Consiglio sul tempo'), findsOneWidget);
-    expect(find.text('Ricetta'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('Ricetta')).dy,
+      lessThan(tester.getTopLeft(find.text('Consiglio sul tempo')).dy),
+    );
     expect(find.text('Libro'), findsNothing);
+    await tester.pageBack();
+    await settle(tester);
+
+    // Tornando ai task il raggruppamento resta per fonte.
+    await tester.tap(find.text('Task'));
+    await settle(tester);
+    expect(find.text('Giulia'), findsOneWidget);
+    expect(find.text('Chiamare Giulia'), findsOneWidget);
   });
 
   testWidgets('sceglie una palette dalle impostazioni e la salva', (

@@ -221,6 +221,10 @@ class LeviathanSizes {
 
   /// Larghezza/altezza di una casella-mese del calendario.
   static const calendarMonthAspect = 0.85;
+
+  /// Larghezza/altezza di un riquadro tag o fonte nella schermata Task e
+  /// note.
+  static const groupTileAspect = 0.95;
 }
 
 class LeviathanRadii {
