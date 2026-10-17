@@ -1,0 +1,735 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
+
+import '../data/graph_layout_store.dart';
+import '../graph/force_layout.dart';
+import '../graph/graph_view.dart';
+import '../model/graph.dart';
+import '../model/search.dart';
+import '../model/tags.dart';
+import '../state/notes_controller.dart';
+import 'chip_input.dart';
+import 'note_screen.dart';
+import 'theme.dart';
+
+/// Il grafo delle note del workspace: ogni nodo è una nota del colore del
+/// suo primo tag; le note con tag in comune sono collegate e si attraggono.
+///
+/// Pizzico per lo zoom, trascinamento per spostarsi o spostare un nodo.
+/// Un tocco seleziona una nota, un secondo tocco la apre.
+class GraphScreen extends StatefulWidget {
+  const GraphScreen({super.key, required this.notes, required this.store});
+
+  final NotesController notes;
+  final GraphLayoutStore store;
+
+  @override
+  State<GraphScreen> createState() => _GraphScreenState();
+}
+
+class _GraphScreenState extends State<GraphScreen>
+    with SingleTickerProviderStateMixin {
+  late NoteGraph _graph;
+  late ForceLayout _layout;
+  late final Ticker _ticker = createTicker(_onTick);
+
+  GraphViewport _view = const GraphViewport(scale: 0.8);
+  bool _needsFit = true;
+  Size _size = Size.zero;
+
+  int _selected = -1;
+  List<String> _filterTags = [];
+  List<String> _filterSources = [];
+  Set<String>? _matching;
+
+  // Gesti in corso.
+  int _dragNode = -1;
+  GraphViewport _gestureStart = const GraphViewport();
+  Offset _worldAtFocal = Offset.zero;
+
+  @override
+  void initState() {
+    super.initState();
+    _rebuild(previous: widget.store.read());
+    widget.notes.addListener(_onNotesChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.notes.removeListener(_onNotesChanged);
+    _ticker.dispose();
+    _savePositions();
+    _layout.dispose();
+    super.dispose();
+  }
+
+  /// Ricostruisce il grafo dalle note tenendo le posizioni già note.
+  void _rebuild({required Map<String, Offset> previous}) {
+    _graph = NoteGraph.build(widget.notes.notes);
+    final seed = seedPositions(_graph, previous);
+    _layout = ForceLayout(
+      _graph.nodes.length,
+      [for (final e in _graph.edges) (a: e.a, b: e.b, weight: e.weight)],
+      x: seed.x,
+      y: seed.y,
+    );
+    final n = _graph.nodes.length;
+    // Tutto già al suo posto: basta un assestamento leggero.
+    _layout.alpha = n == 0
+        ? 0
+        : seed.known == n
+        ? 0.05
+        : seed.known > 0
+        ? 0.4
+        : 1;
+    if (seed.known == 0) {
+      // Primo avvio: si fa il grosso del lavoro subito (max ~300 ms), così
+      // il grafo non compare come un gomitolo.
+      final watch = Stopwatch()..start();
+      while (_layout.isRunning && watch.elapsedMilliseconds < 300) {
+        _layout.tick();
+      }
+    }
+    _applyFilter();
+    _wake();
+  }
+
+  void _onNotesChanged() {
+    final positions = _currentPositions();
+    final selectedId = _selected >= 0 ? _graph.nodes[_selected].note.id : null;
+    _ticker.stop();
+    // Il vecchio layout si libera dopo che il disegno è passato al nuovo.
+    final old = _layout;
+    WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
+    setState(() {
+      _rebuild(previous: positions);
+      _selected = selectedId == null
+          ? -1
+          : _graph.nodes.indexWhere((n) => n.note.id == selectedId);
+    });
+  }
+
+  Map<String, Offset> _currentPositions() => {
+    for (var i = 0; i < _graph.nodes.length; i++)
+      _graph.nodes[i].note.id: Offset(_layout.x[i], _layout.y[i]),
+  };
+
+  void _savePositions() {
+    if (_graph.nodes.isEmpty) return;
+    widget.store.write(_currentPositions());
+  }
+
+  void _wake() {
+    if (_layout.isRunning && !_ticker.isActive) _ticker.start();
+  }
+
+  void _onTick(Duration _) {
+    if (!_layout.tick()) {
+      _ticker.stop();
+      _savePositions();
+    }
+  }
+
+  void _applyFilter() {
+    if (_filterTags.isEmpty && _filterSources.isEmpty) {
+      _matching = null;
+      return;
+    }
+    final hits = searchNotes(
+      widget.notes.notes,
+      SearchQuery(tags: _filterTags, sources: _filterSources),
+    );
+    _matching = {for (final h in hits) h.note.id};
+  }
+
+  void _fit() {
+    if (_size.isEmpty || _graph.nodes.isEmpty) return;
+    final only = _matching == null
+        ? null
+        : [
+            for (var i = 0; i < _graph.nodes.length; i++)
+              if (_matching!.contains(_graph.nodes[i].note.id)) i,
+          ];
+    final bounds = boundsOf(
+      _layout.x,
+      _layout.y,
+      only != null && only.isNotEmpty ? only : null,
+    );
+    setState(() => _view = GraphViewport.fit(bounds, _size));
+  }
+
+  /// Per i test: dove si trova sullo schermo il nodo della nota [noteId].
+  @visibleForTesting
+  Offset debugNodeScreenPosition(String noteId) {
+    final i = _graph.nodes.indexWhere((n) => n.note.id == noteId);
+    return _view.toScreen(Offset(_layout.x[i], _layout.y[i]), _size);
+  }
+
+  // --- Gesti -------------------------------------------------------------
+
+  void _onScaleStart(ScaleStartDetails d) {
+    _gestureStart = _view;
+    _worldAtFocal = _view.toWorld(d.localFocalPoint, _size);
+    if (d.pointerCount == 1) {
+      final hit = hitTestNode(
+        _layout.x,
+        _layout.y,
+        _graph.nodes,
+        _worldAtFocal,
+        _view.scale,
+      );
+      if (hit >= 0) {
+        _dragNode = hit;
+        _layout.pinned = hit;
+        setState(() => _selected = hit);
+        _layout.reheat();
+        _wake();
+      }
+    }
+  }
+
+  void _onScaleUpdate(ScaleUpdateDetails d) {
+    if (_dragNode >= 0) {
+      final world = _view.toWorld(d.localFocalPoint, _size);
+      _layout.x[_dragNode] = world.dx;
+      _layout.y[_dragNode] = world.dy;
+      _layout.reheat();
+      _wake();
+      return;
+    }
+    setState(() {
+      _view = _gestureStart.zoomAround(
+        d.localFocalPoint,
+        _gestureStart.scale * d.scale,
+        _size,
+        worldAtFocal: _worldAtFocal,
+      );
+    });
+  }
+
+  void _onScaleEnd(ScaleEndDetails d) {
+    if (_dragNode >= 0) {
+      _layout.pinned = -1;
+      _dragNode = -1;
+    }
+  }
+
+  void _onTapUp(TapUpDetails d) {
+    final hit = hitTestNode(
+      _layout.x,
+      _layout.y,
+      _graph.nodes,
+      _view.toWorld(d.localPosition, _size),
+      _view.scale,
+    );
+    if (hit >= 0 && hit == _selected) {
+      _openNote(hit);
+    } else {
+      setState(() => _selected = hit);
+    }
+  }
+
+  void _openNote(int index) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => NoteScreen(
+          noteId: _graph.nodes[index].note.id,
+          notes: widget.notes,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _editFilters() async {
+    final result = await showModalBottomSheet<(List<String>, List<String>)>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: LeviathanColors.surface,
+      builder: (_) => _FilterSheet(
+        tagCounts: widget.notes.tagCounts,
+        sourceCounts: widget.notes.sourceCounts,
+        tags: _filterTags,
+        sources: _filterSources,
+      ),
+    );
+    if (result == null) return;
+    setState(() {
+      final (tags, sources) = result;
+      _filterTags = tags;
+      _filterSources = sources;
+      _applyFilter();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final noteCount = _graph.nodes.length;
+    final hasFilter = _matching != null;
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: LeviathanColors.background,
+        title: Text(
+          '${noteCount == 1 ? '1 nota' : '$noteCount note'} · '
+          '${_graph.edges.length == 1 ? '1 collegamento' : '${_graph.edges.length} collegamenti'}',
+          key: const Key('graph-stats'),
+          style: const TextStyle(fontSize: 14, color: LeviathanColors.muted),
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Filtra',
+            onPressed: _editFilters,
+            icon: Badge(
+              isLabelVisible: hasFilter,
+              backgroundColor: LeviathanColors.accent,
+              smallSize: 8,
+              child: const Icon(Icons.filter_list),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Centra',
+            onPressed: _fit,
+            icon: const Icon(Icons.center_focus_strong_outlined),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          if (hasFilter)
+            _ActiveFilters(
+              tags: _filterTags,
+              sources: _filterSources,
+              matches: _matching!.length,
+              onRemoveTag: (t) => setState(() {
+                _filterTags = _filterTags.where((x) => x != t).toList();
+                _applyFilter();
+              }),
+              onRemoveSource: (s) => setState(() {
+                _filterSources = _filterSources.where((x) => x != s).toList();
+                _applyFilter();
+              }),
+            ),
+          Expanded(
+            child: noteCount == 0
+                ? const Center(
+                    child: Text(
+                      'Scrivi qualche nota per vedere il grafo',
+                      style: TextStyle(color: LeviathanColors.muted),
+                    ),
+                  )
+                : LayoutBuilder(
+                    builder: (context, constraints) {
+                      _size = constraints.biggest;
+                      if (_needsFit) {
+                        _needsFit = false;
+                        final bounds = boundsOf(_layout.x, _layout.y);
+                        _view = GraphViewport.fit(bounds, _size);
+                      }
+                      return Stack(
+                        children: [
+                          Positioned.fill(
+                            child: GestureDetector(
+                              key: const Key('graph-canvas'),
+                              behavior: HitTestBehavior.opaque,
+                              onScaleStart: _onScaleStart,
+                              onScaleUpdate: _onScaleUpdate,
+                              onScaleEnd: _onScaleEnd,
+                              onTapUp: _onTapUp,
+                              child: CustomPaint(
+                                painter: _GraphPainter(
+                                  graph: _graph,
+                                  layout: _layout,
+                                  view: _view,
+                                  selected: _selected,
+                                  matching: _matching,
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (_selected >= 0)
+                            Positioned(
+                              left: 12,
+                              right: 12,
+                              bottom: 12,
+                              child: _SelectedCard(
+                                node: _graph.nodes[_selected],
+                                onOpen: () => _openNote(_selected),
+                              ),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GraphPainter extends CustomPainter {
+  _GraphPainter({
+    required this.graph,
+    required this.layout,
+    required this.view,
+    required this.selected,
+    required this.matching,
+  }) : super(repaint: layout);
+
+  final NoteGraph graph;
+  final ForceLayout layout;
+  final GraphViewport view;
+  final int selected;
+  final Set<String>? matching;
+
+  static const _labelZoom = 1.3;
+  static final Map<String, TextPainter> _labels = {};
+
+  bool _isIn(int i) =>
+      matching == null || matching!.contains(graph.nodes[i].note.id);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final xs = layout.x;
+    final ys = layout.y;
+    canvas.save();
+    canvas.translate(
+      size.width / 2 + view.pan.dx,
+      size.height / 2 + view.pan.dy,
+    );
+    canvas.scale(view.scale);
+
+    // Collegamenti: un solo Path per quelli normali, uno per gli attenuati.
+    final normal = Path();
+    final dim = Path();
+    final highlight = Path();
+    for (final e in graph.edges) {
+      final path = (e.a == selected || e.b == selected)
+          ? highlight
+          : (_isIn(e.a) && _isIn(e.b))
+          ? normal
+          : dim;
+      path
+        ..moveTo(xs[e.a], ys[e.a])
+        ..lineTo(xs[e.b], ys[e.b]);
+    }
+    final hairline = 0.8 / view.scale;
+    canvas.drawPath(
+      dim,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = hairline
+        ..color = LeviathanColors.link.withValues(alpha: 0.07),
+    );
+    canvas.drawPath(
+      normal,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = hairline
+        ..color = LeviathanColors.link.withValues(alpha: 0.45),
+    );
+    canvas.drawPath(
+      highlight,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = hairline * 1.8
+        ..color = LeviathanColors.accent.withValues(alpha: 0.85),
+    );
+
+    // Nodi.
+    final fill = Paint();
+    for (var i = 0; i < graph.nodes.length; i++) {
+      final node = graph.nodes[i];
+      fill.color = _isIn(i) ? node.color : node.color.withValues(alpha: 0.12);
+      canvas.drawCircle(Offset(xs[i], ys[i]), nodeRadius(node.degree), fill);
+    }
+    if (selected >= 0) {
+      final node = graph.nodes[selected];
+      canvas.drawCircle(
+        Offset(xs[selected], ys[selected]),
+        nodeRadius(node.degree) + 3 / view.scale,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2 / view.scale
+          ..color = Colors.white,
+      );
+    }
+    canvas.restore();
+
+    // Etichette in coordinate dello schermo (dimensione fissa del testo).
+    final showAll = view.scale >= _labelZoom;
+    for (var i = 0; i < graph.nodes.length; i++) {
+      if (!(showAll && _isIn(i)) && i != selected) continue;
+      final node = graph.nodes[i];
+      final p = view.toScreen(Offset(xs[i], ys[i]), size);
+      if (p.dx < -80 ||
+          p.dy < -20 ||
+          p.dx > size.width + 80 ||
+          p.dy > size.height + 20) {
+        continue;
+      }
+      final label = _labels.putIfAbsent(
+        '${node.note.id}|${node.note.displayTitle}',
+        () => TextPainter(
+          text: TextSpan(
+            text: node.note.displayTitle,
+            style: const TextStyle(color: Color(0xDDE6E6EA), fontSize: 11),
+          ),
+          textDirection: TextDirection.ltr,
+          maxLines: 1,
+          ellipsis: '…',
+        )..layout(maxWidth: 140),
+      );
+      final r = nodeRadius(node.degree) * view.scale;
+      label.paint(canvas, p + Offset(-label.width / 2, r + 3));
+    }
+  }
+
+  @override
+  bool shouldRepaint(_GraphPainter old) =>
+      old.view != view ||
+      old.selected != selected ||
+      old.matching != matching ||
+      old.graph != graph ||
+      old.layout != layout;
+}
+
+class _SelectedCard extends StatelessWidget {
+  const _SelectedCard({required this.node, required this.onOpen});
+
+  final GraphNode node;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final note = node.note;
+    return Material(
+      color: LeviathanColors.surface,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        key: const Key('graph-card'),
+        borderRadius: BorderRadius.circular(12),
+        onTap: onOpen,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      note.displayTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      node.degree == 1
+                          ? '1 nota collegata'
+                          : '${node.degree} note collegate',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: LeviathanColors.muted,
+                      ),
+                    ),
+                    if (note.tags.isNotEmpty || note.sources.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Wrap(
+                          spacing: 4,
+                          runSpacing: 4,
+                          children: [
+                            for (final t in note.tags) TagChip(t, dense: true),
+                            for (final s in note.sources)
+                              SourceChip(s, dense: true),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: LeviathanColors.muted),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ActiveFilters extends StatelessWidget {
+  const _ActiveFilters({
+    required this.tags,
+    required this.sources,
+    required this.matches,
+    required this.onRemoveTag,
+    required this.onRemoveSource,
+  });
+
+  final List<String> tags;
+  final List<String> sources;
+  final int matches;
+  final ValueChanged<String> onRemoveTag;
+  final ValueChanged<String> onRemoveSource;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final t in tags)
+                  TagChip(t, onDeleted: () => onRemoveTag(t)),
+                for (final s in sources)
+                  SourceChip(s, onDeleted: () => onRemoveSource(s)),
+              ],
+            ),
+          ),
+          Text(
+            '$matches',
+            style: const TextStyle(color: LeviathanColors.muted),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Scelta dei filtri: tag e fonti, in AND come nella ricerca.
+class _FilterSheet extends StatefulWidget {
+  const _FilterSheet({
+    required this.tagCounts,
+    required this.sourceCounts,
+    required this.tags,
+    required this.sources,
+  });
+
+  final Map<String, int> tagCounts;
+  final Map<String, int> sourceCounts;
+  final List<String> tags;
+  final List<String> sources;
+
+  @override
+  State<_FilterSheet> createState() => _FilterSheetState();
+}
+
+class _FilterSheetState extends State<_FilterSheet> {
+  late final Set<String> _tags = {...widget.tags};
+  late final Set<String> _sources = {...widget.sources};
+
+  List<String> _byCount(Map<String, int> counts) =>
+      counts.keys.toList()..sort((a, b) {
+        final c = counts[b]!.compareTo(counts[a]!);
+        return c != 0 ? c : a.compareTo(b);
+      });
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.75,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                children: [
+                  Text('Tag', style: text.titleSmall),
+                  const SizedBox(height: 8),
+                  if (widget.tagCounts.isEmpty)
+                    const Text(
+                      'Nessun tag',
+                      style: TextStyle(color: LeviathanColors.muted),
+                    ),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (final t in _byCount(widget.tagCounts))
+                        FilterChip(
+                          avatar: CircleAvatar(
+                            backgroundColor: Tags.colorOf(t),
+                            radius: 5,
+                          ),
+                          label: Text('$t  ${widget.tagCounts[t]}'),
+                          selected: _tags.contains(t),
+                          showCheckmark: false,
+                          onSelected: (on) => setState(
+                            () => on ? _tags.add(t) : _tags.remove(t),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Text('Fonti', style: text.titleSmall),
+                  const SizedBox(height: 8),
+                  if (widget.sourceCounts.isEmpty)
+                    const Text(
+                      'Nessuna fonte',
+                      style: TextStyle(color: LeviathanColors.muted),
+                    ),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (final s in _byCount(widget.sourceCounts))
+                        FilterChip(
+                          avatar: const Icon(Icons.person_outline, size: 16),
+                          label: Text('$s  ${widget.sourceCounts[s]}'),
+                          selected: _sources.contains(s),
+                          showCheckmark: false,
+                          onSelected: (on) => setState(
+                            () => on ? _sources.add(s) : _sources.remove(s),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              child: Row(
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, (
+                      const <String>[],
+                      const <String>[],
+                    )),
+                    child: const Text('Togli filtri'),
+                  ),
+                  const Spacer(),
+                  FilledButton(
+                    onPressed: () => Navigator.pop(context, (
+                      _tags.toList(),
+                      _sources.toList(),
+                    )),
+                    child: const Text('Applica'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

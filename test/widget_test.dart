@@ -6,6 +6,7 @@ import 'package:leviathan/app.dart';
 import 'package:leviathan/data/storage_access.dart';
 import 'package:leviathan/data/workspace_repository.dart';
 import 'package:leviathan/state/app_state.dart';
+import 'package:leviathan/ui/graph_screen.dart';
 
 class _FakeStorage implements StorageAccess {
   _FakeStorage(this.dir, {this.granted = true});
@@ -215,5 +216,51 @@ void main() {
     await tester.pump();
     expect(find.text('1 RISULTATO'), findsOneWidget);
     expect(find.text('Esposizione'), findsOneWidget);
+  });
+
+  testWidgets('grafo: apre, mostra i numeri e seleziona una nota', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    await tester.runAsync(() async {
+      await WorkspaceRepository(root).createWorkspace('Lavoro');
+      final dir = '${root.path}/Lavoro';
+      void write(String id, String title, String tags) =>
+          File('$dir/$id.md').writeAsStringSync(
+            '---\ntitle: "$title"\ntags: $tags\n'
+            'created: "2026-01-0${id}T00:00:00.000"\n---\n',
+          );
+      write('1', 'Esposizione', '["fotografia"]');
+      write('2', 'Luce', '["fotografia"]');
+      write('3', 'Risotto', '[]');
+    });
+
+    await tester.pumpWidget(LeviathanApp(state: AppState(_FakeStorage(root))));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('graph-button')));
+    await settle(tester);
+
+    expect(find.text('3 note · 1 collegamento'), findsOneWidget);
+
+    // Il tocco al centro di un nodo lo seleziona e mostra la scheda.
+    final state = tester.state(find.byType(GraphScreen)) as dynamic;
+    final Offset screen = state.debugNodeScreenPosition('3');
+    await tester.tapAt(
+      tester.getTopLeft(find.byKey(const Key('graph-canvas'))) + screen,
+    );
+    await tester.pump();
+    expect(find.byKey(const Key('graph-card')), findsOneWidget);
+    expect(find.text('Risotto'), findsWidgets);
+
+    // Chiudendo il grafo le posizioni vengono salvate.
+    await tester.pageBack();
+    await settle(tester);
+    expect(
+      File('${root.path}/.leviathan/graph/Lavoro.json').existsSync(),
+      isTrue,
+    );
   });
 }

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 
+import '../data/graph_layout_store.dart';
 import '../data/note_repository.dart';
 import '../data/storage_access.dart';
 import '../data/workspace_repository.dart';
@@ -79,6 +80,11 @@ class AppState extends ChangeNotifier {
     trashDir: Directory(
       p.join(repository.root.path, '.leviathan', 'trash', name),
     ),
+  );
+
+  /// Dove si salvano le posizioni dei nodi del grafo del workspace [name].
+  GraphLayoutStore graphLayoutOf(String name) => GraphLayoutStore(
+    File(p.join(repository.root.path, '.leviathan', 'graph', '$name.json')),
   );
 
   void _set(AppStatus next) {

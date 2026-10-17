@@ -4,6 +4,7 @@ import '../model/note.dart';
 import '../model/tags.dart';
 import '../state/app_state.dart';
 import '../state/notes_controller.dart';
+import 'graph_screen.dart';
 import 'note_editor.dart';
 import 'note_screen.dart';
 import 'search_screen.dart';
@@ -45,6 +46,17 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _openGraph() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => GraphScreen(
+          notes: _notes,
+          store: widget.state.graphLayoutOf(widget.state.currentWorkspace!),
+        ),
+      ),
+    );
+  }
+
   void _openSearch() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => SearchScreen(notes: _notes)),
@@ -66,6 +78,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Flexible(child: _WorkspaceButton(state: widget.state)),
                     const Spacer(),
+                    IconButton(
+                      key: const Key('graph-button'),
+                      tooltip: 'Grafo',
+                      icon: const Icon(Icons.hub_outlined),
+                      onPressed: _openGraph,
+                    ),
                     IconButton(
                       key: const Key('search-button'),
                       tooltip: 'Cerca',
