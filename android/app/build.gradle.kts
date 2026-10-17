@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.leviathan.leviathan"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 37 // permission_handler richiede API 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
