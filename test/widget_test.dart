@@ -461,8 +461,27 @@ void main() {
       lessThan(tester.getTopLeft(find.text('Consiglio sul tempo')).dy),
     );
     expect(find.text('Libro'), findsNothing);
-    await tester.pageBack();
+
+    // Dalla nota, la fonte apre la sua schermata e non la ricerca.
+    await tester.tap(find.text('Ricetta'));
     await settle(tester);
+    await tester.tap(find.text('Anna'));
+    await settle(tester);
+    expect(find.text('2 NOTE'), findsOneWidget);
+    expect(find.text('Libro'), findsOneWidget);
+    expect(find.byKey(const Key('search-field')), findsNothing);
+
+    // La lente cerca solo fra le note di Anna.
+    await tester.tap(find.byKey(const Key('group-search-button')));
+    await settle(tester);
+    await tester.enterText(find.byKey(const Key('search-field')), 'libro');
+    await settle(tester);
+    expect(find.text('Libro'), findsOneWidget);
+    expect(find.text('Ricetta'), findsNothing);
+    for (var i = 0; i < 4; i++) {
+      await tester.pageBack();
+      await settle(tester);
+    }
 
     // Tornando ai task il raggruppamento resta per fonte.
     await tester.tap(find.text('Task'));

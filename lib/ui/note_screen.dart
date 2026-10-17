@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../model/note.dart';
+import '../model/note_groups.dart';
 import '../state/notes_controller.dart';
 import 'home_screen.dart' show formatDate;
+import 'lists_screen.dart';
 import 'note_body.dart';
 import 'note_editor.dart';
-import 'search_screen.dart';
 import 'task_check.dart';
 import 'chip_input.dart';
 import 'theme.dart';
@@ -27,18 +28,21 @@ class NoteScreen extends StatelessWidget {
   /// [noteId] nel workspace (es. le note di prova del calendario).
   final Note? preview;
 
-  /// Toccando un tag o una fonte si cercano le note che li condividono.
-  void _search(
-    BuildContext context, {
-    List<String> tags = const [],
-    List<String> sources = const [],
-  }) {
+  /// Toccando un tag o una fonte si apre la sua schermata, sui task se la
+  /// nota è un task, altrimenti sulle note.
+  void _openGroup(
+    BuildContext context,
+    Note note,
+    NoteGrouping grouping,
+    String name,
+  ) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => SearchScreen(
+        builder: (_) => GroupScreen(
           notes: notes,
-          initialTags: tags,
-          initialSources: sources,
+          name: name,
+          grouping: grouping,
+          initialView: note.isTask ? ListsView.tasks : ListsView.notes,
         ),
       ),
     );
@@ -141,7 +145,12 @@ class NoteScreen extends StatelessWidget {
                         GestureDetector(
                           onTap: readOnly
                               ? null
-                              : () => _search(context, tags: [tag]),
+                              : () => _openGroup(
+                                  context,
+                                  note,
+                                  NoteGrouping.tag,
+                                  tag,
+                                ),
                           child: TagChip(tag),
                         ),
                     ],
@@ -157,7 +166,12 @@ class NoteScreen extends StatelessWidget {
                         GestureDetector(
                           onTap: readOnly
                               ? null
-                              : () => _search(context, sources: [source]),
+                              : () => _openGroup(
+                                  context,
+                                  note,
+                                  NoteGrouping.source,
+                                  source,
+                                ),
                           child: SourceChip(source),
                         ),
                     ],

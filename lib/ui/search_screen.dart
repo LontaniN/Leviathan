@@ -41,8 +41,8 @@ class _SearchScreenState extends State<SearchScreen> {
     super.initState();
     _input.addListener(_onText);
     _focus.addListener(() => setState(() {}));
-    // Arrivando da un chip i filtri sono già pronti: niente tastiera.
-    if (_tags.isEmpty && _sources.isEmpty) _focus.requestFocus();
+    // Anche partendo da un tag o una fonte si viene qui per scrivere.
+    _focus.requestFocus();
   }
 
   @override

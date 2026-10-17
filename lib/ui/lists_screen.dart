@@ -42,11 +42,11 @@ class _ListsScreenState extends State<ListsScreen> {
   void _openGroup(String? name) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => _GroupScreen(
+        builder: (_) => GroupScreen(
           notes: widget.notes,
           name: name,
           grouping: _grouping,
-          tasks: _tasks,
+          initialView: _view,
         ),
       ),
     );
@@ -70,30 +70,9 @@ class _ListsScreenState extends State<ListsScreen> {
         return Scaffold(
           appBar: AppBar(
             backgroundColor: context.palette.background,
-            title: SegmentedButton<ListsView>(
-              key: const Key('view-toggle'),
-              segments: const [
-                ButtonSegment(
-                  value: ListsView.tasks,
-                  icon: Icon(Icons.checklist, size: LeviathanIconSize.sm),
-                  label: Text('Task'),
-                ),
-                ButtonSegment(
-                  value: ListsView.notes,
-                  icon: Icon(
-                    Icons.description_outlined,
-                    size: LeviathanIconSize.sm,
-                  ),
-                  label: Text('Note'),
-                ),
-              ],
-              selected: {_view},
-              showSelectedIcon: false,
-              style: const ButtonStyle(
-                visualDensity: VisualDensity.compact,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              onSelectionChanged: (s) => setState(() => _view = s.first),
+            title: _ViewToggle(
+              view: _view,
+              onChanged: (v) => setState(() => _view = v),
             ),
           ),
           body: Column(
@@ -376,37 +355,67 @@ class _Titles extends StatelessWidget {
   }
 }
 
-/// I task (o le note) di un tag o di una fonte, dal più recente al più
-/// vecchio.
-class _GroupScreen extends StatelessWidget {
-  const _GroupScreen({
+/// La schermata di un tag o di una fonte: i suoi task o le sue note, dal
+/// più recente al più vecchio. In alto si passa dagli uni alle altre; la
+/// lente cerca solo dentro questo tag (o fonte).
+///
+/// Si apre dai riquadri di [ListsScreen] e toccando un tag o una fonte in
+/// una nota.
+class GroupScreen extends StatefulWidget {
+  const GroupScreen({
+    super.key,
     required this.notes,
     required this.name,
     required this.grouping,
-    required this.tasks,
+    this.initialView = ListsView.notes,
   });
 
   final NotesController notes;
+
+  /// Il tag o la fonte; null per chi non ne ha.
   final String? name;
   final NoteGrouping grouping;
-  final bool tasks;
+  final ListsView initialView;
 
-  void _open(BuildContext context, Note note) {
+  @override
+  State<GroupScreen> createState() => _GroupScreenState();
+}
+
+class _GroupScreenState extends State<GroupScreen> {
+  late ListsView _view = widget.initialView;
+
+  void _open(Note note) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => NoteScreen(noteId: note.id, notes: notes),
+        builder: (_) => NoteScreen(noteId: note.id, notes: widget.notes),
+      ),
+    );
+  }
+
+  void _search(String name) {
+    final isTag = widget.grouping == NoteGrouping.tag;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => SearchScreen(
+          notes: widget.notes,
+          initialTags: isTag ? [name] : const [],
+          initialSources: isTag ? const [] : [name],
+        ),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final name = widget.name;
+    final grouping = widget.grouping;
+    final tasks = _view == ListsView.tasks;
     return ListenableBuilder(
-      listenable: notes,
+      listenable: widget.notes,
       builder: (context, _) {
         // Ricalcolato a ogni modifica: una nota che perde il tag esce.
         final items =
-            notes.notes
+            widget.notes.notes
                 .where(
                   (n) =>
                       n.isTask == tasks && groupsOf(n, grouping).contains(name),
@@ -435,25 +444,96 @@ class _GroupScreen extends StatelessWidget {
                 ),
               ],
             ),
-          ),
-          body: items.isEmpty
-              ? _Empty(tasks ? 'Nessun task qui.' : 'Nessuna nota qui.')
-              : ListView.builder(
-                  padding: const EdgeInsets.only(bottom: LeviathanSpacing.xl),
-                  itemCount: items.length + 1,
-                  itemBuilder: (context, i) {
-                    if (i == 0) return SectionTitle(summary);
-                    final note = items[i - 1];
-                    return NoteResultTile(
-                      hit: SearchHit(note, 0, plainText(note.body.trim())),
-                      terms: const [],
-                      onTap: (n) => _open(context, n),
-                      onToggleDone: notes.setDone,
-                    );
-                  },
+            actions: [
+              // Senza tag (o fonte) non c'è un filtro da cui partire.
+              if (name != null)
+                IconButton(
+                  key: const Key('group-search-button'),
+                  tooltip: grouping == NoteGrouping.tag
+                      ? 'Cerca in questo tag'
+                      : 'Cerca in questa fonte',
+                  icon: const Icon(Icons.search),
+                  onPressed: () => _search(name),
                 ),
+            ],
+          ),
+          body: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  LeviathanSpacing.lg,
+                  0,
+                  LeviathanSpacing.lg,
+                  LeviathanSpacing.sm,
+                ),
+                child: _ViewToggle(
+                  view: _view,
+                  onChanged: (v) => setState(() => _view = v),
+                ),
+              ),
+              Expanded(
+                child: items.isEmpty
+                    ? _Empty(tasks ? 'Nessun task qui.' : 'Nessuna nota qui.')
+                    : ListView.builder(
+                        padding: const EdgeInsets.only(
+                          bottom: LeviathanSpacing.xl,
+                        ),
+                        itemCount: items.length + 1,
+                        itemBuilder: (context, i) {
+                          if (i == 0) return SectionTitle(summary);
+                          final note = items[i - 1];
+                          return NoteResultTile(
+                            hit: SearchHit(
+                              note,
+                              0,
+                              plainText(note.body.trim()),
+                            ),
+                            terms: const [],
+                            onTap: _open,
+                            onToggleDone: widget.notes.setDone,
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
         );
       },
+    );
+  }
+}
+
+/// La scelta fra task e note.
+class _ViewToggle extends StatelessWidget {
+  const _ViewToggle({required this.view, required this.onChanged});
+
+  final ListsView view;
+  final ValueChanged<ListsView> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SegmentedButton<ListsView>(
+      key: const Key('view-toggle'),
+      segments: const [
+        ButtonSegment(
+          value: ListsView.tasks,
+          icon: Icon(Icons.checklist, size: LeviathanIconSize.sm),
+          label: Text('Task'),
+        ),
+        ButtonSegment(
+          value: ListsView.notes,
+          icon: Icon(Icons.description_outlined, size: LeviathanIconSize.sm),
+          label: Text('Note'),
+        ),
+      ],
+      selected: {view},
+      showSelectedIcon: false,
+      style: const ButtonStyle(
+        visualDensity: VisualDensity.compact,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      onSelectionChanged: (s) => onChanged(s.first),
     );
   }
 }
