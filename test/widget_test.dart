@@ -263,4 +263,48 @@ void main() {
       isTrue,
     );
   });
+
+  testWidgets('fonti: elenco, ricerca e note di una persona', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    await tester.runAsync(() async {
+      await WorkspaceRepository(root).createWorkspace('Lavoro');
+      final dir = '${root.path}/Lavoro';
+      void write(String id, String title, String sources) =>
+          File('$dir/$id.md').writeAsStringSync(
+            '---\ntitle: "$title"\nsources: $sources\n'
+            'created: "2026-01-0${id}T00:00:00.000"\n---\n',
+          );
+      write('1', 'Consiglio sul tempo', '["Mario Rossi"]');
+      write('2', 'Ricetta', '["Anna", "Mario Rossi"]');
+      write('3', 'Libro', '["Anna"]');
+      write('4', 'Viaggio', '["Giulia"]');
+    });
+
+    await tester.pumpWidget(LeviathanApp(state: AppState(_FakeStorage(root))));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('sources-button')));
+    await settle(tester);
+
+    // Tutte le fonti, dalla più citata.
+    expect(find.text('3 FONTI'), findsOneWidget);
+    expect(find.text('2 note'), findsNWidgets(2));
+    expect(find.text('Giulia'), findsOneWidget);
+
+    // La ricerca ignora maiuscole e accenti.
+    await tester.enterText(find.byKey(const Key('sources-search')), 'mario');
+    await tester.pump();
+    expect(find.text('1 FONTE'), findsOneWidget);
+    expect(find.text('Giulia'), findsNothing);
+
+    // Le note di Mario Rossi, anche quella con due fonti.
+    await tester.tap(find.text('Mario Rossi'));
+    await settle(tester);
+    expect(find.text('2 NOTE'), findsOneWidget);
+    expect(find.text('Consiglio sul tempo'), findsOneWidget);
+    expect(find.text('Ricetta'), findsOneWidget);
+    expect(find.text('Libro'), findsNothing);
+  });
 }

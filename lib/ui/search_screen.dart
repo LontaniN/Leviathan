@@ -318,7 +318,7 @@ class _FilterOptions extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView(
       children: [
-        const _SectionTitle('Filtri di ricerca'),
+        const SectionTitle('Filtri di ricerca'),
         ListTile(
           leading: const Icon(Icons.sell_outlined),
           title: const Text.rich(
@@ -389,7 +389,7 @@ class _FilterSuggestions extends StatelessWidget {
     final isTag = kind == FilterKind.tag;
     return ListView(
       children: [
-        _SectionTitle(isTag ? 'Tag' : 'Fonti'),
+        SectionTitle(isTag ? 'Tag' : 'Fonti'),
         if (values.isEmpty)
           Padding(
             padding: const EdgeInsets.all(16),
@@ -447,19 +447,21 @@ class _Results extends StatelessWidget {
       itemCount: hits.length + 1,
       itemBuilder: (context, i) {
         if (i == 0) {
-          return _SectionTitle(
+          return SectionTitle(
             hits.length == 1 ? '1 risultato' : '${hits.length} risultati',
           );
         }
         final hit = hits[i - 1];
-        return _ResultTile(hit: hit, terms: terms, onTap: onOpen);
+        return NoteResultTile(hit: hit, terms: terms, onTap: onOpen);
       },
     );
   }
 }
 
-class _ResultTile extends StatelessWidget {
-  const _ResultTile({
+/// Una nota in un elenco di risultati: titolo, data, estratto, tag e fonti.
+class NoteResultTile extends StatelessWidget {
+  const NoteResultTile({
+    super.key,
     required this.hit,
     required this.terms,
     required this.onTap,
@@ -577,8 +579,9 @@ class HighlightText extends StatelessWidget {
   }
 }
 
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.text);
+/// Intestazione di sezione in maiuscoletto grigio.
+class SectionTitle extends StatelessWidget {
+  const SectionTitle(this.text, {super.key});
 
   final String text;
 

@@ -8,6 +8,7 @@ import 'graph_screen.dart';
 import 'note_editor.dart';
 import 'note_screen.dart';
 import 'search_screen.dart';
+import 'sources_screen.dart';
 import 'chip_input.dart';
 import 'theme.dart';
 import 'workspace_name_form.dart';
@@ -57,6 +58,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _openSources() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => SourcesScreen(notes: _notes)),
+    );
+  }
+
   void _openSearch() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => SearchScreen(notes: _notes)),
@@ -83,6 +90,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       tooltip: 'Grafo',
                       icon: const Icon(Icons.hub_outlined),
                       onPressed: _openGraph,
+                    ),
+                    IconButton(
+                      key: const Key('sources-button'),
+                      tooltip: 'Fonti',
+                      icon: const Icon(Icons.person),
+                      onPressed: _openSources,
                     ),
                     IconButton(
                       key: const Key('search-button'),
