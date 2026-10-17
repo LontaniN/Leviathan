@@ -11,6 +11,8 @@ import 'note_screen.dart';
 import 'search_screen.dart';
 import 'settings_screen.dart';
 import 'sources_screen.dart';
+import 'task_check.dart';
+import 'tasks_screen.dart';
 import 'chip_input.dart';
 import 'theme.dart';
 import 'workspace_name_form.dart';
@@ -67,6 +69,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _openTasks() {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => TasksScreen(notes: _notes)));
+  }
+
   void _openSearch() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => SearchScreen(notes: _notes)),
@@ -91,11 +99,22 @@ class _HomeScreenState extends State<HomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
+                padding: const EdgeInsets.fromLTRB(
+                  LeviathanSpacing.sm,
+                  LeviathanSpacing.xs,
+                  LeviathanSpacing.sm,
+                  0,
+                ),
                 child: Row(
                   children: [
-                    Flexible(child: _WorkspaceButton(state: widget.state)),
-                    const Spacer(),
+                    // Tutto lo spazio libero va al nome, che va a capo solo
+                    // se davvero non ci sta.
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: _WorkspaceButton(state: widget.state),
+                      ),
+                    ),
                     IconButton(
                       key: const Key('graph-button'),
                       tooltip: 'Grafo',
@@ -107,6 +126,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       tooltip: 'Fonti',
                       icon: const Icon(Icons.person),
                       onPressed: _openSources,
+                    ),
+                    IconButton(
+                      key: const Key('tasks-button'),
+                      tooltip: 'Task',
+                      icon: const Icon(Icons.checklist),
+                      onPressed: _openTasks,
                     ),
                     IconButton(
                       key: const Key('search-button'),
@@ -154,6 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   () => _listExpanded = !_listExpanded,
                                 ),
                                 onOpen: _openNote,
+                                onToggleDone: _notes.setDone,
                               ),
                             ),
                           ),
@@ -169,10 +195,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                   body: draft.body,
                                   tags: draft.tags,
                                   sources: draft.sources,
+                                  isTask: draft.isTask,
                                 );
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Nota salvata'),
+                                  SnackBar(
+                                    content: Text(
+                                      draft.isTask
+                                          ? 'Task salvato'
+                                          : 'Nota salvata',
+                                    ),
                                     duration: Duration(seconds: 2),
                                   ),
                                 );
@@ -199,12 +230,14 @@ class _NoteList extends StatelessWidget {
     required this.expanded,
     required this.onToggle,
     required this.onOpen,
+    required this.onToggleDone,
   });
 
   final List<Note> notes;
   final bool expanded;
   final VoidCallback onToggle;
   final ValueChanged<Note> onOpen;
+  final void Function(Note note, bool done) onToggleDone;
 
   @override
   Widget build(BuildContext context) {
@@ -215,7 +248,12 @@ class _NoteList extends StatelessWidget {
           key: const Key('list-toggle'),
           onTap: onToggle,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+            padding: const EdgeInsets.fromLTRB(
+              LeviathanSpacing.md,
+              LeviathanSpacing.md,
+              LeviathanSpacing.sm,
+              LeviathanSpacing.md,
+            ),
             child: Row(
               children: [
                 AnimatedRotation(
@@ -223,18 +261,17 @@ class _NoteList extends StatelessWidget {
                   duration: const Duration(milliseconds: 220),
                   child: Icon(
                     Icons.keyboard_arrow_down,
-                    size: 20,
+                    size: LeviathanIconSize.md,
                     color: context.palette.accent,
                   ),
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: LeviathanSpacing.xs),
                 Expanded(
                   child: Text(
                     expanded ? 'Tutte le note (${notes.length})' : 'Recenti',
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
+                    style: LeviathanText.body.copyWith(
                       color: context.palette.muted,
-                      fontSize: 13,
                     ),
                   ),
                 ),
@@ -245,18 +282,26 @@ class _NoteList extends StatelessWidget {
         Expanded(
           child: notes.isEmpty
               ? Padding(
-                  padding: EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(LeviathanSpacing.md),
                   child: Text(
                     'Nessuna nota',
                     style: TextStyle(color: context.palette.muted),
                   ),
                 )
               : ListView.builder(
-                  padding: const EdgeInsets.only(bottom: 24),
+                  padding: const EdgeInsets.only(bottom: LeviathanSpacing.xl),
                   itemCount: notes.length,
                   itemBuilder: (context, i) => expanded
-                      ? _ExpandedTile(note: notes[i], onTap: onOpen)
-                      : _CompactTile(note: notes[i], onTap: onOpen),
+                      ? _ExpandedTile(
+                          note: notes[i],
+                          onTap: onOpen,
+                          onToggleDone: onToggleDone,
+                        )
+                      : _CompactTile(
+                          note: notes[i],
+                          onTap: onOpen,
+                          onToggleDone: onToggleDone,
+                        ),
                 ),
         ),
       ],
@@ -270,35 +315,48 @@ Color _noteColor(BuildContext context, Note note) => note.tags.isEmpty
     : Tags.colorOf(note.tags.first);
 
 class _CompactTile extends StatelessWidget {
-  const _CompactTile({required this.note, required this.onTap});
+  const _CompactTile({
+    required this.note,
+    required this.onTap,
+    required this.onToggleDone,
+  });
 
   final Note note;
   final ValueChanged<Note> onTap;
+  final void Function(Note note, bool done) onToggleDone;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () => onTap(note),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(10, 8, 6, 8),
+        padding: const EdgeInsets.all(LeviathanSpacing.sm),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
               width: 3,
               height: 32,
-              margin: const EdgeInsets.only(right: 8),
+              margin: const EdgeInsets.only(right: LeviathanSpacing.sm),
               decoration: BoxDecoration(
                 color: _noteColor(context, note),
-                borderRadius: BorderRadius.circular(2),
+                borderRadius: BorderRadius.circular(LeviathanRadii.sm),
               ),
             ),
+            if (note.isTask)
+              Padding(
+                padding: const EdgeInsets.only(right: LeviathanSpacing.xs),
+                child: TaskCheck(
+                  note: note,
+                  onChanged: (done) => onToggleDone(note, done),
+                ),
+              ),
             Expanded(
               child: Text(
                 note.displayTitle,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 13, height: 1.25),
+                style: taskTitleStyle(context, note, LeviathanText.body),
               ),
             ),
           ],
@@ -309,10 +367,15 @@ class _CompactTile extends StatelessWidget {
 }
 
 class _ExpandedTile extends StatelessWidget {
-  const _ExpandedTile({required this.note, required this.onTap});
+  const _ExpandedTile({
+    required this.note,
+    required this.onTap,
+    required this.onToggleDone,
+  });
 
   final Note note;
   final ValueChanged<Note> onTap;
+  final void Function(Note note, bool done) onToggleDone;
 
   @override
   Widget build(BuildContext context) {
@@ -320,17 +383,25 @@ class _ExpandedTile extends StatelessWidget {
     return InkWell(
       onTap: () => onTap(note),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 10, 16, 10),
+        padding: const EdgeInsets.fromLTRB(
+          LeviathanSpacing.md,
+          LeviathanSpacing.md,
+          LeviathanSpacing.lg,
+          LeviathanSpacing.md,
+        ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
               width: 3,
               height: 44,
-              margin: const EdgeInsets.only(right: 12, top: 2),
+              margin: const EdgeInsets.only(
+                right: LeviathanSpacing.md,
+                top: LeviathanSpacing.xxs,
+              ),
               decoration: BoxDecoration(
                 color: _noteColor(context, note),
-                borderRadius: BorderRadius.circular(2),
+                borderRadius: BorderRadius.circular(LeviathanRadii.sm),
               ),
             ),
             Expanded(
@@ -339,21 +410,31 @@ class _ExpandedTile extends StatelessWidget {
                 children: [
                   Row(
                     children: [
+                      if (note.isTask)
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            right: LeviathanSpacing.xs,
+                          ),
+                          child: TaskCheck(
+                            note: note,
+                            onChanged: (done) => onToggleDone(note, done),
+                          ),
+                        ),
                       Expanded(
                         child: Text(
                           note.displayTitle,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
+                          style: taskTitleStyle(
+                            context,
+                            note,
+                            LeviathanText.title,
                           ),
                         ),
                       ),
                       Text(
                         formatDate(note.created),
-                        style: TextStyle(
-                          fontSize: 12,
+                        style: LeviathanText.meta.copyWith(
                           color: context.palette.muted,
                         ),
                       ),
@@ -361,23 +442,22 @@ class _ExpandedTile extends StatelessWidget {
                   ),
                   if (preview.isNotEmpty && note.title.trim().isNotEmpty)
                     Padding(
-                      padding: const EdgeInsets.only(top: 2),
+                      padding: const EdgeInsets.only(top: LeviathanSpacing.xxs),
                       child: Text(
                         preview,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 13,
+                        style: LeviathanText.body.copyWith(
                           color: context.palette.muted,
                         ),
                       ),
                     ),
                   if (note.tags.isNotEmpty || note.sources.isNotEmpty)
                     Padding(
-                      padding: const EdgeInsets.only(top: 6),
+                      padding: const EdgeInsets.only(top: LeviathanSpacing.sm),
                       child: Wrap(
-                        spacing: 4,
-                        runSpacing: 4,
+                        spacing: LeviathanSpacing.xs,
+                        runSpacing: LeviathanSpacing.xs,
                         children: [
                           for (final tag in note.tags)
                             TagChip(tag, dense: true),
@@ -413,11 +493,8 @@ class _WorkspaceButton extends StatelessWidget {
       key: const Key('workspace-button'),
       onPressed: () => showWorkspaceSwitcher(context, state),
       iconAlignment: IconAlignment.end,
-      icon: const Icon(Icons.expand_more, size: 18),
-      label: Text(
-        state.currentWorkspace ?? '',
-        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-      ),
+      icon: const Icon(Icons.expand_more, size: LeviathanIconSize.md),
+      label: Text(state.currentWorkspace ?? '', style: LeviathanText.title),
       style: TextButton.styleFrom(foregroundColor: context.palette.accent),
     );
   }
@@ -439,7 +516,12 @@ Future<void> showWorkspaceSwitcher(BuildContext context, AppState state) {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: EdgeInsets.fromLTRB(24, 0, 24, 8),
+              padding: const EdgeInsets.fromLTRB(
+                LeviathanSpacing.xl,
+                0,
+                LeviathanSpacing.xl,
+                LeviathanSpacing.sm,
+              ),
               child: Text(
                 'Workspace',
                 style: TextStyle(color: context.palette.muted),

@@ -193,6 +193,7 @@ class SourceNotesScreen extends StatelessWidget {
                       hit: hits[i - 1],
                       terms: const [],
                       onTap: (note) => _open(context, note),
+                      onToggleDone: notes.setDone,
                     );
                   },
                 ),

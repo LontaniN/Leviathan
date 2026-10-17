@@ -1,26 +1,67 @@
 import 'note.dart';
 import 'tags.dart';
 
-/// Una ricerca: testo libero più filtri per tag e per fonte.
+/// Filtro sullo stato dei task; il nome è la parola dopo `stato:`.
+enum TaskFilter {
+  task('task', 'tutti i task'),
+  aperto('aperto', 'task da fare'),
+  fatto('fatto', 'task eseguiti');
+
+  const TaskFilter(this.label, this.description);
+
+  final String label;
+  final String description;
+
+  bool matches(Note note) => switch (this) {
+    TaskFilter.task => note.isTask,
+    TaskFilter.aperto => note.isOpenTask,
+    TaskFilter.fatto => note.isTask && note.done,
+  };
+
+  /// Il filtro con questo nome (anche abbreviato: "ap" → aperto).
+  static TaskFilter? parse(String value) {
+    final v = foldText(value.trim());
+    if (v.isEmpty) return null;
+    for (final f in values) {
+      if (f.label.startsWith(v)) return f;
+    }
+    return null;
+  }
+
+  /// I filtri il cui nome comincia con [value], nell'ordine dell'enum.
+  static List<TaskFilter> suggest(String value) {
+    final v = foldText(value.trim());
+    return [
+      for (final f in values)
+        if (f.label.startsWith(v)) f,
+    ];
+  }
+}
+
+/// Una ricerca: testo libero più filtri per tag, fonte e stato dei task.
 ///
 /// Ogni parte è facoltativa e si combinano tutte in AND: una nota compare
-/// se contiene tutte le parole, ha tutti i tag e tutte le fonti scelti.
+/// se contiene tutte le parole, ha tutti i tag e tutte le fonti scelti e,
+/// se c'è, rispetta il filtro sui task.
 class SearchQuery {
   const SearchQuery({
     this.text = '',
     this.tags = const [],
     this.sources = const [],
+    this.task,
   });
 
   final String text;
   final List<String> tags;
   final List<String> sources;
+  final TaskFilter? task;
 
   /// Le parole cercate, normalizzate (minuscolo, senza accenti).
   List<String> get terms =>
       foldText(text).split(RegExp(r'\s+')).where((t) => t.isNotEmpty).toList();
 
-  bool get isEmpty => terms.isEmpty && tags.isEmpty && sources.isEmpty;
+  bool get isEmpty =>
+      terms.isEmpty && tags.isEmpty && sources.isEmpty && task == null;
 }
 
 class SearchHit {
@@ -43,6 +84,7 @@ List<SearchHit> searchNotes(List<Note> notes, SearchQuery query) {
   final wantedSources = query.sources.map(foldText).toSet();
   final hits = <SearchHit>[];
   for (final note in notes) {
+    if (query.task != null && !query.task!.matches(note)) continue;
     if (!query.tags.every(note.tags.contains)) continue;
     final noteSources = note.sources.map(foldText).toSet();
     if (!wantedSources.every(noteSources.contains)) continue;
@@ -125,13 +167,13 @@ List<(int, int)> matchRanges(String text, List<String> terms) {
 }
 
 /// Un filtro che si sta scrivendo nella barra di ricerca.
-enum FilterKind { tag, source }
+enum FilterKind { tag, source, status }
 
 /// Cosa c'è nella barra: testo libero e, in fondo, un filtro in scrittura.
 ///
-/// Come su Discord: `tag:` (o `#`) e `da:` (o `@`) aprono un filtro. Un tag
-/// finisce allo spazio; una fonte può contenere spazi ("da:Mario Rossi") e
-/// resta aperta finché non la si conferma.
+/// Come su Discord: `tag:` (o `#`), `da:` (o `@`) e `stato:` aprono un
+/// filtro. Tag e stato finiscono allo spazio; una fonte può contenere spazi
+/// ("da:Mario Rossi") e resta aperta finché non la si conferma.
 class SearchInput {
   const SearchInput(this.freeText, this.activeKind, this.activeValue);
 
@@ -140,7 +182,7 @@ class SearchInput {
   final String activeValue;
 
   static final _marker = RegExp(
-    r'(?<=^|\s)(tag:|#|da:|@)',
+    r'(?<=^|\s)(tag:|#|da:|@|stato:)',
     caseSensitive: false,
   );
 
@@ -150,10 +192,13 @@ class SearchInput {
       final match = markers.last;
       final marker = match.group(1)!.toLowerCase();
       final value = raw.substring(match.end);
-      final kind = marker == 'tag:' || marker == '#'
-          ? FilterKind.tag
-          : FilterKind.source;
-      // Un tag non contiene spazi: dopo uno spazio si torna al testo libero.
+      final kind = switch (marker) {
+        'tag:' || '#' => FilterKind.tag,
+        'stato:' => FilterKind.status,
+        _ => FilterKind.source,
+      };
+      // Tag e stato non contengono spazi: dopo uno spazio si torna al testo
+      // libero.
       if (kind == FilterKind.source || !value.contains(RegExp(r'\s'))) {
         return SearchInput(raw.substring(0, match.start).trim(), kind, value);
       }

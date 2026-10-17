@@ -5,10 +5,12 @@ import '../state/notes_controller.dart';
 import 'home_screen.dart' show formatDate;
 import 'note_editor.dart';
 import 'search_screen.dart';
+import 'task_check.dart';
 import 'chip_input.dart';
 import 'theme.dart';
 
 /// Lettura di una nota a schermo intero, con modifica ed eliminazione.
+/// Un task si spunta da qui.
 class NoteScreen extends StatelessWidget {
   const NoteScreen({super.key, required this.noteId, required this.notes});
 
@@ -88,10 +90,18 @@ class NoteScreen extends StatelessWidget {
           ),
           body: SelectionArea(
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 40),
+              padding: const EdgeInsets.fromLTRB(
+                LeviathanSpacing.xl,
+                LeviathanSpacing.xs,
+                LeviathanSpacing.xl,
+                LeviathanSpacing.xxl,
+              ),
               children: [
-                Text(note.displayTitle, style: text.headlineSmall),
-                const SizedBox(height: 6),
+                Text(
+                  note.displayTitle,
+                  style: taskTitleStyle(context, note, text.headlineSmall!),
+                ),
+                const SizedBox(height: LeviathanSpacing.sm),
                 Text(
                   note.updated.isAfter(note.created)
                       ? '${formatDate(note.created)} · modificata '
@@ -99,11 +109,18 @@ class NoteScreen extends StatelessWidget {
                       : formatDate(note.created),
                   style: text.bodySmall?.copyWith(color: context.palette.muted),
                 ),
+                if (note.isTask) ...[
+                  const SizedBox(height: LeviathanSpacing.md),
+                  _TaskStatus(
+                    note: note,
+                    onChanged: (done) => notes.setDone(note, done),
+                  ),
+                ],
                 if (note.tags.isNotEmpty) ...[
-                  const SizedBox(height: 12),
+                  const SizedBox(height: LeviathanSpacing.md),
                   Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
+                    spacing: LeviathanSpacing.sm,
+                    runSpacing: LeviathanSpacing.sm,
                     children: [
                       for (final tag in note.tags)
                         GestureDetector(
@@ -114,10 +131,10 @@ class NoteScreen extends StatelessWidget {
                   ),
                 ],
                 if (note.sources.isNotEmpty) ...[
-                  const SizedBox(height: 8),
+                  const SizedBox(height: LeviathanSpacing.sm),
                   Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
+                    spacing: LeviathanSpacing.sm,
+                    runSpacing: LeviathanSpacing.sm,
                     children: [
                       for (final source in note.sources)
                         GestureDetector(
@@ -127,13 +144,60 @@ class NoteScreen extends StatelessWidget {
                     ],
                   ),
                 ],
-                const Divider(height: 32),
+                const Divider(height: LeviathanSpacing.xxl),
                 Text(note.body, style: text.bodyLarge?.copyWith(height: 1.5)),
               ],
             ),
           ),
         );
       },
+    );
+  }
+}
+
+/// La casella del task con lo stato a parole: "Da fare" o "Fatto il …".
+class _TaskStatus extends StatelessWidget {
+  const _TaskStatus({required this.note, required this.onChanged});
+
+  final Note note;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final doneAt = note.doneAt;
+    final label = !note.done
+        ? 'Da fare'
+        : doneAt == null
+        ? 'Fatto'
+        : 'Fatto il ${formatDate(doneAt)}';
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: InkWell(
+        key: const Key('task-status'),
+        onTap: () => onChanged(!note.done),
+        borderRadius: BorderRadius.circular(LeviathanRadii.md),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: LeviathanSpacing.sm,
+            vertical: LeviathanSpacing.xs,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TaskCheck(note: note),
+              const SizedBox(width: LeviathanSpacing.sm),
+              Text(
+                label,
+                style: LeviathanText.title.copyWith(
+                  color: note.done
+                      ? context.palette.muted
+                      : context.palette.accent,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -163,6 +227,7 @@ class _EditNotePage extends StatelessWidget {
               body: draft.body,
               tags: draft.tags,
               sources: draft.sources,
+              isTask: draft.isTask,
             ),
           );
           Navigator.pop(context);

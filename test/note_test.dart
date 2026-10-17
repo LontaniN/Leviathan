@@ -44,6 +44,73 @@ void main() {
       expect(Note.fromMarkdown('v', content, date).sources, ['Giulia']);
     });
 
+    test('un task fatto: andata e ritorno', () {
+      final task = Note(
+        id: 't',
+        title: 'Comprare il libro',
+        body: '',
+        tags: ['studio'],
+        sources: ['Anna'],
+        created: date,
+        updated: date,
+        isTask: true,
+        done: true,
+        doneAt: date.add(const Duration(days: 2)),
+      );
+      final markdown = task.toMarkdown();
+      expect(markdown, contains('type: "task"'));
+      expect(markdown, contains('done: true'));
+      final back = Note.fromMarkdown('t', markdown, DateTime(2000));
+      expect(back.isTask, isTrue);
+      expect(back.done, isTrue);
+      expect(back.doneAt, task.doneAt);
+      expect(back.tags, ['studio']);
+      expect(back.sources, ['Anna']);
+    });
+
+    test('le note normali non scrivono i campi dei task', () {
+      final note = Note(
+        id: 'n',
+        title: 'Idea',
+        body: '',
+        tags: [],
+        sources: [],
+        created: date,
+        updated: date,
+      );
+      expect(note.toMarkdown(), isNot(contains('type:')));
+      expect(note.toMarkdown(), isNot(contains('done')));
+    });
+
+    test('legge un task scritto a mano', () {
+      const content = '---\ntitle: Esame\ntype: task\ndone: false\n---\n';
+      final note = Note.fromMarkdown('e', content, date);
+      expect(note.isTask, isTrue);
+      expect(note.isOpenTask, isTrue);
+    });
+
+    test('togliere la spunta o il tipo task azzera lo stato', () {
+      final task = Note(
+        id: 't',
+        title: 'x',
+        body: '',
+        tags: [],
+        sources: [],
+        created: date,
+        updated: date,
+        isTask: true,
+        done: true,
+        doneAt: date,
+      );
+      final reopened = task.copyWith(done: false);
+      expect(reopened.done, isFalse);
+      expect(reopened.doneAt, isNull);
+      final plain = task.copyWith(isTask: false);
+      expect(plain.isTask, isFalse);
+      expect(plain.done, isFalse);
+      expect(plain.doneAt, isNull);
+    });
+
     test('file senza intestazione: tutto è corpo', () {
       final note = Note.fromMarkdown('z', 'Solo testo\nsu due righe', date);
       expect(note.body, 'Solo testo\nsu due righe');

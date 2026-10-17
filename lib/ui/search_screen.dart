@@ -7,11 +7,12 @@ import '../state/notes_controller.dart';
 import 'chip_input.dart';
 import 'home_screen.dart' show formatDate;
 import 'note_screen.dart';
+import 'task_check.dart';
 import 'theme.dart';
 
 /// Ricerca in stile Discord: si scrive il testo da cercare e si aggiungono
-/// filtri con `tag:` / `#` e `da:` / `@`. Testo e filtri sono facoltativi e
-/// si combinano liberamente.
+/// filtri con `tag:` / `#`, `da:` / `@` e `stato:`. Testo e filtri sono
+/// facoltativi e si combinano liberamente.
 class SearchScreen extends StatefulWidget {
   const SearchScreen({
     super.key,
@@ -33,6 +34,7 @@ class _SearchScreenState extends State<SearchScreen> {
   final _focus = FocusNode();
   late List<String> _tags = [...widget.initialTags];
   late List<String> _sources = [...widget.initialSources];
+  TaskFilter? _task;
 
   @override
   void initState() {
@@ -55,7 +57,9 @@ class _SearchScreenState extends State<SearchScreen> {
     // Spazio dopo un tag o virgola dopo una fonte: il filtro è confermato.
     if (text.endsWith(' ') || text.endsWith(',')) {
       final before = SearchInput.parse(text.substring(0, text.length - 1));
-      final closesTag = before.activeKind == FilterKind.tag;
+      final closesTag =
+          before.activeKind == FilterKind.tag ||
+          before.activeKind == FilterKind.status;
       final closesSource =
           before.activeKind == FilterKind.source && text.endsWith(',');
       if ((closesTag || closesSource) && before.activeValue.trim().isNotEmpty) {
@@ -69,14 +73,21 @@ class _SearchScreenState extends State<SearchScreen> {
   void _commit(SearchInput parsed, String value) {
     final kind = parsed.activeKind!;
     setState(() {
-      if (kind == FilterKind.tag) {
-        final tag = Tags.normalize(value);
-        if (tag.isNotEmpty && !_tags.contains(tag)) _tags = [..._tags, tag];
-      } else {
-        final source = Sources.canonical(value, widget.notes.sourceCounts.keys);
-        if (source.isNotEmpty && !_sources.contains(source)) {
-          _sources = [..._sources, source];
-        }
+      switch (kind) {
+        case FilterKind.tag:
+          final tag = Tags.normalize(value);
+          if (tag.isNotEmpty && !_tags.contains(tag)) _tags = [..._tags, tag];
+        case FilterKind.source:
+          final source = Sources.canonical(
+            value,
+            widget.notes.sourceCounts.keys,
+          );
+          if (source.isNotEmpty && !_sources.contains(source)) {
+            _sources = [..._sources, source];
+          }
+        case FilterKind.status:
+          // Un solo filtro di stato alla volta: il nuovo sostituisce il vecchio.
+          _task = TaskFilter.parse(value) ?? _task;
       }
     });
     final rest = parsed.freeText;
@@ -113,7 +124,16 @@ class _SearchScreenState extends State<SearchScreen> {
       exclude: _sources,
       limit: 8,
     ),
+    FilterKind.status => [
+      for (final f in TaskFilter.suggest(parsed.activeValue)) f.label,
+    ],
     null => const [],
+  };
+
+  /// Quante note corrispondono a ogni filtro di stato.
+  Map<String, int> get _statusCounts => {
+    for (final f in TaskFilter.values)
+      f.label: widget.notes.notes.where(f.matches).length,
   };
 
   void _submit(SearchInput parsed) {
@@ -133,6 +153,7 @@ class _SearchScreenState extends State<SearchScreen> {
     setState(() {
       _tags = [];
       _sources = [];
+      _task = null;
     });
     _focus.requestFocus();
   }
@@ -155,11 +176,13 @@ class _SearchScreenState extends State<SearchScreen> {
           text: parsed.freeText,
           tags: _tags,
           sources: _sources,
+          task: _task,
         );
         final hasAnything =
             _input.text.trim().isNotEmpty ||
             _tags.isNotEmpty ||
-            _sources.isNotEmpty;
+            _sources.isNotEmpty ||
+            _task != null;
         return Scaffold(
           body: SafeArea(
             child: Column(
@@ -170,12 +193,14 @@ class _SearchScreenState extends State<SearchScreen> {
                   focus: _focus,
                   tags: _tags,
                   sources: _sources,
+                  task: _task,
                   onRemoveTag: (t) => setState(
                     () => _tags = _tags.where((x) => x != t).toList(),
                   ),
                   onRemoveSource: (s) => setState(
                     () => _sources = _sources.where((x) => x != s).toList(),
                   ),
+                  onRemoveTask: () => setState(() => _task = null),
                   onSubmitted: () => _submit(parsed),
                   onClear: hasAnything ? _clear : null,
                 ),
@@ -184,9 +209,11 @@ class _SearchScreenState extends State<SearchScreen> {
                       ? _FilterSuggestions(
                           kind: parsed.activeKind!,
                           values: _suggestions(parsed),
-                          counts: parsed.activeKind == FilterKind.tag
-                              ? widget.notes.tagCounts
-                              : widget.notes.sourceCounts,
+                          counts: switch (parsed.activeKind!) {
+                            FilterKind.tag => widget.notes.tagCounts,
+                            FilterKind.source => widget.notes.sourceCounts,
+                            FilterKind.status => _statusCounts,
+                          },
                           onPick: (v) => _commit(parsed, v),
                         )
                       : query.isEmpty
@@ -195,6 +222,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           hits: searchNotes(widget.notes.notes, query),
                           terms: query.terms,
                           onOpen: _open,
+                          onToggleDone: widget.notes.setDone,
                         ),
                 ),
               ],
@@ -212,8 +240,10 @@ class _SearchBar extends StatelessWidget {
     required this.focus,
     required this.tags,
     required this.sources,
+    required this.task,
     required this.onRemoveTag,
     required this.onRemoveSource,
+    required this.onRemoveTask,
     required this.onSubmitted,
     required this.onClear,
   });
@@ -222,15 +252,22 @@ class _SearchBar extends StatelessWidget {
   final FocusNode focus;
   final List<String> tags;
   final List<String> sources;
+  final TaskFilter? task;
   final ValueChanged<String> onRemoveTag;
   final ValueChanged<String> onRemoveSource;
+  final VoidCallback onRemoveTask;
   final VoidCallback onSubmitted;
   final VoidCallback? onClear;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 4, 12, 8),
+      padding: const EdgeInsets.fromLTRB(
+        LeviathanSpacing.xs,
+        LeviathanSpacing.xs,
+        LeviathanSpacing.md,
+        LeviathanSpacing.sm,
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -239,20 +276,26 @@ class _SearchBar extends StatelessWidget {
             child: DecoratedBox(
               decoration: BoxDecoration(
                 color: context.palette.surface,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(LeviathanRadii.md),
               ),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: LeviathanSpacing.sm,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    if (tags.isNotEmpty || sources.isNotEmpty)
+                    if (tags.isNotEmpty || sources.isNotEmpty || task != null)
                       Padding(
-                        padding: const EdgeInsets.only(top: 8),
+                        padding: const EdgeInsets.only(
+                          top: LeviathanSpacing.sm,
+                        ),
                         child: Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
+                          spacing: LeviathanSpacing.sm,
+                          runSpacing: LeviathanSpacing.sm,
                           children: [
+                            if (task != null)
+                              StatusChip(task!, onDeleted: onRemoveTask),
                             for (final tag in tags)
                               TagChip(tag, onDeleted: () => onRemoveTag(tag)),
                             for (final source in sources)
@@ -267,7 +310,7 @@ class _SearchBar extends StatelessWidget {
                       children: [
                         Icon(
                           Icons.search,
-                          size: 20,
+                          size: LeviathanIconSize.md,
                           color: context.palette.muted,
                         ),
                         Expanded(
@@ -282,8 +325,8 @@ class _SearchBar extends StatelessWidget {
                               filled: false,
                               border: InputBorder.none,
                               contentPadding: EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 14,
+                                horizontal: LeviathanSpacing.sm,
+                                vertical: LeviathanSpacing.md,
                               ),
                             ),
                             onSubmitted: (_) => onSubmitted(),
@@ -292,7 +335,10 @@ class _SearchBar extends StatelessWidget {
                         if (onClear != null)
                           IconButton(
                             tooltip: 'Svuota',
-                            icon: const Icon(Icons.close, size: 20),
+                            icon: const Icon(
+                              Icons.close,
+                              size: LeviathanIconSize.md,
+                            ),
                             onPressed: onClear,
                           ),
                       ],
@@ -357,12 +403,37 @@ class _FilterOptions extends StatelessWidget {
           subtitle: const Text('scorciatoia: @'),
           onTap: () => onPick('da:'),
         ),
+        ListTile(
+          leading: const Icon(Icons.check_box_outlined),
+          title: Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: 'stato: ',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                TextSpan(
+                  text: 'task da fare o fatti',
+                  style: TextStyle(color: context.palette.muted),
+                ),
+              ],
+            ),
+          ),
+          subtitle: const Text('aperto · fatto · task'),
+          onTap: () => onPick('stato:'),
+        ),
         Padding(
-          padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+          padding: const EdgeInsets.fromLTRB(
+            LeviathanSpacing.lg,
+            LeviathanSpacing.lg,
+            LeviathanSpacing.lg,
+            0,
+          ),
           child: Text(
             'Testo e filtri si combinano: per esempio '
-            '"esposizione tag:fotografia da:Mario Rossi".',
-            style: TextStyle(color: context.palette.muted, fontSize: 13),
+            '"esposizione tag:fotografia da:Mario Rossi" oppure '
+            '"stato:aperto tag:università".',
+            style: LeviathanText.body.copyWith(color: context.palette.muted),
           ),
         ),
       ],
@@ -386,26 +457,42 @@ class _FilterSuggestions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isTag = kind == FilterKind.tag;
     return ListView(
       children: [
-        SectionTitle(isTag ? 'Tag' : 'Fonti'),
+        SectionTitle(switch (kind) {
+          FilterKind.tag => 'Tag',
+          FilterKind.source => 'Fonti',
+          FilterKind.status => 'Stato dei task',
+        }),
         if (values.isEmpty)
           Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text(
-              isTag
-                  ? 'Nessun tag corrispondente'
-                  : 'Nessuna fonte corrispondente',
-              style: TextStyle(color: context.palette.muted),
-            ),
+            padding: const EdgeInsets.all(LeviathanSpacing.lg),
+            child: Text(switch (kind) {
+              FilterKind.tag => 'Nessun tag corrispondente',
+              FilterKind.source => 'Nessuna fonte corrispondente',
+              FilterKind.status => 'Scrivi aperto, fatto o task',
+            }, style: TextStyle(color: context.palette.muted)),
           ),
         for (final value in values)
           ListTile(
-            leading: isTag
-                ? CircleAvatar(backgroundColor: Tags.colorOf(value), radius: 6)
-                : Icon(Icons.person_outline, color: context.palette.muted),
+            leading: switch (kind) {
+              FilterKind.tag => CircleAvatar(
+                backgroundColor: Tags.colorOf(value),
+                radius: LeviathanSpacing.xs,
+              ),
+              FilterKind.source => Icon(
+                Icons.person_outline,
+                color: context.palette.muted,
+              ),
+              FilterKind.status => Icon(
+                Icons.check_box_outlined,
+                color: context.palette.muted,
+              ),
+            },
             title: Text(value),
+            subtitle: kind == FilterKind.status
+                ? Text(TaskFilter.parse(value)!.description)
+                : null,
             trailing: Text(
               '${counts[value] ?? 0}',
               style: TextStyle(color: context.palette.muted),
@@ -422,11 +509,13 @@ class _Results extends StatelessWidget {
     required this.hits,
     required this.terms,
     required this.onOpen,
+    required this.onToggleDone,
   });
 
   final List<SearchHit> hits;
   final List<String> terms;
   final ValueChanged<Note> onOpen;
+  final void Function(Note note, bool done) onToggleDone;
 
   @override
   Widget build(BuildContext context) {
@@ -440,7 +529,7 @@ class _Results extends StatelessWidget {
     }
     return ListView.builder(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      padding: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.only(bottom: LeviathanSpacing.xl),
       itemCount: hits.length + 1,
       itemBuilder: (context, i) {
         if (i == 0) {
@@ -449,24 +538,32 @@ class _Results extends StatelessWidget {
           );
         }
         final hit = hits[i - 1];
-        return NoteResultTile(hit: hit, terms: terms, onTap: onOpen);
+        return NoteResultTile(
+          hit: hit,
+          terms: terms,
+          onTap: onOpen,
+          onToggleDone: onToggleDone,
+        );
       },
     );
   }
 }
 
 /// Una nota in un elenco di risultati: titolo, data, estratto, tag e fonti.
+/// I task hanno la casella, che si spunta se c'è [onToggleDone].
 class NoteResultTile extends StatelessWidget {
   const NoteResultTile({
     super.key,
     required this.hit,
     required this.terms,
     required this.onTap,
+    this.onToggleDone,
   });
 
   final SearchHit hit;
   final List<String> terms;
   final ValueChanged<Note> onTap;
+  final void Function(Note note, bool done)? onToggleDone;
 
   @override
   Widget build(BuildContext context) {
@@ -474,46 +571,60 @@ class NoteResultTile extends StatelessWidget {
     return InkWell(
       onTap: () => onTap(note),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+        padding: const EdgeInsets.symmetric(
+          horizontal: LeviathanSpacing.lg,
+          vertical: LeviathanSpacing.md,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
+                if (note.isTask)
+                  Padding(
+                    padding: const EdgeInsets.only(right: LeviathanSpacing.xs),
+                    child: TaskCheck(
+                      note: note,
+                      onChanged: onToggleDone == null
+                          ? null
+                          : (done) => onToggleDone!(note, done),
+                    ),
+                  ),
                 Expanded(
                   child: HighlightText(
                     note.displayTitle,
                     terms: terms,
                     maxLines: 1,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: taskTitleStyle(context, note, LeviathanText.title),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: LeviathanSpacing.sm),
                 Text(
                   formatDate(note.created),
-                  style: TextStyle(fontSize: 12, color: context.palette.muted),
+                  style: LeviathanText.meta.copyWith(
+                    color: context.palette.muted,
+                  ),
                 ),
               ],
             ),
             if (hit.snippet.isNotEmpty && note.title.trim().isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(top: 2),
+                padding: const EdgeInsets.only(top: LeviathanSpacing.xxs),
                 child: HighlightText(
                   hit.snippet,
                   terms: terms,
                   maxLines: 3,
-                  style: TextStyle(fontSize: 13, color: context.palette.muted),
+                  style: LeviathanText.body.copyWith(
+                    color: context.palette.muted,
+                  ),
                 ),
               ),
             if (note.tags.isNotEmpty || note.sources.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(top: 6),
+                padding: const EdgeInsets.only(top: LeviathanSpacing.sm),
                 child: Wrap(
-                  spacing: 4,
-                  runSpacing: 4,
+                  spacing: LeviathanSpacing.xs,
+                  runSpacing: LeviathanSpacing.xs,
                   children: [
                     for (final tag in note.tags) TagChip(tag, dense: true),
                     for (final source in note.sources)
@@ -554,7 +665,7 @@ class HighlightText extends StatelessWidget {
         TextSpan(
           text: text.substring(start, end),
           style: TextStyle(
-            color: Colors.black,
+            color: context.palette.onAccent,
             backgroundColor: context.palette.accent,
           ),
         ),
@@ -579,11 +690,15 @@ class SectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      padding: const EdgeInsets.fromLTRB(
+        LeviathanSpacing.lg,
+        LeviathanSpacing.sm,
+        LeviathanSpacing.lg,
+        LeviathanSpacing.xs,
+      ),
       child: Text(
         text.toUpperCase(),
-        style: TextStyle(
-          fontSize: 12,
+        style: LeviathanText.meta.copyWith(
           letterSpacing: 0.8,
           fontWeight: FontWeight.w600,
           color: context.palette.muted,

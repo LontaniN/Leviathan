@@ -30,12 +30,14 @@ class NotesController extends ChangeNotifier {
     required String body,
     required List<String> tags,
     required List<String> sources,
+    bool isTask = false,
   }) {
     final note = _repo.create(
       title: title,
       body: body,
       tags: tags,
       sources: sources,
+      isTask: isTask,
     );
     notes = [note, ...notes];
     _refreshCounts();
@@ -50,6 +52,19 @@ class NotesController extends ChangeNotifier {
     _refreshCounts();
     notifyListeners();
     return updated;
+  }
+
+  /// Spunta o toglie la spunta a un task. Non conta come modifica della
+  /// nota: la data di esecuzione sta in `done_at`.
+  Note setDone(Note note, bool done) {
+    final changed = note.copyWith(
+      done: done,
+      doneAt: done ? DateTime.now() : null,
+    );
+    _repo.save(changed);
+    notes = [for (final n in notes) n.id == changed.id ? changed : n];
+    notifyListeners();
+    return changed;
   }
 
   void delete(Note note) {

@@ -169,6 +169,88 @@ void main() {
     expect(find.text('luce-naturale'), findsOneWidget);
   });
 
+  testWidgets('crea un task, lo spunta dalla lista e lo ritrova', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    final repo = WorkspaceRepository(root);
+    await tester.runAsync(() => repo.createWorkspace('Studio'));
+    await tester.pumpWidget(LeviathanApp(state: AppState(_FakeStorage(root))));
+    await settle(tester);
+
+    await tester.tap(find.text('Task'));
+    await tester.pump();
+    await tester.enterText(find.byKey(const Key('title-field')), 'Esame');
+    await tester.ensureVisible(find.text('Salva task'));
+    await tester.tap(find.text('Salva task'));
+    await settle(tester);
+
+    File taskFile() =>
+        Directory('${root.path}/Studio')
+            .listSync()
+            .whereType<File>()
+            .singleWhere((f) => f.path.contains('esame'));
+    expect(taskFile().readAsStringSync(), contains('done: false'));
+
+    // Spunta dalla lista delle recenti.
+    final check = find.byWidgetPredicate(
+      (w) =>
+          w.key is ValueKey<String> &&
+          (w.key! as ValueKey<String>).value.startsWith('task-check-'),
+    );
+    await tester.tap(check);
+    await settle(tester);
+    expect(taskFile().readAsStringSync(), contains('done: true'));
+    expect(taskFile().readAsStringSync(), contains('done_at:'));
+
+    // Il filtro stato:fatto lo trova, stato:aperto no.
+    await tester.tap(find.byKey(const Key('search-button')));
+    await settle(tester);
+    final field = find.byKey(const Key('search-field'));
+    await tester.enterText(field, 'stato:fatto ');
+    await settle(tester);
+    expect(find.text('1 RISULTATO'), findsOneWidget);
+    expect(find.text('Esame'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.close).first);
+    await settle(tester);
+    await tester.enterText(field, 'stato:aperto ');
+    await settle(tester);
+    expect(find.text('Nessuna nota trovata'), findsOneWidget);
+  });
+
+  testWidgets('schermata task: raggruppa per tag o per fonte', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    final repo = WorkspaceRepository(root);
+    await tester.runAsync(() async {
+      await repo.createWorkspace('Studio');
+      final dir = Directory('${root.path}/Studio');
+      File('${dir.path}/esame.md').writeAsStringSync(
+        '---\ntitle: "Esame"\ntags: ["universita"]\n'
+        'sources: ["Anna"]\ntype: "task"\ndone: false\n---\n',
+      );
+    });
+    await tester.pumpWidget(LeviathanApp(state: AppState(_FakeStorage(root))));
+    await settle(tester);
+
+    await tester.tap(find.byKey(const Key('tasks-button')));
+    await settle(tester);
+    expect(find.text('1 task da fare'), findsOneWidget);
+    expect(find.text('universita'), findsOneWidget);
+    expect(find.text('Esame'), findsOneWidget);
+
+    await tester.tap(find.text('Per fonte'));
+    await settle(tester);
+    expect(find.text('Anna'), findsOneWidget);
+    expect(find.text('universita'), findsNothing);
+  });
+
   testWidgets('ricerca con testo, filtro tag e filtro fonte', (tester) async {
     tester.view.physicalSize = const Size(1080, 2424);
     tester.view.devicePixelRatio = 2.625;

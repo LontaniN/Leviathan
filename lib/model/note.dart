@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-/// Una nota: titolo, corpo, tag e fonti.
+/// Una nota: titolo, corpo, tag e fonti. Può essere un task da spuntare.
 ///
 /// Su disco è un file Markdown con un'intestazione (frontmatter) in cima:
 ///
@@ -15,6 +15,9 @@ import 'dart:convert';
 /// Corpo della nota…
 /// ```
 ///
+/// Un task ha in più `type: "task"`, `done` e, se fatto, `done_at`; le note
+/// normali non scrivono questi campi.
+///
 /// I valori sono scritti come JSON, che è anche YAML valido: il file resta
 /// leggibile da Obsidian e da qualsiasi editor.
 class Note {
@@ -26,6 +29,9 @@ class Note {
     required this.sources,
     required this.created,
     required this.updated,
+    this.isTask = false,
+    this.done = false,
+    this.doneAt,
   });
 
   /// Nome del file senza estensione; non cambia se si modifica il titolo.
@@ -40,21 +46,45 @@ class Note {
   final DateTime created;
   final DateTime updated;
 
+  /// Una nota da fare: si spunta quando è eseguita.
+  final bool isTask;
+
+  /// Solo per i task: già eseguito.
+  final bool done;
+
+  /// Quando il task è stato spuntato (se lo si sa).
+  final DateTime? doneAt;
+
+  /// Un task ancora da fare.
+  bool get isOpenTask => isTask && !done;
+
+  /// Togliendo [isTask] o [done] si perdono anche spunta e data di
+  /// esecuzione, così non restano valori senza senso.
   Note copyWith({
     String? title,
     String? body,
     List<String>? tags,
     List<String>? sources,
     DateTime? updated,
-  }) => Note(
-    id: id,
-    title: title ?? this.title,
-    body: body ?? this.body,
-    tags: tags ?? this.tags,
-    sources: sources ?? this.sources,
-    created: created,
-    updated: updated ?? this.updated,
-  );
+    bool? isTask,
+    bool? done,
+    DateTime? doneAt,
+  }) {
+    final task = isTask ?? this.isTask;
+    final isDone = task && (done ?? this.done);
+    return Note(
+      id: id,
+      title: title ?? this.title,
+      body: body ?? this.body,
+      tags: tags ?? this.tags,
+      sources: sources ?? this.sources,
+      created: created,
+      updated: updated ?? this.updated,
+      isTask: task,
+      done: isDone,
+      doneAt: isDone ? (doneAt ?? this.doneAt) : null,
+    );
+  }
 
   /// Il titolo, oppure l'inizio del corpo se il titolo è vuoto.
   String get displayTitle {
@@ -71,7 +101,16 @@ class Note {
       ..writeln('tags: ${jsonEncode(tags)}')
       ..writeln('sources: ${jsonEncode(sources)}')
       ..writeln('created: ${jsonEncode(created.toIso8601String())}')
-      ..writeln('updated: ${jsonEncode(updated.toIso8601String())}')
+      ..writeln('updated: ${jsonEncode(updated.toIso8601String())}');
+    if (isTask) {
+      buffer
+        ..writeln('type: "task"')
+        ..writeln('done: $done');
+      if (doneAt != null) {
+        buffer.writeln('done_at: ${jsonEncode(doneAt!.toIso8601String())}');
+      }
+    }
+    buffer
       ..writeln('---')
       ..write(body);
     return buffer.toString();
@@ -100,6 +139,8 @@ class Note {
     // `source` (singolare) è il formato delle prime versioni.
     final sources = _parseList(fields['sources'] ?? fields['source']);
     final created = _parseDate(fields['created']) ?? fallbackDate;
+    final isTask = '${fields['type'] ?? ''}'.trim().toLowerCase() == 'task';
+    final done = isTask && (fields['done'] == true || fields['done'] == 'true');
     return Note(
       id: id,
       title: '${fields['title'] ?? ''}',
@@ -108,6 +149,9 @@ class Note {
       sources: sources,
       created: created,
       updated: _parseDate(fields['updated']) ?? created,
+      isTask: isTask,
+      done: done,
+      doneAt: done ? _parseDate(fields['done_at']) : null,
     );
   }
 

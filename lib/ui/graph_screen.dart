@@ -439,11 +439,16 @@ class _GraphPainter extends CustomPainter {
         ..color = palette.accent.withValues(alpha: 0.85),
     );
 
-    // Nodi.
+    // Nodi. I task eseguiti restano al loro posto ma sbiaditi.
     final fill = Paint();
     for (var i = 0; i < graph.nodes.length; i++) {
       final node = graph.nodes[i];
-      fill.color = _isIn(i) ? node.color : node.color.withValues(alpha: 0.12);
+      final done = node.note.isTask && node.note.done;
+      fill.color = !_isIn(i)
+          ? node.color.withValues(alpha: 0.12)
+          : done
+          ? node.color.withValues(alpha: 0.35)
+          : node.color;
       canvas.drawCircle(Offset(xs[i], ys[i]), nodeRadius(node.degree), fill);
     }
     if (selected >= 0) {

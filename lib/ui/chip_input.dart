@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../model/search.dart';
 import '../model/tags.dart';
 import 'theme.dart';
 
@@ -49,6 +50,30 @@ class SourceChip extends StatelessWidget {
       borderColor: context.palette.muted.withValues(alpha: 0.4),
       onDeleted: onDeleted,
       dense: dense,
+    );
+  }
+}
+
+/// Casella + stato: il filtro `stato:` della ricerca.
+class StatusChip extends StatelessWidget {
+  const StatusChip(this.filter, {super.key, this.onDeleted});
+
+  final TaskFilter filter;
+  final VoidCallback? onDeleted;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.palette.accent;
+    return _BaseChip(
+      label: filter.label,
+      avatar: Icon(
+        Icons.check_box_outlined,
+        size: LeviathanIconSize.sm,
+        color: color,
+      ),
+      borderColor: color.withValues(alpha: 0.5),
+      onDeleted: onDeleted,
+      dense: false,
     );
   }
 }

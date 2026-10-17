@@ -10,11 +10,13 @@ typedef NoteDraft = ({
   String body,
   List<String> tags,
   List<String> sources,
+  bool isTask,
 });
 
 /// Editor di una nota: titolo e corpo in grande, sotto tag e fonti.
 ///
-/// Senza [initial] scrive una nota nuova e dopo il salvataggio si svuota.
+/// In cima si sceglie se è una nota o un task da spuntare. Senza [initial]
+/// scrive una nota nuova e dopo il salvataggio si svuota.
 class NoteEditor extends StatefulWidget {
   const NoteEditor({
     super.key,
@@ -42,6 +44,7 @@ class _NoteEditorState extends State<NoteEditor> {
   final _pendingSource = TextEditingController();
   late List<String> _tags = [...?widget.initial?.tags];
   late List<String> _sources = [...?widget.initial?.sources];
+  late bool _isTask = widget.initial?.isTask ?? false;
 
   @override
   void dispose() {
@@ -72,7 +75,13 @@ class _NoteEditorState extends State<NoteEditor> {
       );
       return;
     }
-    widget.onSave((title: title, body: body, tags: tags, sources: sources));
+    widget.onSave((
+      title: title,
+      body: body,
+      tags: tags,
+      sources: sources,
+      isTask: _isTask,
+    ));
     if (widget.initial == null) {
       _title.clear();
       _body.clear();
@@ -81,6 +90,7 @@ class _NoteEditorState extends State<NoteEditor> {
       setState(() {
         _tags = [];
         _sources = [];
+        _isTask = false;
       });
       FocusScope.of(context).unfocus();
     }
@@ -90,16 +100,55 @@ class _NoteEditorState extends State<NoteEditor> {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(8, 8, 12, 24),
+      padding: const EdgeInsets.fromLTRB(
+        LeviathanSpacing.sm,
+        LeviathanSpacing.sm,
+        LeviathanSpacing.md,
+        LeviathanSpacing.xl,
+      ),
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       children: [
+        Align(
+          alignment: Alignment.centerLeft,
+          child: SegmentedButton<bool>(
+            key: const Key('kind-toggle'),
+            segments: const [
+              ButtonSegment(
+                value: false,
+                icon: Icon(Icons.notes, size: LeviathanIconSize.sm),
+                label: Text('Nota'),
+              ),
+              ButtonSegment(
+                value: true,
+                icon: Icon(
+                  Icons.check_box_outlined,
+                  size: LeviathanIconSize.sm,
+                ),
+                label: Text('Task'),
+              ),
+            ],
+            selected: {_isTask},
+            showSelectedIcon: false,
+            style: const ButtonStyle(
+              visualDensity: VisualDensity.compact,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            onSelectionChanged: (s) => setState(() => _isTask = s.first),
+          ),
+        ),
+        const SizedBox(height: LeviathanSpacing.sm),
         DecoratedBox(
           decoration: BoxDecoration(
             color: context.palette.surface,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(LeviathanRadii.md),
           ),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 6, 14, 10),
+            padding: const EdgeInsets.fromLTRB(
+              LeviathanSpacing.md,
+              LeviathanSpacing.xs,
+              LeviathanSpacing.md,
+              LeviathanSpacing.sm,
+            ),
             child: Column(
               children: [
                 TextField(
@@ -107,8 +156,8 @@ class _NoteEditorState extends State<NoteEditor> {
                   controller: _title,
                   textCapitalization: TextCapitalization.sentences,
                   style: text.titleLarge,
-                  decoration: const InputDecoration(
-                    hintText: 'Titolo',
+                  decoration: InputDecoration(
+                    hintText: _isTask ? 'Cosa c\'è da fare?' : 'Titolo',
                     filled: false,
                     border: InputBorder.none,
                   ),
@@ -131,7 +180,7 @@ class _NoteEditorState extends State<NoteEditor> {
             ),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: LeviathanSpacing.md),
         ChipInput(
           kind: ChipKind.tags,
           fieldKey: const Key('tag-field'),
@@ -140,7 +189,7 @@ class _NoteEditorState extends State<NoteEditor> {
           counts: widget.tagCounts,
           pending: _pendingTag,
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: LeviathanSpacing.md),
         ChipInput(
           kind: ChipKind.sources,
           fieldKey: const Key('source-field'),
@@ -149,11 +198,13 @@ class _NoteEditorState extends State<NoteEditor> {
           counts: widget.sourceCounts,
           pending: _pendingSource,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: LeviathanSpacing.lg),
         FilledButton.icon(
           onPressed: _save,
           icon: const Icon(Icons.check),
-          label: Text(widget.saveLabel),
+          label: Text(
+            widget.initial == null && _isTask ? 'Salva task' : widget.saveLabel,
+          ),
         ),
       ],
     );

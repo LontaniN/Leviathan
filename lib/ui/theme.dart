@@ -190,6 +190,18 @@ class LeviathanRadii {
   static const md = 12.0;
 }
 
+/// Dimensioni delle icone.
+class LeviathanIconSize {
+  /// Icone dentro i chip e nelle righe dense.
+  static const sm = 16.0;
+
+  /// Icone nelle righe di elenco e nelle barre (frecce, ricerca).
+  static const md = 20.0;
+
+  /// Icone da toccare spesso, come le caselle dei task.
+  static const lg = 28.0;
+}
+
 /// Stili di testo ricorrenti, ricavati dalle dimensioni già in uso. Non hanno
 /// colore: quello viene dalla palette (es. `copyWith(color: palette.muted)`).
 class LeviathanText {
