@@ -44,7 +44,69 @@ class WorkspaceRepository {
     return name;
   }
 
+  /// Rinomina il workspace [oldName] e ne restituisce il nuovo nome
+  /// normalizzato. Sposta anche cestino e disposizione del grafo.
+  ///
+  /// Lancia [ArgumentError] se il nome non è valido o è già in uso.
+  Future<String> renameWorkspace(String oldName, String rawName) async {
+    final name = rawName.trim();
+    if (name == oldName) return name;
+    final others = [
+      for (final w in await listWorkspaces())
+        if (w != oldName) w,
+    ];
+    final error = validateName(name, others);
+    if (error != null) throw ArgumentError(error);
+
+    await _move(workspaceDir(oldName), workspaceDir(name));
+    await _move(trashDir(oldName), trashDir(name));
+    final layout = graphLayoutFile(oldName);
+    if (layout.existsSync()) {
+      await layout.rename(graphLayoutFile(name).path);
+    }
+    if (await readLastWorkspace() == oldName) await writeLastWorkspace(name);
+    return name;
+  }
+
+  /// Elimina il workspace [name] senza cancellare nulla: note, cestino e
+  /// disposizione del grafo finiscono in `.leviathan/eliminati/<nome> <data>`.
+  /// Restituisce la cartella in cui sono stati spostati.
+  Future<Directory> deleteWorkspace(String name) async {
+    final stamp = DateTime.now().toIso8601String().replaceAll(':', '-');
+    final target = Directory(
+      p.join(root.path, _settingsDirName, 'eliminati', '$name $stamp'),
+    );
+    await target.create(recursive: true);
+    await _move(workspaceDir(name), Directory(p.join(target.path, 'note')));
+    await _move(trashDir(name), Directory(p.join(target.path, 'cestino')));
+    final layout = graphLayoutFile(name);
+    if (layout.existsSync()) {
+      await layout.rename(p.join(target.path, 'grafo.json'));
+    }
+    return target;
+  }
+
+  /// Sposta una cartella, se esiste. Se cambia solo maiuscole/minuscole passa
+  /// da un nome temporaneo: sui file system che non le distinguono il rename
+  /// diretto fallirebbe.
+  Future<void> _move(Directory from, Directory to) async {
+    if (!from.existsSync()) return;
+    to.parent.createSync(recursive: true);
+    if (from.path.toLowerCase() == to.path.toLowerCase()) {
+      from = await from.rename('${to.path}.rinomina');
+    }
+    await from.rename(to.path);
+  }
+
   Directory workspaceDir(String name) => Directory(p.join(root.path, name));
+
+  /// Il cestino del workspace [name].
+  Directory trashDir(String name) =>
+      Directory(p.join(root.path, _settingsDirName, 'trash', name));
+
+  /// Il file con le posizioni dei nodi del grafo del workspace [name].
+  File graphLayoutFile(String name) =>
+      File(p.join(root.path, _settingsDirName, 'graph', '$name.json'));
 
   /// Il workspace usato per ultimo, se registrato.
   ///

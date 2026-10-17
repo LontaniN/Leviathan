@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import '../model/markdown.dart';
@@ -542,11 +544,37 @@ Future<void> showWorkspaceSwitcher(BuildContext context, AppState state) {
                         Navigator.pop(sheetContext);
                         state.switchTo(name);
                       },
+                      // Tenendo premuto si rinomina o elimina anche un
+                      // workspace non aperto.
+                      onLongPress: () {
+                        Navigator.pop(sheetContext);
+                        _showWorkspaceActions(context, state, name);
+                      },
                     ),
                 ],
               ),
             ),
             const Divider(height: 1),
+            if (state.currentWorkspace case final current?) ...[
+              ListTile(
+                key: const Key('rename-workspace'),
+                leading: const Icon(Icons.edit_outlined),
+                title: const Text('Rinomina workspace'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _showRenameWorkspaceDialog(context, state, current);
+                },
+              ),
+              ListTile(
+                key: const Key('delete-workspace'),
+                leading: const Icon(Icons.delete_outline),
+                title: const Text('Elimina workspace'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _confirmDeleteWorkspace(context, state, current);
+                },
+              ),
+            ],
             ListTile(
               leading: const Icon(Icons.add),
               title: const Text('Nuovo workspace'),
@@ -562,17 +590,135 @@ Future<void> showWorkspaceSwitcher(BuildContext context, AppState state) {
   );
 }
 
+/// Le azioni su un workspace qualsiasi, aperte tenendo premuta la sua riga.
+Future<void> _showWorkspaceActions(
+  BuildContext context,
+  AppState state,
+  String name,
+) {
+  return showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    backgroundColor: context.palette.surface,
+    builder: (sheetContext) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              LeviathanSpacing.xl,
+              0,
+              LeviathanSpacing.xl,
+              LeviathanSpacing.sm,
+            ),
+            child: Text(name, style: TextStyle(color: context.palette.muted)),
+          ),
+          ListTile(
+            leading: const Icon(Icons.edit_outlined),
+            title: const Text('Rinomina'),
+            onTap: () {
+              Navigator.pop(sheetContext);
+              _showRenameWorkspaceDialog(context, state, name);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.delete_outline),
+            title: const Text('Elimina'),
+            onTap: () {
+              Navigator.pop(sheetContext);
+              _confirmDeleteWorkspace(context, state, name);
+            },
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+Future<void> _confirmDeleteWorkspace(
+  BuildContext context,
+  AppState state,
+  String name,
+) async {
+  final last = state.workspaces.length == 1;
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: Text('Eliminare «$name»?'),
+      content: Text(
+        'Il workspace, con le sue note e il suo cestino, viene spostato in '
+        '.leviathan/eliminati, non cancellato.'
+        '${last ? ' È l\'unico workspace: dovrai crearne uno nuovo.' : ''}',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext, false),
+          child: const Text('Annulla'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(dialogContext, true),
+          child: const Text('Elimina'),
+        ),
+      ],
+    ),
+  );
+  if (ok != true || !context.mounted) return;
+  // Se si elimina il workspace aperto la schermata viene ricreata: il
+  // messenger va preso prima.
+  final messenger = ScaffoldMessenger.of(context);
+  try {
+    await state.deleteWorkspace(name);
+    messenger.showSnackBar(
+      SnackBar(content: Text('«$name» spostato in .leviathan/eliminati')),
+    );
+  } on FileSystemException catch (e) {
+    messenger.showSnackBar(
+      SnackBar(content: Text('Impossibile eliminare: ${e.message}')),
+    );
+  }
+}
+
 Future<void> _showNewWorkspaceDialog(BuildContext context, AppState state) {
   return showDialog<void>(
     context: context,
     builder: (dialogContext) => AlertDialog(
       title: const Text('Nuovo workspace'),
       content: SizedBox(
-        width: 360,
+        width: LeviathanSizes.dialogWidth,
         child: WorkspaceNameForm(
           validate: state.validateNewName,
           onSubmit: (name) async {
             await state.createWorkspace(name);
+            if (dialogContext.mounted) Navigator.pop(dialogContext);
+          },
+        ),
+      ),
+    ),
+  );
+}
+
+Future<void> _showRenameWorkspaceDialog(
+  BuildContext context,
+  AppState state,
+  String oldName,
+) {
+  return showDialog<void>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Rinomina workspace'),
+      content: SizedBox(
+        width: LeviathanSizes.dialogWidth,
+        child: WorkspaceNameForm(
+          initialName: oldName,
+          buttonLabel: 'Rinomina',
+          validate: (name) => state.validateRename(oldName, name),
+          onSubmit: (name) async {
+            try {
+              await state.renameWorkspace(oldName, name);
+            } on FileSystemException catch (e) {
+              throw ArgumentError('Impossibile rinominare: ${e.message}');
+            }
             if (dialogContext.mounted) Navigator.pop(dialogContext);
           },
         ),

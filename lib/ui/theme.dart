@@ -185,6 +185,12 @@ class LeviathanSpacing {
   static const xxl = 32.0;
 }
 
+/// Misure di contenitori.
+class LeviathanSizes {
+  /// Larghezza dei dialoghi con un campo di testo.
+  static const dialogWidth = 360.0;
+}
+
 class LeviathanRadii {
   static const sm = 2.0;
   static const md = 12.0;

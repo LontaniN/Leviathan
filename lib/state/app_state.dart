@@ -1,7 +1,4 @@
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
-import 'package:path/path.dart' as p;
 
 import '../data/graph_layout_store.dart';
 import '../data/note_repository.dart';
@@ -65,6 +62,31 @@ class AppState extends ChangeNotifier {
     await switchTo(created);
   }
 
+  /// Rinomina il workspace [oldName]; se è quello aperto, resta aperto col
+  /// nuovo nome. Lancia [ArgumentError] se il nome non va.
+  Future<void> renameWorkspace(String oldName, String newName) async {
+    final renamed = await repository.renameWorkspace(oldName, newName);
+    workspaces = await repository.listWorkspaces();
+    if (currentWorkspace == oldName) currentWorkspace = renamed;
+    notifyListeners();
+  }
+
+  /// Elimina il workspace [name] (spostandolo fra gli eliminati). Se era
+  /// quello aperto passa al primo rimasto; se non ne resta nessuno torna
+  /// all'onboarding.
+  Future<void> deleteWorkspace(String name) async {
+    await repository.deleteWorkspace(name);
+    workspaces = await repository.listWorkspaces();
+    if (workspaces.isEmpty) {
+      currentWorkspace = null;
+      _set(AppStatus.onboarding);
+    } else if (currentWorkspace == name) {
+      await switchTo(workspaces.first);
+    } else {
+      notifyListeners();
+    }
+  }
+
   Future<void> switchTo(String name) async {
     currentWorkspace = name;
     await repository.writeLastWorkspace(name);
@@ -74,18 +96,23 @@ class AppState extends ChangeNotifier {
   String? validateNewName(String name) =>
       WorkspaceRepository.validateName(name, workspaces);
 
+  /// Come [validateNewName], ma il workspace [oldName] può tenere il suo nome
+  /// (o cambiarne solo maiuscole e minuscole).
+  String? validateRename(String oldName, String name) =>
+      WorkspaceRepository.validateName(name, [
+        for (final w in workspaces)
+          if (w != oldName) w,
+      ]);
+
   /// L'archivio delle note del workspace [name].
   NoteRepository notesOf(String name) => NoteRepository(
     repository.workspaceDir(name),
-    trashDir: Directory(
-      p.join(repository.root.path, '.leviathan', 'trash', name),
-    ),
+    trashDir: repository.trashDir(name),
   );
 
   /// Dove si salvano le posizioni dei nodi del grafo del workspace [name].
-  GraphLayoutStore graphLayoutOf(String name) => GraphLayoutStore(
-    File(p.join(repository.root.path, '.leviathan', 'graph', '$name.json')),
-  );
+  GraphLayoutStore graphLayoutOf(String name) =>
+      GraphLayoutStore(repository.graphLayoutFile(name));
 
   void _set(AppStatus next) {
     status = next;

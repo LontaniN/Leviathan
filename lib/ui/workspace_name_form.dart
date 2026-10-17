@@ -1,27 +1,35 @@
 import 'package:flutter/material.dart';
 
-/// Campo + pulsante per dare un nome a un nuovo workspace.
+import 'theme.dart';
+
+/// Campo + pulsante per dare un nome a un workspace, nuovo o da rinominare.
 ///
 /// [validate] restituisce un messaggio d'errore o null; [onSubmit] riceve il
-/// nome già controllato.
+/// nome già controllato. [initialName] precompila il campo, tutto selezionato.
 class WorkspaceNameForm extends StatefulWidget {
   const WorkspaceNameForm({
     super.key,
     required this.validate,
     required this.onSubmit,
     this.buttonLabel = 'Crea',
+    this.initialName = '',
   });
 
   final String? Function(String name) validate;
   final Future<void> Function(String name) onSubmit;
   final String buttonLabel;
+  final String initialName;
 
   @override
   State<WorkspaceNameForm> createState() => _WorkspaceNameFormState();
 }
 
 class _WorkspaceNameFormState extends State<WorkspaceNameForm> {
-  final _controller = TextEditingController();
+  late final _controller = TextEditingController(text: widget.initialName)
+    ..selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: widget.initialName.length,
+    );
   String? _error;
   bool _busy = false;
 
@@ -66,7 +74,7 @@ class _WorkspaceNameFormState extends State<WorkspaceNameForm> {
           },
           onSubmitted: (_) => _submit(),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: LeviathanSpacing.lg),
         FilledButton(
           onPressed: _busy ? null : _submit,
           child: Text(widget.buttonLabel),
