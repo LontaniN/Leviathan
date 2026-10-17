@@ -8,6 +8,7 @@ import '../model/tags.dart';
 import '../state/app_state.dart';
 import '../state/notes_controller.dart';
 import '../state/settings.dart';
+import 'calendar_screen.dart';
 import 'graph_screen.dart';
 import 'note_editor.dart';
 import 'note_screen.dart';
@@ -78,6 +79,12 @@ class _HomeScreenState extends State<HomeScreen> {
     ).push(MaterialPageRoute<void>(builder: (_) => TasksScreen(notes: _notes)));
   }
 
+  void _openCalendar() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => CalendarScreen(notes: _notes)),
+    );
+  }
+
   void _openSearch() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => SearchScreen(notes: _notes)),
@@ -135,6 +142,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       tooltip: 'Task',
                       icon: const Icon(Icons.checklist),
                       onPressed: _openTasks,
+                    ),
+                    IconButton(
+                      key: const Key('calendar-button'),
+                      tooltip: 'Calendario',
+                      icon: const Icon(Icons.calendar_month_outlined),
+                      onPressed: _openCalendar,
                     ),
                     IconButton(
                       key: const Key('search-button'),

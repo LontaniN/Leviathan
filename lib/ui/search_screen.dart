@@ -558,9 +558,13 @@ class NoteResultTile extends StatelessWidget {
     required this.terms,
     required this.onTap,
     this.onToggleDone,
+    this.dateLabel,
   });
 
   final SearchHit hit;
+
+  /// Cosa scrivere a destra del titolo; di default la data di creazione.
+  final String? dateLabel;
   final List<String> terms;
   final ValueChanged<Note> onTap;
   final void Function(Note note, bool done)? onToggleDone;
@@ -600,7 +604,7 @@ class NoteResultTile extends StatelessWidget {
                 ),
                 const SizedBox(width: LeviathanSpacing.sm),
                 Text(
-                  formatDate(note.created),
+                  dateLabel ?? formatDate(note.created),
                   style: LeviathanText.meta.copyWith(
                     color: context.palette.muted,
                   ),

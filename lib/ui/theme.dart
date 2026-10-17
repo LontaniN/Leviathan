@@ -189,10 +189,23 @@ class LeviathanSpacing {
 class LeviathanSizes {
   /// Larghezza dei dialoghi con un campo di testo.
   static const dialogWidth = 360.0;
+
+  /// Spessore dei bordi sottili (es. il giorno di oggi nel calendario).
+  static const outline = 1.5;
+
+  /// Larghezza/altezza di una casella-giorno del calendario: più alta che
+  /// larga, per farci stare qualche tag.
+  static const calendarDayAspect = 0.6;
+
+  /// Larghezza/altezza di una casella-mese del calendario.
+  static const calendarMonthAspect = 0.85;
 }
 
 class LeviathanRadii {
   static const sm = 2.0;
+
+  /// Caselle piccole, come i giorni del calendario.
+  static const cell = 6.0;
   static const md = 12.0;
 }
 

@@ -13,10 +13,19 @@ import 'theme.dart';
 /// Lettura di una nota a schermo intero, con modifica ed eliminazione.
 /// Un task si spunta da qui.
 class NoteScreen extends StatelessWidget {
-  const NoteScreen({super.key, required this.noteId, required this.notes});
+  const NoteScreen({
+    super.key,
+    required this.noteId,
+    required this.notes,
+    this.preview,
+  });
 
   final String noteId;
   final NotesController notes;
+
+  /// Se c'è, si mostra questa nota in sola lettura invece di cercare
+  /// [noteId] nel workspace (es. le note di prova del calendario).
+  final Note? preview;
 
   /// Toccando un tag o una fonte si cercano le note che li condividono.
   void _search(
@@ -66,27 +75,30 @@ class NoteScreen extends StatelessWidget {
     return ListenableBuilder(
       listenable: notes,
       builder: (context, _) {
-        final note = notes.byId(noteId);
+        final note = preview ?? notes.byId(noteId);
         if (note == null) return const Scaffold();
+        final readOnly = preview != null;
         final text = Theme.of(context).textTheme;
         return Scaffold(
           appBar: AppBar(
             backgroundColor: context.palette.background,
             actions: [
-              IconButton(
-                tooltip: 'Modifica',
-                icon: const Icon(Icons.edit_outlined),
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => _EditNotePage(note: note, notes: notes),
+              if (!readOnly) ...[
+                IconButton(
+                  tooltip: 'Modifica',
+                  icon: const Icon(Icons.edit_outlined),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => _EditNotePage(note: note, notes: notes),
+                    ),
                   ),
                 ),
-              ),
-              IconButton(
-                tooltip: 'Elimina',
-                icon: const Icon(Icons.delete_outline),
-                onPressed: () => _confirmDelete(context, note),
-              ),
+                IconButton(
+                  tooltip: 'Elimina',
+                  icon: const Icon(Icons.delete_outline),
+                  onPressed: () => _confirmDelete(context, note),
+                ),
+              ],
             ],
           ),
           body: SelectionArea(
@@ -114,7 +126,9 @@ class NoteScreen extends StatelessWidget {
                   const SizedBox(height: LeviathanSpacing.md),
                   _TaskStatus(
                     note: note,
-                    onChanged: (done) => notes.setDone(note, done),
+                    onChanged: readOnly
+                        ? null
+                        : (done) => notes.setDone(note, done),
                   ),
                 ],
                 if (note.tags.isNotEmpty) ...[
@@ -125,7 +139,9 @@ class NoteScreen extends StatelessWidget {
                     children: [
                       for (final tag in note.tags)
                         GestureDetector(
-                          onTap: () => _search(context, tags: [tag]),
+                          onTap: readOnly
+                              ? null
+                              : () => _search(context, tags: [tag]),
                           child: TagChip(tag),
                         ),
                     ],
@@ -139,7 +155,9 @@ class NoteScreen extends StatelessWidget {
                     children: [
                       for (final source in note.sources)
                         GestureDetector(
-                          onTap: () => _search(context, sources: [source]),
+                          onTap: readOnly
+                              ? null
+                              : () => _search(context, sources: [source]),
                           child: SourceChip(source),
                         ),
                     ],
@@ -148,7 +166,9 @@ class NoteScreen extends StatelessWidget {
                 const Divider(height: LeviathanSpacing.xxl),
                 NoteBody(
                   note.body,
-                  onChanged: (body) => notes.update(note.copyWith(body: body)),
+                  onChanged: readOnly
+                      ? null
+                      : (body) => notes.update(note.copyWith(body: body)),
                 ),
               ],
             ),
@@ -164,7 +184,9 @@ class _TaskStatus extends StatelessWidget {
   const _TaskStatus({required this.note, required this.onChanged});
 
   final Note note;
-  final ValueChanged<bool> onChanged;
+
+  /// Null in sola lettura: la casella non si tocca.
+  final ValueChanged<bool>? onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -178,7 +200,7 @@ class _TaskStatus extends StatelessWidget {
       alignment: Alignment.centerLeft,
       child: InkWell(
         key: const Key('task-status'),
-        onTap: () => onChanged(!note.done),
+        onTap: onChanged == null ? null : () => onChanged!(!note.done),
         borderRadius: BorderRadius.circular(LeviathanRadii.md),
         child: Padding(
           padding: const EdgeInsets.symmetric(
