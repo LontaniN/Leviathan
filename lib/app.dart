@@ -54,7 +54,11 @@ class _LeviathanAppState extends State<LeviathanApp>
               ),
             AppStatus.needsPermission => PermissionScreen(state: state),
             AppStatus.onboarding => OnboardingScreen(state: state),
-            AppStatus.ready => HomeScreen(state: state),
+            // La chiave ricrea la schermata (e le sue note) a ogni cambio.
+            AppStatus.ready => HomeScreen(
+                key: ValueKey(state.currentWorkspace),
+                state: state,
+              ),
             AppStatus.error => Scaffold(
                 body: Center(
                   child: Padding(

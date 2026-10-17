@@ -106,4 +106,58 @@ void main() {
 
     expect(find.text('Crea workspace'), findsOneWidget);
   });
+
+  testWidgets('scrive una nota con tag suggeriti e la riapre',
+      (tester) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    final repo = WorkspaceRepository(root);
+    await tester.runAsync(() async {
+      await repo.createWorkspace('Lavoro');
+      final dir = Directory('${root.path}/Lavoro');
+      File('${dir.path}/vecchia.md').writeAsStringSync(
+          '---\ntitle: "Vecchia"\ntags: ["fotografia"]\n'
+          'created: "2026-01-01T00:00:00.000"\n---\nTesto vecchio');
+    });
+
+    await tester.pumpWidget(LeviathanApp(state: AppState(_FakeStorage(root))));
+    await settle(tester);
+    expect(find.text('Vecchia'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const Key('title-field')), 'Luce');
+    await tester.enterText(
+        find.byKey(const Key('body-field')), 'La luce del mattino');
+    await tester.enterText(find.byKey(const Key('tag-field')), 'fotogr');
+    await tester.pump();
+    await tester.tap(find.widgetWithText(ActionChip, 'fotografia  1'));
+    await tester.enterText(find.byKey(const Key('tag-field')), 'Luce Naturale');
+    await tester.enterText(
+        find.byKey(const Key('source-field')), 'Manuale di fotografia');
+    await tester.ensureVisible(find.text('Salva nota'));
+    await tester.tap(find.text('Salva nota'));
+    await settle(tester);
+
+    // La nota nuova è in cima alla lista e su disco.
+    final files = Directory('${root.path}/Lavoro')
+        .listSync()
+        .map((f) => f.path)
+        .where((p) => p.contains('luce'));
+    expect(files, hasLength(1));
+    final saved = File(files.single).readAsStringSync();
+    expect(saved, contains('tags: ["fotografia","luce-naturale"]'));
+    expect(saved, contains('source: "Manuale di fotografia"'));
+
+    // Lista espansa: anteprima e tag; poi si apre la nota.
+    await tester.tap(find.byKey(const Key('list-toggle')));
+    await settle(tester);
+    expect(find.text('Tutte le note (2)'), findsOneWidget);
+    expect(find.text('La luce del mattino'), findsOneWidget);
+
+    await tester.tap(find.text('Luce'));
+    await settle(tester);
+    expect(find.text('Manuale di fotografia'), findsOneWidget);
+    expect(find.text('luce-naturale'), findsOneWidget);
+  });
 }

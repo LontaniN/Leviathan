@@ -1,5 +1,9 @@
-import 'package:flutter/foundation.dart';
+import 'dart:io';
 
+import 'package:flutter/foundation.dart';
+import 'package:path/path.dart' as p;
+
+import '../data/note_repository.dart';
 import '../data/storage_access.dart';
 import '../data/workspace_repository.dart';
 
@@ -68,6 +72,13 @@ class AppState extends ChangeNotifier {
 
   String? validateNewName(String name) =>
       WorkspaceRepository.validateName(name, workspaces);
+
+  /// L'archivio delle note del workspace [name].
+  NoteRepository notesOf(String name) => NoteRepository(
+        repository.workspaceDir(name),
+        trashDir: Directory(
+            p.join(repository.root.path, '.leviathan', 'trash', name)),
+      );
 
   void _set(AppStatus next) {
     status = next;
