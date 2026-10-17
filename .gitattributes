@@ -1,0 +1,2 @@
+# Gli script bash si rompono con i fine riga CRLF.
+*.sh text eol=lf
