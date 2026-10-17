@@ -40,7 +40,7 @@ class NoteEditor extends StatefulWidget {
   State<NoteEditor> createState() => _NoteEditorState();
 }
 
-class _NoteEditorState extends State<NoteEditor> {
+class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
   late final _title = TextEditingController(text: widget.initial?.title);
   late final _body = TextEditingController(text: widget.initial?.body);
   final _bodyFocus = FocusNode();
@@ -54,6 +54,7 @@ class _NoteEditorState extends State<NoteEditor> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _body.addListener(_onBodyChanged);
     _bodyFocus.addListener(() => setState(() {}));
   }
@@ -66,6 +67,33 @@ class _NoteEditorState extends State<NoteEditor> {
     if (next != _body.value) _body.value = next;
   }
 
+  /// Si sta scrivendo il corpo con la tastiera aperta. Chiudendo la
+  /// tastiera col tasto indietro il campo resta attivo, ma tag, fonti e
+  /// pulsante devono tornare visibili.
+  ///
+  /// L'altezza della tastiera si legge dalla finestra: lo Scaffold la toglie
+  /// dal MediaQuery del suo contenuto.
+  bool get _writingBody =>
+      _bodyFocus.hasFocus && View.of(context).viewInsets.bottom > 0;
+
+  /// Se c'era la tastiera all'ultimo controllo.
+  bool _keyboardWasOpen = false;
+
+  /// La tastiera si è aperta o chiusa. Le misure della finestra si leggono
+  /// al frame successivo, quando sono definitive.
+  @override
+  void didChangeMetrics() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final open = View.of(context).viewInsets.bottom > 0;      // Chiusa in qualunque modo (freccia, tasto indietro): il corpo smette
+      // di essere attivo, così tornano tag, fonti e pulsante e sparisce la
+      // barra di formattazione.
+      if (_keyboardWasOpen && !open) _bodyFocus.unfocus();
+      _keyboardWasOpen = open;
+      setState(() {});
+    });
+  }
+
   void _format(TextEditingValue Function(TextEditingValue) change) {
     _body.value = change(_body.value);
   }
@@ -75,6 +103,7 @@ class _NoteEditorState extends State<NoteEditor> {
     _title.dispose();
     _body.dispose();
     _bodyFocus.dispose();
+    WidgetsBinding.instance.removeObserver(this);
     _pendingTag.dispose();
     _pendingSource.dispose();
     super.dispose();
@@ -133,15 +162,76 @@ class _NoteEditorState extends State<NoteEditor> {
     );
   }
 
+  /// Il modulo è fermo e riempie tutta l'altezza: il riquadro del corpo si
+  /// allunga (o si accorcia con la tastiera) e il pulsante di salvataggio
+  /// sta in fondo. Scorre solo il testo dentro il corpo.
   Widget _form(TextTheme text) {
-    return ListView(
+    return Padding(
       padding: const EdgeInsets.fromLTRB(
         LeviathanSpacing.sm,
         LeviathanSpacing.sm,
         LeviathanSpacing.md,
-        LeviathanSpacing.xl,
+        LeviathanSpacing.lg,
       ),
-      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      child: _fields(text),
+    );
+  }
+
+  Widget _textCard(TextTheme text) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: context.palette.surface,
+        borderRadius: BorderRadius.circular(LeviathanRadii.md),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          LeviathanSpacing.md,
+          LeviathanSpacing.xs,
+          LeviathanSpacing.md,
+          LeviathanSpacing.sm,
+        ),
+        child: Column(
+          children: [
+            TextField(
+              key: const Key('title-field'),
+              controller: _title,
+              textCapitalization: TextCapitalization.sentences,
+              style: text.titleLarge,
+              decoration: InputDecoration(
+                hintText: _isTask ? 'Cosa c\'è da fare?' : 'Titolo',
+                filled: false,
+                border: InputBorder.none,
+              ),
+            ),
+            const Divider(height: 1),
+            // Il corpo occupa tutto il riquadro, così lo si tocca ovunque.
+            Expanded(
+              child: TextField(
+                key: const Key('body-field'),
+                controller: _body,
+                focusNode: _bodyFocus,
+                expands: true,
+                minLines: null,
+                maxLines: null,
+                textAlignVertical: TextAlignVertical.top,
+                keyboardType: TextInputType.multiline,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: const InputDecoration(
+                  hintText: 'Scrivi la nota…',
+                  filled: false,
+                  border: InputBorder.none,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _fields(TextTheme text) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Align(
           alignment: Alignment.centerLeft,
@@ -172,74 +262,48 @@ class _NoteEditorState extends State<NoteEditor> {
           ),
         ),
         const SizedBox(height: LeviathanSpacing.sm),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            color: context.palette.surface,
-            borderRadius: BorderRadius.circular(LeviathanRadii.md),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              LeviathanSpacing.md,
-              LeviathanSpacing.xs,
-              LeviathanSpacing.md,
-              LeviathanSpacing.sm,
-            ),
+        Expanded(child: _textCard(text)),
+        // Mentre si scrive il corpo, tag, fonti e pulsante restano al loro
+        // posto ma scivolano sotto la tastiera: non occupano spazio, così il
+        // riquadro si allunga fino alla tastiera. Il widget è lo stesso nei
+        // due casi, quindi quello che si stava scrivendo nei campi resta.
+        ClipRect(
+          child: Align(
+            alignment: Alignment.topCenter,
+            heightFactor: _writingBody ? 0 : 1,
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                TextField(
-                  key: const Key('title-field'),
-                  controller: _title,
-                  textCapitalization: TextCapitalization.sentences,
-                  style: text.titleLarge,
-                  decoration: InputDecoration(
-                    hintText: _isTask ? 'Cosa c\'è da fare?' : 'Titolo',
-                    filled: false,
-                    border: InputBorder.none,
-                  ),
+                const SizedBox(height: LeviathanSpacing.md),
+                ChipInput(
+                  kind: ChipKind.tags,
+                  fieldKey: const Key('tag-field'),
+                  values: _tags,
+                  onChanged: (tags) => setState(() => _tags = tags),
+                  counts: widget.tagCounts,
+                  pending: _pendingTag,
                 ),
-                const Divider(height: 1),
-                TextField(
-                  key: const Key('body-field'),
-                  controller: _body,
-                  focusNode: _bodyFocus,
-                  minLines: 10,
-                  maxLines: null,
-                  keyboardType: TextInputType.multiline,
-                  textCapitalization: TextCapitalization.sentences,
-                  decoration: const InputDecoration(
-                    hintText: 'Scrivi la nota…',
-                    filled: false,
-                    border: InputBorder.none,
+                const SizedBox(height: LeviathanSpacing.md),
+                ChipInput(
+                  kind: ChipKind.sources,
+                  fieldKey: const Key('source-field'),
+                  values: _sources,
+                  onChanged: (sources) => setState(() => _sources = sources),
+                  counts: widget.sourceCounts,
+                  pending: _pendingSource,
+                ),
+                const SizedBox(height: LeviathanSpacing.lg),
+                FilledButton.icon(
+                  onPressed: _save,
+                  icon: const Icon(Icons.check),
+                  label: Text(
+                    widget.initial == null && _isTask
+                        ? 'Salva task'
+                        : widget.saveLabel,
                   ),
                 ),
               ],
             ),
-          ),
-        ),
-        const SizedBox(height: LeviathanSpacing.md),
-        ChipInput(
-          kind: ChipKind.tags,
-          fieldKey: const Key('tag-field'),
-          values: _tags,
-          onChanged: (tags) => setState(() => _tags = tags),
-          counts: widget.tagCounts,
-          pending: _pendingTag,
-        ),
-        const SizedBox(height: LeviathanSpacing.md),
-        ChipInput(
-          kind: ChipKind.sources,
-          fieldKey: const Key('source-field'),
-          values: _sources,
-          onChanged: (sources) => setState(() => _sources = sources),
-          counts: widget.sourceCounts,
-          pending: _pendingSource,
-        ),
-        const SizedBox(height: LeviathanSpacing.lg),
-        FilledButton.icon(
-          onPressed: _save,
-          icon: const Icon(Icons.check),
-          label: Text(
-            widget.initial == null && _isTask ? 'Salva task' : widget.saveLabel,
           ),
         ),
       ],
