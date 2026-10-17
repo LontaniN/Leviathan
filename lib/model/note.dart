@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-/// Una nota: titolo, corpo, tag e fonte.
+/// Una nota: titolo, corpo, tag e fonti.
 ///
 /// Su disco è un file Markdown con un'intestazione (frontmatter) in cima:
 ///
@@ -8,7 +8,7 @@ import 'dart:convert';
 /// ---
 /// title: "Titolo"
 /// tags: ["tag-uno", "tag-due"]
-/// source: "https://…"
+/// sources: ["Mario Rossi"]
 /// created: "2026-10-17T14:05:12.000"
 /// updated: "2026-10-17T14:05:12.000"
 /// ---
@@ -23,7 +23,7 @@ class Note {
     required this.title,
     required this.body,
     required this.tags,
-    required this.source,
+    required this.sources,
     required this.created,
     required this.updated,
   });
@@ -33,7 +33,10 @@ class Note {
   final String title;
   final String body;
   final List<String> tags;
-  final String source;
+
+  /// Da chi o da dove arriva l'informazione (di solito persone).
+  /// Seconda categorizzazione delle note: non colora nulla.
+  final List<String> sources;
   final DateTime created;
   final DateTime updated;
 
@@ -41,7 +44,7 @@ class Note {
     String? title,
     String? body,
     List<String>? tags,
-    String? source,
+    List<String>? sources,
     DateTime? updated,
   }) =>
       Note(
@@ -49,7 +52,7 @@ class Note {
         title: title ?? this.title,
         body: body ?? this.body,
         tags: tags ?? this.tags,
-        source: source ?? this.source,
+        sources: sources ?? this.sources,
         created: created,
         updated: updated ?? this.updated,
       );
@@ -67,7 +70,7 @@ class Note {
       ..writeln('---')
       ..writeln('title: ${jsonEncode(title)}')
       ..writeln('tags: ${jsonEncode(tags)}')
-      ..writeln('source: ${jsonEncode(source)}')
+      ..writeln('sources: ${jsonEncode(sources)}')
       ..writeln('created: ${jsonEncode(created.toIso8601String())}')
       ..writeln('updated: ${jsonEncode(updated.toIso8601String())}')
       ..writeln('---')
@@ -93,22 +96,28 @@ class Note {
         body = afterHeader == -1 ? '' : text.substring(afterHeader + 1);
       }
     }
-    final tagsField = fields['tags'];
-    final tags = switch (tagsField) {
-      List<dynamic> list => list.map((t) => '$t').toList(),
-      String s when s.isNotEmpty => s.split(',').map((t) => t.trim()).toList(),
-      _ => <String>[],
-    };
+    final tags = _parseList(fields['tags']);
+    // `source` (singolare) è il formato delle prime versioni.
+    final sources = _parseList(fields['sources'] ?? fields['source']);
     final created = _parseDate(fields['created']) ?? fallbackDate;
     return Note(
       id: id,
       title: '${fields['title'] ?? ''}',
       body: body,
-      tags: tags.where((t) => t.isNotEmpty).toList(),
-      source: '${fields['source'] ?? ''}',
+      tags: tags,
+      sources: sources,
       created: created,
       updated: _parseDate(fields['updated']) ?? created,
     );
+  }
+
+  static List<String> _parseList(Object? field) {
+    final items = switch (field) {
+      List<dynamic> list => list.map((t) => '$t'),
+      String s => s.split(','),
+      _ => const <String>[],
+    };
+    return items.map((t) => t.trim()).where((t) => t.isNotEmpty).toList();
   }
 
   static Object? _parseValue(String raw) {

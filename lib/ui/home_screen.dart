@@ -6,12 +6,12 @@ import '../state/app_state.dart';
 import '../state/notes_controller.dart';
 import 'note_editor.dart';
 import 'note_screen.dart';
-import 'tag_input.dart';
+import 'chip_input.dart';
 import 'theme.dart';
 import 'workspace_name_form.dart';
 
 /// Schermata principale di un workspace: a sinistra le ultime note, a destra
-/// l'editor per scriverne una nuova con tag e fonte.
+/// l'editor per scriverne una nuova con tag e fonti.
 ///
 /// La freccia in cima alla lista la espande a tutta larghezza, con anteprima,
 /// tag e data di ogni nota.
@@ -90,12 +90,13 @@ class _HomeScreenState extends State<HomeScreen> {
                           Expanded(
                             child: NoteEditor(
                               tagCounts: _notes.tagCounts,
+                              sourceCounts: _notes.sourceCounts,
                               onSave: (draft) {
                                 _notes.create(
                                   title: draft.title,
                                   body: draft.body,
                                   tags: draft.tags,
-                                  source: draft.source,
+                                  sources: draft.sources,
                                 );
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
@@ -284,7 +285,7 @@ class _ExpandedTile extends StatelessWidget {
                             fontSize: 13, color: LeviathanColors.muted),
                       ),
                     ),
-                  if (note.tags.isNotEmpty)
+                  if (note.tags.isNotEmpty || note.sources.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 6),
                       child: Wrap(
@@ -292,6 +293,8 @@ class _ExpandedTile extends StatelessWidget {
                         runSpacing: 4,
                         children: [
                           for (final tag in note.tags) TagChip(tag, dense: true),
+                          for (final source in note.sources)
+                            SourceChip(source, dense: true),
                         ],
                       ),
                     ),

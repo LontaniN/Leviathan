@@ -4,7 +4,7 @@ import '../model/note.dart';
 import '../state/notes_controller.dart';
 import 'home_screen.dart' show formatDate;
 import 'note_editor.dart';
-import 'tag_input.dart';
+import 'chip_input.dart';
 import 'theme.dart';
 
 /// Lettura di una nota a schermo intero, con modifica ed eliminazione.
@@ -89,19 +89,13 @@ class NoteScreen extends StatelessWidget {
                     children: [for (final tag in note.tags) TagChip(tag)],
                   ),
                 ],
-                if (note.source.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                if (note.sources.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
                     children: [
-                      const Icon(Icons.link,
-                          size: 18, color: LeviathanColors.muted),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(note.source,
-                            style: const TextStyle(
-                                color: LeviathanColors.link)),
-                      ),
+                      for (final source in note.sources) SourceChip(source),
                     ],
                   ),
                 ],
@@ -132,13 +126,14 @@ class _EditNotePage extends StatelessWidget {
       body: NoteEditor(
         initial: note,
         tagCounts: notes.tagCounts,
+        sourceCounts: notes.sourceCounts,
         saveLabel: 'Salva modifiche',
         onSave: (draft) {
           notes.update(note.copyWith(
             title: draft.title,
             body: draft.body,
             tags: draft.tags,
-            source: draft.source,
+            sources: draft.sources,
           ));
           Navigator.pop(context);
         },

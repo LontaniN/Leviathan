@@ -42,7 +42,7 @@ class NoteRepository {
     required String title,
     required String body,
     required List<String> tags,
-    required String source,
+    required List<String> sources,
     DateTime? now,
   }) {
     final time = now ?? DateTime.now();
@@ -51,7 +51,7 @@ class NoteRepository {
       title: title,
       body: body,
       tags: tags,
-      source: source,
+      sources: sources,
       created: time,
       updated: time,
     );

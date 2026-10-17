@@ -16,9 +16,12 @@ class NotesController extends ChangeNotifier {
   /// Ogni tag con il numero di note che lo usano.
   Map<String, int> tagCounts = const {};
 
+  /// Ogni fonte con il numero di note che la citano.
+  Map<String, int> sourceCounts = const {};
+
   void reload() {
     notes = _repo.loadAll();
-    _refreshTags();
+    _refreshCounts();
     notifyListeners();
   }
 
@@ -26,12 +29,12 @@ class NotesController extends ChangeNotifier {
     required String title,
     required String body,
     required List<String> tags,
-    required String source,
+    required List<String> sources,
   }) {
     final note =
-        _repo.create(title: title, body: body, tags: tags, source: source);
+        _repo.create(title: title, body: body, tags: tags, sources: sources);
     notes = [note, ...notes];
-    _refreshTags();
+    _refreshCounts();
     notifyListeners();
     return note;
   }
@@ -40,7 +43,7 @@ class NotesController extends ChangeNotifier {
     final updated = note.copyWith(updated: DateTime.now());
     _repo.save(updated);
     notes = [for (final n in notes) n.id == updated.id ? updated : n];
-    _refreshTags();
+    _refreshCounts();
     notifyListeners();
     return updated;
   }
@@ -48,7 +51,7 @@ class NotesController extends ChangeNotifier {
   void delete(Note note) {
     _repo.delete(note);
     notes = notes.where((n) => n.id != note.id).toList();
-    _refreshTags();
+    _refreshCounts();
     notifyListeners();
   }
 
@@ -59,13 +62,18 @@ class NotesController extends ChangeNotifier {
     return null;
   }
 
-  void _refreshTags() {
-    final counts = <String, int>{};
+  void _refreshCounts() {
+    final tags = <String, int>{};
+    final sources = <String, int>{};
     for (final note in notes) {
       for (final tag in note.tags) {
-        counts[tag] = (counts[tag] ?? 0) + 1;
+        tags[tag] = (tags[tag] ?? 0) + 1;
+      }
+      for (final source in note.sources) {
+        sources[source] = (sources[source] ?? 0) + 1;
       }
     }
-    tagCounts = counts;
+    tagCounts = tags;
+    sourceCounts = sources;
   }
 }

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../model/note.dart';
-import '../model/tags.dart';
-import 'tag_input.dart';
+import 'chip_input.dart';
 import 'theme.dart';
 
 /// Quello che l'editor consegna quando si salva.
@@ -10,10 +9,10 @@ typedef NoteDraft = ({
   String title,
   String body,
   List<String> tags,
-  String source,
+  List<String> sources,
 });
 
-/// Editor di una nota: titolo e corpo in grande, sotto tag e fonte.
+/// Editor di una nota: titolo e corpo in grande, sotto tag e fonti.
 ///
 /// Senza [initial] scrive una nota nuova e dopo il salvataggio si svuota.
 class NoteEditor extends StatefulWidget {
@@ -21,12 +20,14 @@ class NoteEditor extends StatefulWidget {
     super.key,
     this.initial,
     required this.tagCounts,
+    required this.sourceCounts,
     required this.onSave,
     this.saveLabel = 'Salva nota',
   });
 
   final Note? initial;
   final Map<String, int> tagCounts;
+  final Map<String, int> sourceCounts;
   final void Function(NoteDraft draft) onSave;
   final String saveLabel;
 
@@ -37,26 +38,26 @@ class NoteEditor extends StatefulWidget {
 class _NoteEditorState extends State<NoteEditor> {
   late final _title = TextEditingController(text: widget.initial?.title);
   late final _body = TextEditingController(text: widget.initial?.body);
-  late final _source = TextEditingController(text: widget.initial?.source);
   final _pendingTag = TextEditingController();
+  final _pendingSource = TextEditingController();
   late List<String> _tags = [...?widget.initial?.tags];
+  late List<String> _sources = [...?widget.initial?.sources];
 
   @override
   void dispose() {
     _title.dispose();
     _body.dispose();
-    _source.dispose();
     _pendingTag.dispose();
+    _pendingSource.dispose();
     super.dispose();
   }
 
   void _save() {
-    // Un tag scritto ma non confermato con virgola/invio vale comunque.
-    final pending = Tags.normalize(_pendingTag.text);
-    final tags = [
-      ..._tags,
-      if (pending.isNotEmpty && !_tags.contains(pending)) pending,
-    ];
+    // Una voce scritta ma non confermata con virgola/invio vale comunque.
+    final tags = ChipKind.tags.withValue(_tags, _pendingTag.text,
+        widget.tagCounts.keys);
+    final sources = ChipKind.sources.withValue(_sources,
+        _pendingSource.text, widget.sourceCounts.keys);
     final title = _title.text.trim();
     final body = _body.text.trimRight();
     if (title.isEmpty && body.trim().isEmpty) {
@@ -69,14 +70,17 @@ class _NoteEditorState extends State<NoteEditor> {
       title: title,
       body: body,
       tags: tags,
-      source: _source.text.trim(),
+      sources: sources,
     ));
     if (widget.initial == null) {
       _title.clear();
       _body.clear();
-      _source.clear();
       _pendingTag.clear();
-      setState(() => _tags = []);
+      _pendingSource.clear();
+      setState(() {
+        _tags = [];
+        _sources = [];
+      });
       FocusScope.of(context).unfocus();
     }
   }
@@ -127,21 +131,22 @@ class _NoteEditorState extends State<NoteEditor> {
           ),
         ),
         const SizedBox(height: 12),
-        TagInput(
-          tags: _tags,
+        ChipInput(
+          kind: ChipKind.tags,
+          fieldKey: const Key('tag-field'),
+          values: _tags,
           onChanged: (tags) => setState(() => _tags = tags),
-          tagCounts: widget.tagCounts,
+          counts: widget.tagCounts,
           pending: _pendingTag,
         ),
         const SizedBox(height: 12),
-        TextField(
-          key: const Key('source-field'),
-          controller: _source,
-          keyboardType: TextInputType.url,
-          decoration: const InputDecoration(
-            hintText: 'Fonte (facoltativa)',
-            prefixIcon: Icon(Icons.link, size: 20),
-          ),
+        ChipInput(
+          kind: ChipKind.sources,
+          fieldKey: const Key('source-field'),
+          values: _sources,
+          onChanged: (sources) => setState(() => _sources = sources),
+          counts: widget.sourceCounts,
+          pending: _pendingSource,
         ),
         const SizedBox(height: 16),
         FilledButton.icon(
