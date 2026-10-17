@@ -1,3 +1,4 @@
+import 'markdown.dart';
 import 'note.dart';
 import 'tags.dart';
 
@@ -131,7 +132,9 @@ String _snippet(String body, String foldedBody, List<String> terms) {
   // foldText non cambia la lunghezza per l'italiano, ma per sicurezza:
   if (start >= body.length) start = 0;
   final end = (start + length).clamp(0, body.length);
-  var text = body.substring(start, end).replaceAll(RegExp(r'\s+'), ' ').trim();
+  var text = plainText(body.substring(start, end))
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
   if (start > 0) text = '…$text';
   if (end < body.length) text = '$text…';
   return text;

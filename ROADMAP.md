@@ -20,7 +20,7 @@ Ordine consigliato: 1 → 3 → 2 → 4/5.
 2. **Ricevere dal tasto Condividi.** Testo condiviso da un'altra app → editor
    precompilato, pronto per tag e fonte; scelta del workspace se ce n'è più
    d'uno (`receive_sharing_intent`).
-3. **Markdown con anteprima.** Corpo formattato nella lettura (titoli,
+3. **Markdown con anteprima.** *(fatto)* Corpo formattato nella lettura (titoli,
    grassetto, elenchi, citazioni, codice), barra di formattazione sopra la
    tastiera, checklist `- [ ]` spuntabili.
 4. **Backup ed esportazione.** Zip del workspace da condividere, importazione

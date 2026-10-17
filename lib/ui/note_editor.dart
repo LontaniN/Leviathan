@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../model/markdown.dart';
 import '../model/note.dart';
 import 'chip_input.dart';
 import 'theme.dart';
@@ -15,8 +16,10 @@ typedef NoteDraft = ({
 
 /// Editor di una nota: titolo e corpo in grande, sotto tag e fonti.
 ///
-/// In cima si sceglie se è una nota o un task da spuntare. Senza [initial]
-/// scrive una nota nuova e dopo il salvataggio si svuota.
+/// In cima si sceglie se è una nota o un task da spuntare. Il corpo è
+/// Markdown: mentre lo si scrive compare una barra di formattazione sopra la
+/// tastiera, e un invio in un elenco lo continua. Senza [initial] scrive una
+/// nota nuova e dopo il salvataggio si svuota.
 class NoteEditor extends StatefulWidget {
   const NoteEditor({
     super.key,
@@ -40,6 +43,8 @@ class NoteEditor extends StatefulWidget {
 class _NoteEditorState extends State<NoteEditor> {
   late final _title = TextEditingController(text: widget.initial?.title);
   late final _body = TextEditingController(text: widget.initial?.body);
+  final _bodyFocus = FocusNode();
+  late TextEditingValue _lastBody = _body.value;
   final _pendingTag = TextEditingController();
   final _pendingSource = TextEditingController();
   late List<String> _tags = [...?widget.initial?.tags];
@@ -47,9 +52,29 @@ class _NoteEditorState extends State<NoteEditor> {
   late bool _isTask = widget.initial?.isTask ?? false;
 
   @override
+  void initState() {
+    super.initState();
+    _body.addListener(_onBodyChanged);
+    _bodyFocus.addListener(() => setState(() {}));
+  }
+
+  void _onBodyChanged() {
+    final next = continueList(_lastBody, _body.value);
+    _lastBody = next;
+    // Assegnare il valore richiama il listener, che a quel punto non trova
+    // più un invio da completare.
+    if (next != _body.value) _body.value = next;
+  }
+
+  void _format(TextEditingValue Function(TextEditingValue) change) {
+    _body.value = change(_body.value);
+  }
+
+  @override
   void dispose() {
     _title.dispose();
     _body.dispose();
+    _bodyFocus.dispose();
     _pendingTag.dispose();
     _pendingSource.dispose();
     super.dispose();
@@ -99,6 +124,16 @@ class _NoteEditorState extends State<NoteEditor> {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(child: _form(text)),
+        if (_bodyFocus.hasFocus) _FormatBar(onFormat: _format),
+      ],
+    );
+  }
+
+  Widget _form(TextTheme text) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(
         LeviathanSpacing.sm,
@@ -166,6 +201,7 @@ class _NoteEditorState extends State<NoteEditor> {
                 TextField(
                   key: const Key('body-field'),
                   controller: _body,
+                  focusNode: _bodyFocus,
                   minLines: 10,
                   maxLines: null,
                   keyboardType: TextInputType.multiline,
@@ -207,6 +243,77 @@ class _NoteEditorState extends State<NoteEditor> {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// I pulsanti di formattazione Markdown, sopra la tastiera.
+class _FormatBar extends StatelessWidget {
+  const _FormatBar({required this.onFormat});
+
+  final void Function(TextEditingValue Function(TextEditingValue)) onFormat;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget button(
+      String tooltip,
+      IconData icon,
+      TextEditingValue Function(TextEditingValue) change,
+    ) => IconButton(
+      tooltip: tooltip,
+      icon: Icon(icon, size: LeviathanIconSize.md),
+      color: context.palette.text,
+      visualDensity: VisualDensity.compact,
+      onPressed: () => onFormat(change),
+    );
+
+    return DecoratedBox(
+      key: const Key('format-bar'),
+      decoration: BoxDecoration(color: context.palette.surface),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: LeviathanSpacing.xs),
+        child: Row(
+          children: [
+            button(
+              'Grassetto',
+              Icons.format_bold,
+              (v) => wrapSelection(v, '**'),
+            ),
+            button(
+              'Corsivo',
+              Icons.format_italic,
+              (v) => wrapSelection(v, '_'),
+            ),
+            button(
+              'Titolo',
+              Icons.title,
+              (v) => toggleLinePrefix(v, LinePrefix.heading),
+            ),
+            button(
+              'Elenco puntato',
+              Icons.format_list_bulleted,
+              (v) => toggleLinePrefix(v, LinePrefix.bullet),
+            ),
+            button(
+              'Elenco numerato',
+              Icons.format_list_numbered,
+              (v) => toggleLinePrefix(v, LinePrefix.numbered),
+            ),
+            button(
+              'Checklist',
+              Icons.check_box_outlined,
+              (v) => toggleLinePrefix(v, LinePrefix.checkbox),
+            ),
+            button(
+              'Citazione',
+              Icons.format_quote,
+              (v) => toggleLinePrefix(v, LinePrefix.quote),
+            ),
+            button('Codice', Icons.code, (v) => wrapSelection(v, '`')),
+          ],
+        ),
+      ),
     );
   }
 }

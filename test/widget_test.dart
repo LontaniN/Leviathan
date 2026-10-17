@@ -222,6 +222,52 @@ void main() {
     expect(find.text('Nessuna nota trovata'), findsOneWidget);
   });
 
+  testWidgets('Markdown: barra di formattazione e checklist spuntabile', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    final repo = WorkspaceRepository(root);
+    await tester.runAsync(() => repo.createWorkspace('Studio'));
+    await tester.pumpWidget(LeviathanApp(state: AppState(_FakeStorage(root))));
+    await settle(tester);
+
+    // La barra compare scrivendo il corpo; un invio continua la checklist.
+    expect(find.byKey(const Key('format-bar')), findsNothing);
+    final body = find.byKey(const Key('body-field'));
+    await tester.tap(body);
+    await tester.pump();
+    expect(find.byKey(const Key('format-bar')), findsOneWidget);
+    await tester.tap(find.byTooltip('Checklist'));
+    await tester.pump();
+    await tester.enterText(body, '- [ ] latte');
+    await tester.enterText(body, '- [ ] latte\n');
+    await tester.pump();
+    final field = tester.widget<TextField>(body);
+    expect(field.controller!.text, '- [ ] latte\n- [ ] ');
+    await tester.enterText(body, '- [ ] latte\n- [ ] pane');
+    await tester.enterText(find.byKey(const Key('title-field')), 'Spesa');
+    await tester.ensureVisible(find.text('Salva nota'));
+    await tester.tap(find.text('Salva nota'));
+    await settle(tester);
+
+    File noteFile() =>
+        Directory('${root.path}/Studio')
+            .listSync()
+            .whereType<File>()
+            .singleWhere((f) => f.path.contains('spesa'));
+
+    // Nella lettura le caselle si spuntano e il file si aggiorna.
+    await tester.tap(find.text('Spesa'));
+    await settle(tester);
+    expect(find.byIcon(Icons.check_box_outline_blank), findsNWidgets(2));
+    await tester.tap(find.byIcon(Icons.check_box_outline_blank).last);
+    await settle(tester);
+    expect(noteFile().readAsStringSync(), contains('- [ ] latte\n- [x] pane'));
+  });
+
   testWidgets('schermata task: raggruppa per tag o per fonte', (tester) async {
     tester.view.physicalSize = const Size(1080, 2424);
     tester.view.devicePixelRatio = 2.625;

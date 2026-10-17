@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../model/markdown.dart';
 import '../model/note.dart';
 import '../model/tags.dart';
 import '../state/app_state.dart';
@@ -379,7 +380,7 @@ class _ExpandedTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final preview = note.body.trim().replaceAll(RegExp(r'\s+'), ' ');
+    final preview = plainText(note.body).trim().replaceAll(RegExp(r'\s+'), ' ');
     return InkWell(
       onTap: () => onTap(note),
       child: Padding(

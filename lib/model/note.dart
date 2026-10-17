@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'markdown.dart';
+
 /// Una nota: titolo, corpo, tag e fonti. Può essere un task da spuntare.
 ///
 /// Su disco è un file Markdown con un'intestazione (frontmatter) in cima:
@@ -89,7 +91,7 @@ class Note {
   /// Il titolo, oppure l'inizio del corpo se il titolo è vuoto.
   String get displayTitle {
     if (title.trim().isNotEmpty) return title.trim();
-    final firstLine = body.trim().split('\n').first.trim();
+    final firstLine = plainText(body.trim().split('\n').first).trim();
     if (firstLine.isEmpty) return 'Senza titolo';
     return firstLine.length > 60 ? '${firstLine.substring(0, 60)}…' : firstLine;
   }

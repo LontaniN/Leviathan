@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../model/note.dart';
 import '../state/notes_controller.dart';
 import 'home_screen.dart' show formatDate;
+import 'note_body.dart';
 import 'note_editor.dart';
 import 'search_screen.dart';
 import 'task_check.dart';
@@ -145,7 +146,10 @@ class NoteScreen extends StatelessWidget {
                   ),
                 ],
                 const Divider(height: LeviathanSpacing.xxl),
-                Text(note.body, style: text.bodyLarge?.copyWith(height: 1.5)),
+                NoteBody(
+                  note.body,
+                  onChanged: (body) => notes.update(note.copyWith(body: body)),
+                ),
               ],
             ),
           ),
