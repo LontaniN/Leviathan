@@ -46,16 +46,15 @@ class Note {
     List<String>? tags,
     List<String>? sources,
     DateTime? updated,
-  }) =>
-      Note(
-        id: id,
-        title: title ?? this.title,
-        body: body ?? this.body,
-        tags: tags ?? this.tags,
-        sources: sources ?? this.sources,
-        created: created,
-        updated: updated ?? this.updated,
-      );
+  }) => Note(
+    id: id,
+    title: title ?? this.title,
+    body: body ?? this.body,
+    tags: tags ?? this.tags,
+    sources: sources ?? this.sources,
+    created: created,
+    updated: updated ?? this.updated,
+  );
 
   /// Il titolo, oppure l'inizio del corpo se il titolo è vuoto.
   String get displayTitle {
@@ -89,8 +88,9 @@ class Note {
         for (final line in text.substring(4, end).split('\n')) {
           final colon = line.indexOf(':');
           if (colon <= 0) continue;
-          fields[line.substring(0, colon).trim()] =
-              _parseValue(line.substring(colon + 1).trim());
+          fields[line.substring(0, colon).trim()] = _parseValue(
+            line.substring(colon + 1).trim(),
+          );
         }
         final afterHeader = text.indexOf('\n', end + 1);
         body = afterHeader == -1 ? '' : text.substring(afterHeader + 1);

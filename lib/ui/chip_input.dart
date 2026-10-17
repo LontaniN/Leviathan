@@ -26,8 +26,12 @@ class TagChip extends StatelessWidget {
 
 /// Icona persona + nome, in grigio: le fonti non hanno colori.
 class SourceChip extends StatelessWidget {
-  const SourceChip(this.source,
-      {super.key, this.onDeleted, this.dense = false});
+  const SourceChip(
+    this.source, {
+    super.key,
+    this.onDeleted,
+    this.dense = false,
+  });
 
   final String source;
   final VoidCallback? onDeleted;
@@ -37,8 +41,11 @@ class SourceChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return _BaseChip(
       label: source,
-      avatar: Icon(Icons.person_outline,
-          size: dense ? 12 : 16, color: LeviathanColors.muted),
+      avatar: Icon(
+        Icons.person_outline,
+        size: dense ? 12 : 16,
+        color: LeviathanColors.muted,
+      ),
       borderColor: LeviathanColors.muted.withValues(alpha: 0.4),
       onDeleted: onDeleted,
       dense: dense,
@@ -69,8 +76,9 @@ class _BaseChip extends StatelessWidget {
       onDeleted: onDeleted,
       deleteIcon: const Icon(Icons.close, size: 16),
       visualDensity: VisualDensity.compact,
-      materialTapTargetSize:
-          dense ? MaterialTapTargetSize.shrinkWrap : MaterialTapTargetSize.padded,
+      materialTapTargetSize: dense
+          ? MaterialTapTargetSize.shrinkWrap
+          : MaterialTapTargetSize.padded,
       padding: dense ? EdgeInsets.zero : null,
       labelPadding: dense ? const EdgeInsets.only(left: 2, right: 6) : null,
       side: BorderSide(color: borderColor),
@@ -96,14 +104,21 @@ class ChipKind {
   /// Trasforma il testo scritto nella voce da salvare ('' = scarta).
   final String Function(String raw, Iterable<String> known) canonical;
   final List<String> Function(
-      String input, Map<String, int> counts, Iterable<String> exclude) suggest;
+    String input,
+    Map<String, int> counts,
+    Iterable<String> exclude,
+  )
+  suggest;
   final Widget Function(String value, VoidCallback onDeleted) chip;
   final Widget Function(String value) suggestionAvatar;
 
   /// [values] con in più la voce scritta in [raw], se valida e nuova.
   /// [known] sono le voci già usate nel workspace, per riusarne la grafia.
   List<String> withValue(
-      List<String> values, String raw, Iterable<String> known) {
+    List<String> values,
+    String raw,
+    Iterable<String> known,
+  ) {
     final value = canonical(raw, [...values, ...known]);
     if (value.isEmpty || values.contains(value)) return values;
     return [...values, value];
@@ -127,8 +142,11 @@ class ChipKind {
     suggest: (input, counts, exclude) =>
         Sources.suggest(input, counts, exclude: exclude),
     chip: (value, onDeleted) => SourceChip(value, onDeleted: onDeleted),
-    suggestionAvatar: (_) => const Icon(Icons.person_outline,
-        size: 16, color: LeviathanColors.muted),
+    suggestionAvatar: (_) => const Icon(
+      Icons.person_outline,
+      size: 16,
+      color: LeviathanColors.muted,
+    ),
   );
 }
 
@@ -203,8 +221,11 @@ class _ChipInputState extends State<ChipInput> {
   @override
   Widget build(BuildContext context) {
     final kind = widget.kind;
-    final suggestions =
-        kind.suggest(widget.pending.text, widget.counts, widget.values);
+    final suggestions = kind.suggest(
+      widget.pending.text,
+      widget.counts,
+      widget.values,
+    );
     final typed = kind.canonical(widget.pending.text, widget.counts.keys);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -259,7 +280,8 @@ class _ChipInputState extends State<ChipInput> {
                   kind.chip(
                     value,
                     () => widget.onChanged(
-                        widget.values.where((v) => v != value).toList()),
+                      widget.values.where((v) => v != value).toList(),
+                    ),
                   ),
               ],
             ),

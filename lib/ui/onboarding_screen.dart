@@ -23,16 +23,20 @@ class OnboardingScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text('Leviathan',
-                      style: text.displaySmall
-                          ?.copyWith(color: LeviathanColors.accent)),
+                  Text(
+                    'Leviathan',
+                    style: text.displaySmall?.copyWith(
+                      color: LeviathanColors.accent,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   Text(
                     'Dai un nome al tuo primo workspace. '
                     'Ogni workspace raccoglie le sue note: '
                     'puoi crearne altri in qualsiasi momento.',
-                    style:
-                        text.bodyLarge?.copyWith(color: LeviathanColors.muted),
+                    style: text.bodyLarge?.copyWith(
+                      color: LeviathanColors.muted,
+                    ),
                   ),
                   const SizedBox(height: 32),
                   WorkspaceNameForm(

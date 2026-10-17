@@ -31,8 +31,12 @@ class NotesController extends ChangeNotifier {
     required List<String> tags,
     required List<String> sources,
   }) {
-    final note =
-        _repo.create(title: title, body: body, tags: tags, sources: sources);
+    final note = _repo.create(
+      title: title,
+      body: body,
+      tags: tags,
+      sources: sources,
+    );
     notes = [note, ...notes];
     _refreshCounts();
     notifyListeners();

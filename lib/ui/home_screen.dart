@@ -6,6 +6,7 @@ import '../state/app_state.dart';
 import '../state/notes_controller.dart';
 import 'note_editor.dart';
 import 'note_screen.dart';
+import 'search_screen.dart';
 import 'chip_input.dart';
 import 'theme.dart';
 import 'workspace_name_form.dart';
@@ -25,8 +26,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  late final NotesController _notes =
-      NotesController(widget.state.notesOf(widget.state.currentWorkspace!));
+  late final NotesController _notes = NotesController(
+    widget.state.notesOf(widget.state.currentWorkspace!),
+  );
   bool _listExpanded = false;
 
   @override
@@ -36,9 +38,17 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _openNote(Note note) {
-    Navigator.of(context).push(MaterialPageRoute<void>(
-      builder: (_) => NoteScreen(noteId: note.id, notes: _notes),
-    ));
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => NoteScreen(noteId: note.id, notes: _notes),
+      ),
+    );
+  }
+
+  void _openSearch() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => SearchScreen(notes: _notes)),
+    );
   }
 
   @override
@@ -52,13 +62,26 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
-                child: _WorkspaceButton(state: widget.state),
+                child: Row(
+                  children: [
+                    Flexible(child: _WorkspaceButton(state: widget.state)),
+                    const Spacer(),
+                    IconButton(
+                      key: const Key('search-button'),
+                      tooltip: 'Cerca',
+                      icon: const Icon(Icons.search),
+                      onPressed: _openSearch,
+                    ),
+                  ],
+                ),
               ),
               Expanded(
                 child: LayoutBuilder(
                   builder: (context, constraints) {
-                    final collapsedWidth =
-                        (constraints.maxWidth * 0.3).clamp(104.0, 220.0);
+                    final collapsedWidth = (constraints.maxWidth * 0.3).clamp(
+                      104.0,
+                      220.0,
+                    );
                     final listWidth = _listExpanded
                         ? constraints.maxWidth
                         : collapsedWidth;
@@ -80,7 +103,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 notes: _notes.notes,
                                 expanded: _listExpanded,
                                 onToggle: () => setState(
-                                    () => _listExpanded = !_listExpanded),
+                                  () => _listExpanded = !_listExpanded,
+                                ),
                                 onOpen: _openNote,
                               ),
                             ),
@@ -149,8 +173,11 @@ class _NoteList extends StatelessWidget {
                 AnimatedRotation(
                   turns: expanded ? 0.5 : 0,
                   duration: const Duration(milliseconds: 220),
-                  child: const Icon(Icons.keyboard_arrow_down,
-                      size: 20, color: LeviathanColors.accent),
+                  child: const Icon(
+                    Icons.keyboard_arrow_down,
+                    size: 20,
+                    color: LeviathanColors.accent,
+                  ),
                 ),
                 const SizedBox(width: 4),
                 Expanded(
@@ -158,7 +185,9 @@ class _NoteList extends StatelessWidget {
                     expanded ? 'Tutte le note (${notes.length})' : 'Recenti',
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                        color: LeviathanColors.muted, fontSize: 13),
+                      color: LeviathanColors.muted,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
               ],
@@ -169,8 +198,10 @@ class _NoteList extends StatelessWidget {
           child: notes.isEmpty
               ? const Padding(
                   padding: EdgeInsets.all(12),
-                  child: Text('Nessuna nota',
-                      style: TextStyle(color: LeviathanColors.muted)),
+                  child: Text(
+                    'Nessuna nota',
+                    style: TextStyle(color: LeviathanColors.muted),
+                  ),
                 )
               : ListView.builder(
                   padding: const EdgeInsets.only(bottom: 24),
@@ -266,12 +297,18 @@ class _ExpandedTile extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                              fontSize: 15, fontWeight: FontWeight.w600),
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                      Text(formatDate(note.created),
-                          style: const TextStyle(
-                              fontSize: 12, color: LeviathanColors.muted)),
+                      Text(
+                        formatDate(note.created),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: LeviathanColors.muted,
+                        ),
+                      ),
                     ],
                   ),
                   if (preview.isNotEmpty && note.title.trim().isNotEmpty)
@@ -282,7 +319,9 @@ class _ExpandedTile extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                            fontSize: 13, color: LeviathanColors.muted),
+                          fontSize: 13,
+                          color: LeviathanColors.muted,
+                        ),
                       ),
                     ),
                   if (note.tags.isNotEmpty || note.sources.isNotEmpty)
@@ -292,7 +331,8 @@ class _ExpandedTile extends StatelessWidget {
                         spacing: 4,
                         runSpacing: 4,
                         children: [
-                          for (final tag in note.tags) TagChip(tag, dense: true),
+                          for (final tag in note.tags)
+                            TagChip(tag, dense: true),
                           for (final source in note.sources)
                             SourceChip(source, dense: true),
                         ],
@@ -352,8 +392,10 @@ Future<void> showWorkspaceSwitcher(BuildContext context, AppState state) {
           children: [
             const Padding(
               padding: EdgeInsets.fromLTRB(24, 0, 24, 8),
-              child: Text('Workspace',
-                  style: TextStyle(color: LeviathanColors.muted)),
+              child: Text(
+                'Workspace',
+                style: TextStyle(color: LeviathanColors.muted),
+              ),
             ),
             Flexible(
               child: ListView(
@@ -363,8 +405,10 @@ Future<void> showWorkspaceSwitcher(BuildContext context, AppState state) {
                     ListTile(
                       title: Text(name),
                       trailing: name == state.currentWorkspace
-                          ? const Icon(Icons.check,
-                              color: LeviathanColors.accent)
+                          ? const Icon(
+                              Icons.check,
+                              color: LeviathanColors.accent,
+                            )
                           : null,
                       onTap: () {
                         Navigator.pop(sheetContext);

@@ -29,7 +29,8 @@ void main() {
     });
 
     test('legge file scritti a mano', () {
-      const content = '---\ntitle: Idea veloce\ntags: [lavoro, idee]\n---\n'
+      const content =
+          '---\ntitle: Idea veloce\ntags: [lavoro, idee]\n---\n'
           'Testo';
       final note = Note.fromMarkdown('y', content, date);
       expect(note.title, 'Idea veloce');
@@ -81,13 +82,16 @@ void main() {
     });
 
     test('esclude i tag già presenti', () {
-      expect(Tags.suggest('foto', counts, exclude: ['fotografia']),
-          ['fotoritocco']);
+      expect(Tags.suggest('foto', counts, exclude: ['fotografia']), [
+        'fotoritocco',
+      ]);
     });
 
     test('a campo vuoto propone i più usati', () {
-      expect(Tags.suggest('', counts, limit: 2),
-          ['fotografia', 'machine-learning']);
+      expect(Tags.suggest('', counts, limit: 2), [
+        'fotografia',
+        'machine-learning',
+      ]);
     });
 
     test('fonti: si tiene la grafia e si riusa quella esistente', () {
@@ -95,8 +99,9 @@ void main() {
       expect(Sources.canonical('mario rossi', ['Mario Rossi']), 'Mario Rossi');
       expect(Sources.canonical('Niccolò', ['Niccolo']), 'Niccolo');
       expect(Sources.canonical('Anna', ['Mario Rossi']), 'Anna');
-      expect(Sources.suggest('ros', {'Mario Rossi': 2, 'Anna': 1}),
-          ['Mario Rossi']);
+      expect(Sources.suggest('ros', {'Mario Rossi': 2, 'Anna': 1}), [
+        'Mario Rossi',
+      ]);
     });
 
     test('il colore di un tag è stabile', () {
@@ -110,19 +115,29 @@ void main() {
 
     setUp(() {
       root = Directory.systemTemp.createTempSync('leviathan_notes');
-      repo = NoteRepository(Directory('${root.path}/ws'),
-          trashDir: Directory('${root.path}/trash'));
+      repo = NoteRepository(
+        Directory('${root.path}/ws'),
+        trashDir: Directory('${root.path}/trash'),
+      );
     });
 
     tearDown(() => root.deleteSync(recursive: true));
 
     test('crea, rilegge in ordine e sposta nel cestino', () {
       final first = repo.create(
-          title: 'Prima', body: 'a', tags: ['x'], sources: [],
-          now: DateTime(2026, 1, 1));
+        title: 'Prima',
+        body: 'a',
+        tags: ['x'],
+        sources: [],
+        now: DateTime(2026, 1, 1),
+      );
       final second = repo.create(
-          title: 'Seconda nota!', body: 'b', tags: [], sources: [],
-          now: DateTime(2026, 1, 2));
+        title: 'Seconda nota!',
+        body: 'b',
+        tags: [],
+        sources: [],
+        now: DateTime(2026, 1, 2),
+      );
       expect(second.id, '20260102-000000-seconda-nota');
 
       expect(repo.loadAll().map((n) => n.title), ['Seconda nota!', 'Prima']);
@@ -135,9 +150,19 @@ void main() {
     test('due note nello stesso secondo non si sovrascrivono', () {
       final now = DateTime(2026, 1, 1);
       final a = repo.create(
-          title: 'Uguale', body: '1', tags: [], sources: [], now: now);
+        title: 'Uguale',
+        body: '1',
+        tags: [],
+        sources: [],
+        now: now,
+      );
       final b = repo.create(
-          title: 'Uguale', body: '2', tags: [], sources: [], now: now);
+        title: 'Uguale',
+        body: '2',
+        tags: [],
+        sources: [],
+        now: now,
+      );
       expect(a.id, isNot(b.id));
       expect(repo.loadAll(), hasLength(2));
     });

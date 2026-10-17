@@ -50,23 +50,23 @@ class _LeviathanAppState extends State<LeviathanApp>
           final state = widget.state;
           return switch (state.status) {
             AppStatus.loading => const Scaffold(
-                body: Center(child: CircularProgressIndicator()),
-              ),
+              body: Center(child: CircularProgressIndicator()),
+            ),
             AppStatus.needsPermission => PermissionScreen(state: state),
             AppStatus.onboarding => OnboardingScreen(state: state),
             // La chiave ricrea la schermata (e le sue note) a ogni cambio.
             AppStatus.ready => HomeScreen(
-                key: ValueKey(state.currentWorkspace),
-                state: state,
-              ),
+              key: ValueKey(state.currentWorkspace),
+              state: state,
+            ),
             AppStatus.error => Scaffold(
-                body: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Text('Errore: ${state.errorMessage}'),
-                  ),
+              body: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Text('Errore: ${state.errorMessage}'),
                 ),
               ),
+            ),
           };
         },
       ),

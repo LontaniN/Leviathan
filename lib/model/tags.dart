@@ -7,7 +7,7 @@ const _accents = {
 };
 
 /// Minuscolo e senza accenti: la forma usata per confrontare.
-String _fold(String s) =>
+String foldText(String s) =>
     s.toLowerCase().split('').map((c) => _accents[c] ?? c).join();
 
 /// Suggerisce le voci di [counts] più vicine a [query].
@@ -22,9 +22,9 @@ List<String> rankSuggestions(
   Iterable<String> exclude = const [],
   int limit = 6,
 }) {
-  final q = _fold(query.trim());
-  final excluded = exclude.map(_fold).toSet();
-  final candidates = counts.keys.where((c) => !excluded.contains(_fold(c)));
+  final q = foldText(query.trim());
+  final excluded = exclude.map(foldText).toSet();
+  final candidates = counts.keys.where((c) => !excluded.contains(foldText(c)));
   if (q.isEmpty) {
     final popular = candidates.toList()
       ..sort((a, b) => counts[b]!.compareTo(counts[a]!));
@@ -32,7 +32,7 @@ List<String> rankSuggestions(
   }
   final scored = <(String, int)>[];
   for (final candidate in candidates) {
-    final score = _score(q, _fold(candidate));
+    final score = _score(q, foldText(candidate));
     if (score != null) scored.add((candidate, score));
   }
   scored.sort((a, b) {
@@ -52,8 +52,10 @@ int? _score(String query, String candidate) {
   }
   if (candidate.contains(query)) return 3;
   // Errori di battitura: confronto con l'inizio lungo quanto la query.
-  final prefix =
-      candidate.substring(0, math.min(candidate.length, query.length));
+  final prefix = candidate.substring(
+    0,
+    math.min(candidate.length, query.length),
+  );
   final distance = _levenshtein(query, prefix);
   final allowed = query.length <= 3 ? 0 : (query.length <= 6 ? 1 : 2);
   if (distance <= allowed) return 4 + distance;
@@ -66,10 +68,12 @@ int _levenshtein(String a, String b) {
     final current = [i + 1];
     for (var j = 0; j < b.length; j++) {
       final cost = a[i] == b[j] ? 0 : 1;
-      current.add(math.min(
-        math.min(current[j] + 1, previous[j + 1] + 1),
-        previous[j] + cost,
-      ));
+      current.add(
+        math.min(
+          math.min(current[j] + 1, previous[j + 1] + 1),
+          previous[j] + cost,
+        ),
+      );
     }
     previous = current;
   }
@@ -86,7 +90,7 @@ class Tags {
     while (tag.startsWith('#')) {
       tag = tag.substring(1);
     }
-    tag = _fold(tag);
+    tag = foldText(tag);
     tag = tag.replaceAll(RegExp(r'[\s_]+'), '-');
     tag = tag.replaceAll(RegExp(r'[^a-z0-9\-/]'), '');
     tag = tag.replaceAll(RegExp(r'-{2,}'), '-');
@@ -101,8 +105,7 @@ class Tags {
     Iterable<String> exclude = const [],
     int limit = 6,
   }) =>
-      rankSuggestions(normalize(input), counts,
-          exclude: exclude, limit: limit);
+      rankSuggestions(normalize(input), counts, exclude: exclude, limit: limit);
 
   static const palette = [
     Color(0xFFF2E94E), // giallo
@@ -138,9 +141,9 @@ class Sources {
   /// quella: scrivere "mario rossi" riusa "Mario Rossi".
   static String canonical(String raw, Iterable<String> existing) {
     final name = normalize(raw);
-    final key = _fold(name);
+    final key = foldText(name);
     for (final source in existing) {
-      if (_fold(source) == key) return source;
+      if (foldText(source) == key) return source;
     }
     return name;
   }
@@ -151,6 +154,5 @@ class Sources {
     Iterable<String> exclude = const [],
     int limit = 6,
   }) =>
-      rankSuggestions(normalize(input), counts,
-          exclude: exclude, limit: limit);
+      rankSuggestions(normalize(input), counts, exclude: exclude, limit: limit);
 }

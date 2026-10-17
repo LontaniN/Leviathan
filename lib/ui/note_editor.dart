@@ -54,24 +54,25 @@ class _NoteEditorState extends State<NoteEditor> {
 
   void _save() {
     // Una voce scritta ma non confermata con virgola/invio vale comunque.
-    final tags = ChipKind.tags.withValue(_tags, _pendingTag.text,
-        widget.tagCounts.keys);
-    final sources = ChipKind.sources.withValue(_sources,
-        _pendingSource.text, widget.sourceCounts.keys);
+    final tags = ChipKind.tags.withValue(
+      _tags,
+      _pendingTag.text,
+      widget.tagCounts.keys,
+    );
+    final sources = ChipKind.sources.withValue(
+      _sources,
+      _pendingSource.text,
+      widget.sourceCounts.keys,
+    );
     final title = _title.text.trim();
     final body = _body.text.trimRight();
     if (title.isEmpty && body.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Scrivi almeno un titolo o un testo'),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Scrivi almeno un titolo o un testo')),
+      );
       return;
     }
-    widget.onSave((
-      title: title,
-      body: body,
-      tags: tags,
-      sources: sources,
-    ));
+    widget.onSave((title: title, body: body, tags: tags, sources: sources));
     if (widget.initial == null) {
       _title.clear();
       _body.clear();

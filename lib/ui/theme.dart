@@ -10,16 +10,17 @@ class LeviathanColors {
 }
 
 ThemeData buildTheme() {
-  final scheme = ColorScheme.fromSeed(
-    seedColor: LeviathanColors.link,
-    brightness: Brightness.dark,
-  ).copyWith(
-    primary: LeviathanColors.accent,
-    onPrimary: Colors.black,
-    secondary: LeviathanColors.link,
-    surface: LeviathanColors.background,
-    surfaceContainer: LeviathanColors.surface,
-  );
+  final scheme =
+      ColorScheme.fromSeed(
+        seedColor: LeviathanColors.link,
+        brightness: Brightness.dark,
+      ).copyWith(
+        primary: LeviathanColors.accent,
+        onPrimary: Colors.black,
+        secondary: LeviathanColors.link,
+        surface: LeviathanColors.background,
+        surfaceContainer: LeviathanColors.surface,
+      );
   return ThemeData(
     colorScheme: scheme,
     scaffoldBackgroundColor: LeviathanColors.background,

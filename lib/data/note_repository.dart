@@ -24,11 +24,13 @@ class NoteRepository {
     for (final entity in dir.listSync(followLinks: false)) {
       if (entity is! File || p.extension(entity.path) != '.md') continue;
       try {
-        notes.add(Note.fromMarkdown(
-          p.basenameWithoutExtension(entity.path),
-          entity.readAsStringSync(),
-          entity.lastModifiedSync(),
-        ));
+        notes.add(
+          Note.fromMarkdown(
+            p.basenameWithoutExtension(entity.path),
+            entity.readAsStringSync(),
+            entity.lastModifiedSync(),
+          ),
+        );
       } on FileSystemException {
         // File illeggibile: lo si salta invece di bloccare tutto il workspace.
       }
@@ -71,8 +73,10 @@ class NoteRepository {
     trashDir.createSync(recursive: true);
     var target = p.join(trashDir.path, '${note.id}.md');
     if (File(target).existsSync()) {
-      target = p.join(trashDir.path,
-          '${note.id}-${DateTime.now().millisecondsSinceEpoch}.md');
+      target = p.join(
+        trashDir.path,
+        '${note.id}-${DateTime.now().millisecondsSinceEpoch}.md',
+      );
     }
     file.renameSync(target);
   }
@@ -81,7 +85,8 @@ class NoteRepository {
 
   String _newId(DateTime time, String title) {
     String two(int n) => n.toString().padLeft(2, '0');
-    final stamp = '${time.year}${two(time.month)}${two(time.day)}-'
+    final stamp =
+        '${time.year}${two(time.month)}${two(time.day)}-'
         '${two(time.hour)}${two(time.minute)}${two(time.second)}';
     final slug = _slug(title);
     final base = slug.isEmpty ? stamp : '$stamp-$slug';
@@ -93,7 +98,14 @@ class NoteRepository {
   }
 
   static String _slug(String title) {
-    const accents = {'à': 'a', 'è': 'e', 'é': 'e', 'ì': 'i', 'ò': 'o', 'ù': 'u'};
+    const accents = {
+      'à': 'a',
+      'è': 'e',
+      'é': 'e',
+      'ì': 'i',
+      'ò': 'o',
+      'ù': 'u',
+    };
     var slug = title.toLowerCase().split('').map((c) => accents[c] ?? c).join();
     slug = slug
         .replaceAll(RegExp(r'[^a-z0-9]+'), '-')

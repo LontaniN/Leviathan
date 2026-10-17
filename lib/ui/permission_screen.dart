@@ -20,11 +20,17 @@ class PermissionScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(Icons.folder_open,
-                  size: 48, color: LeviathanColors.accent),
+              const Icon(
+                Icons.folder_open,
+                size: 48,
+                color: LeviathanColors.accent,
+              ),
               const SizedBox(height: 24),
-              Text('Accesso ai file',
-                  style: text.headlineSmall, textAlign: TextAlign.center),
+              Text(
+                'Accesso ai file',
+                style: text.headlineSmall,
+                textAlign: TextAlign.center,
+              ),
               const SizedBox(height: 12),
               Text(
                 'Le note vengono salvate come file nella cartella '

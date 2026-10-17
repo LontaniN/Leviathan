@@ -37,7 +37,8 @@ void main() {
   Future<void> settle(WidgetTester tester) async {
     for (var i = 0; i < 6; i++) {
       await tester.runAsync(
-          () => Future<void>.delayed(const Duration(milliseconds: 30)));
+        () => Future<void>.delayed(const Duration(milliseconds: 30)),
+      );
       await tester.pump(const Duration(milliseconds: 400));
     }
   }
@@ -88,14 +89,10 @@ void main() {
 
     expect(find.text('Fotografia'), findsOneWidget);
     expect(find.text('Lavoro'), findsNothing);
-    expect(
-      await tester.runAsync(repo.readLastWorkspace),
-      'Fotografia',
-    );
+    expect(await tester.runAsync(repo.readLastWorkspace), 'Fotografia');
   });
 
-  testWidgets('senza permesso mostra la richiesta di accesso',
-      (tester) async {
+  testWidgets('senza permesso mostra la richiesta di accesso', (tester) async {
     final storage = _FakeStorage(root, granted: false);
     await tester.pumpWidget(LeviathanApp(state: AppState(storage)));
     await settle(tester);
@@ -107,8 +104,7 @@ void main() {
     expect(find.text('Crea workspace'), findsOneWidget);
   });
 
-  testWidgets('scrive una nota con tag suggeriti e la riapre',
-      (tester) async {
+  testWidgets('scrive una nota con tag suggeriti e la riapre', (tester) async {
     tester.view.physicalSize = const Size(1080, 2424);
     tester.view.devicePixelRatio = 2.625;
     addTearDown(tester.view.reset);
@@ -118,9 +114,10 @@ void main() {
       await repo.createWorkspace('Lavoro');
       final dir = Directory('${root.path}/Lavoro');
       File('${dir.path}/vecchia.md').writeAsStringSync(
-          '---\ntitle: "Vecchia"\ntags: ["fotografia"]\n'
-          'sources: ["Mario Rossi"]\n'
-          'created: "2026-01-01T00:00:00.000"\n---\nTesto vecchio');
+        '---\ntitle: "Vecchia"\ntags: ["fotografia"]\n'
+        'sources: ["Mario Rossi"]\n'
+        'created: "2026-01-01T00:00:00.000"\n---\nTesto vecchio',
+      );
     });
 
     await tester.pumpWidget(LeviathanApp(state: AppState(_FakeStorage(root))));
@@ -129,7 +126,9 @@ void main() {
 
     await tester.enterText(find.byKey(const Key('title-field')), 'Luce');
     await tester.enterText(
-        find.byKey(const Key('body-field')), 'La luce del mattino');
+      find.byKey(const Key('body-field')),
+      'La luce del mattino',
+    );
     await tester.enterText(find.byKey(const Key('tag-field')), 'fotogr');
     await tester.pump();
     await tester.tap(find.widgetWithText(ActionChip, 'fotografia  1'));
@@ -165,5 +164,56 @@ void main() {
     expect(find.text('Mario Rossi'), findsOneWidget);
     expect(find.text('Anna'), findsOneWidget);
     expect(find.text('luce-naturale'), findsOneWidget);
+  });
+
+  testWidgets('ricerca con testo, filtro tag e filtro fonte', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    await tester.runAsync(() async {
+      await WorkspaceRepository(root).createWorkspace('Lavoro');
+      final dir = '${root.path}/Lavoro';
+      void write(String id, String title, String tags, String sources) =>
+          File('$dir/$id.md').writeAsStringSync(
+            '---\ntitle: "$title"\ntags: $tags\nsources: $sources\n'
+            'created: "2026-01-0${id}T00:00:00.000"\n---\nCorpo $title',
+          );
+      write('1', 'Esposizione', '["fotografia"]', '["Mario Rossi"]');
+      write('2', 'Luce del mattino', '["fotografia"]', '["Anna"]');
+      write('3', 'Riunione luce', '["lavoro"]', '["Mario Rossi"]');
+    });
+
+    await tester.pumpWidget(LeviathanApp(state: AppState(_FakeStorage(root))));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('search-button')));
+    await settle(tester);
+
+    // Ricerca vuota: si vedono le opzioni dei filtri.
+    expect(
+      find.textContaining('note con un tag', findRichText: true),
+      findsOneWidget,
+    );
+
+    final field = find.byKey(const Key('search-field'));
+    await tester.enterText(field, 'luce');
+    await tester.pump();
+    expect(find.text('2 RISULTATI'), findsOneWidget);
+
+    // "#fot" + invio: il primo suggerimento diventa un filtro.
+    await tester.enterText(field, 'luce #fot');
+    await tester.pump();
+    expect(find.text('fotografia'), findsOneWidget);
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pump();
+    expect(find.text('1 RISULTATO'), findsOneWidget);
+
+    // Solo filtri: tolto il testo, tag fotografia + fonte Mario Rossi.
+    await tester.enterText(field, 'da:mario');
+    await tester.pump();
+    await tester.tap(find.text('Mario Rossi'));
+    await tester.pump();
+    expect(find.text('1 RISULTATO'), findsOneWidget);
+    expect(find.text('Esposizione'), findsOneWidget);
   });
 }

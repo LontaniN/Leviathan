@@ -4,6 +4,7 @@ import '../model/note.dart';
 import '../state/notes_controller.dart';
 import 'home_screen.dart' show formatDate;
 import 'note_editor.dart';
+import 'search_screen.dart';
 import 'chip_input.dart';
 import 'theme.dart';
 
@@ -14,14 +15,32 @@ class NoteScreen extends StatelessWidget {
   final String noteId;
   final NotesController notes;
 
+  /// Toccando un tag o una fonte si cercano le note che li condividono.
+  void _search(
+    BuildContext context, {
+    List<String> tags = const [],
+    List<String> sources = const [],
+  }) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => SearchScreen(
+          notes: notes,
+          initialTags: tags,
+          initialSources: sources,
+        ),
+      ),
+    );
+  }
+
   Future<void> _confirmDelete(BuildContext context, Note note) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Eliminare la nota?'),
         content: const Text(
-            'La nota viene spostata nel cestino del workspace '
-            '(cartella .leviathan/trash), non cancellata.'),
+          'La nota viene spostata nel cestino del workspace '
+          '(cartella .leviathan/trash), non cancellata.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
@@ -76,17 +95,22 @@ class NoteScreen extends StatelessWidget {
                 Text(
                   note.updated.isAfter(note.created)
                       ? '${formatDate(note.created)} · modificata '
-                          '${formatDate(note.updated)}'
+                            '${formatDate(note.updated)}'
                       : formatDate(note.created),
-                  style: text.bodySmall
-                      ?.copyWith(color: LeviathanColors.muted),
+                  style: text.bodySmall?.copyWith(color: LeviathanColors.muted),
                 ),
                 if (note.tags.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 6,
                     runSpacing: 6,
-                    children: [for (final tag in note.tags) TagChip(tag)],
+                    children: [
+                      for (final tag in note.tags)
+                        GestureDetector(
+                          onTap: () => _search(context, tags: [tag]),
+                          child: TagChip(tag),
+                        ),
+                    ],
                   ),
                 ],
                 if (note.sources.isNotEmpty) ...[
@@ -95,7 +119,11 @@ class NoteScreen extends StatelessWidget {
                     spacing: 6,
                     runSpacing: 6,
                     children: [
-                      for (final source in note.sources) SourceChip(source),
+                      for (final source in note.sources)
+                        GestureDetector(
+                          onTap: () => _search(context, sources: [source]),
+                          child: SourceChip(source),
+                        ),
                     ],
                   ),
                 ],
@@ -129,12 +157,14 @@ class _EditNotePage extends StatelessWidget {
         sourceCounts: notes.sourceCounts,
         saveLabel: 'Salva modifiche',
         onSave: (draft) {
-          notes.update(note.copyWith(
-            title: draft.title,
-            body: draft.body,
-            tags: draft.tags,
-            sources: draft.sources,
-          ));
+          notes.update(
+            note.copyWith(
+              title: draft.title,
+              body: draft.body,
+              tags: draft.tags,
+              sources: draft.sources,
+            ),
+          );
           Navigator.pop(context);
         },
       ),

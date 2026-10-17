@@ -75,10 +75,11 @@ class AppState extends ChangeNotifier {
 
   /// L'archivio delle note del workspace [name].
   NoteRepository notesOf(String name) => NoteRepository(
-        repository.workspaceDir(name),
-        trashDir: Directory(
-            p.join(repository.root.path, '.leviathan', 'trash', name)),
-      );
+    repository.workspaceDir(name),
+    trashDir: Directory(
+      p.join(repository.root.path, '.leviathan', 'trash', name),
+    ),
+  );
 
   void _set(AppStatus next) {
     status = next;
