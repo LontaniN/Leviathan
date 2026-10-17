@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 
 import 'state/app_state.dart';
+import 'state/settings.dart';
 import 'ui/home_screen.dart';
 import 'ui/onboarding_screen.dart';
 import 'ui/permission_screen.dart';
 import 'ui/theme.dart';
 
 class LeviathanApp extends StatefulWidget {
-  const LeviathanApp({super.key, required this.state});
+  LeviathanApp({super.key, required this.state, Settings? settings})
+    : settings = settings ?? Settings();
 
   final AppState state;
+  final Settings settings;
 
   @override
   State<LeviathanApp> createState() => _LeviathanAppState();
@@ -40,11 +43,15 @@ class _LeviathanAppState extends State<LeviathanApp>
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Leviathan',
-      debugShowCheckedModeBanner: false,
-      theme: buildTheme(),
-      home: ListenableBuilder(
+    return ListenableBuilder(
+      listenable: widget.settings,
+      builder: (context, home) => MaterialApp(
+        title: 'Leviathan',
+        debugShowCheckedModeBanner: false,
+        theme: buildTheme(widget.settings.palette),
+        home: home,
+      ),
+      child: ListenableBuilder(
         listenable: widget.state,
         builder: (context, _) {
           final state = widget.state;
@@ -58,6 +65,7 @@ class _LeviathanAppState extends State<LeviathanApp>
             AppStatus.ready => HomeScreen(
               key: ValueKey(state.currentWorkspace),
               state: state,
+              settings: widget.settings,
             ),
             AppStatus.error => Scaffold(
               body: Center(

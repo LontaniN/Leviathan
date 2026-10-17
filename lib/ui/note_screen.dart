@@ -68,7 +68,7 @@ class NoteScreen extends StatelessWidget {
         final text = Theme.of(context).textTheme;
         return Scaffold(
           appBar: AppBar(
-            backgroundColor: LeviathanColors.background,
+            backgroundColor: context.palette.background,
             actions: [
               IconButton(
                 tooltip: 'Modifica',
@@ -97,7 +97,7 @@ class NoteScreen extends StatelessWidget {
                       ? '${formatDate(note.created)} · modificata '
                             '${formatDate(note.updated)}'
                       : formatDate(note.created),
-                  style: text.bodySmall?.copyWith(color: LeviathanColors.muted),
+                  style: text.bodySmall?.copyWith(color: context.palette.muted),
                 ),
                 if (note.tags.isNotEmpty) ...[
                   const SizedBox(height: 12),
@@ -149,7 +149,7 @@ class _EditNotePage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Modifica nota'),
-        backgroundColor: LeviathanColors.background,
+        backgroundColor: context.palette.background,
       ),
       body: NoteEditor(
         initial: note,

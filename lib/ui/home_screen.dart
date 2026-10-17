@@ -4,10 +4,12 @@ import '../model/note.dart';
 import '../model/tags.dart';
 import '../state/app_state.dart';
 import '../state/notes_controller.dart';
+import '../state/settings.dart';
 import 'graph_screen.dart';
 import 'note_editor.dart';
 import 'note_screen.dart';
 import 'search_screen.dart';
+import 'settings_screen.dart';
 import 'sources_screen.dart';
 import 'chip_input.dart';
 import 'theme.dart';
@@ -19,9 +21,10 @@ import 'workspace_name_form.dart';
 /// La freccia in cima alla lista la espande a tutta larghezza, con anteprima,
 /// tag e data di ogni nota.
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, required this.state});
+  const HomeScreen({super.key, required this.state, required this.settings});
 
   final AppState state;
+  final Settings settings;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -70,6 +73,14 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _openSettings() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => SettingsScreen(settings: widget.settings),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -102,6 +113,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       tooltip: 'Cerca',
                       icon: const Icon(Icons.search),
                       onPressed: _openSearch,
+                    ),
+                    IconButton(
+                      key: const Key('settings-button'),
+                      tooltip: 'Impostazioni',
+                      icon: const Icon(Icons.settings_outlined),
+                      onPressed: _openSettings,
                     ),
                   ],
                 ),
@@ -204,10 +221,10 @@ class _NoteList extends StatelessWidget {
                 AnimatedRotation(
                   turns: expanded ? 0.5 : 0,
                   duration: const Duration(milliseconds: 220),
-                  child: const Icon(
+                  child: Icon(
                     Icons.keyboard_arrow_down,
                     size: 20,
-                    color: LeviathanColors.accent,
+                    color: context.palette.accent,
                   ),
                 ),
                 const SizedBox(width: 4),
@@ -215,8 +232,8 @@ class _NoteList extends StatelessWidget {
                   child: Text(
                     expanded ? 'Tutte le note (${notes.length})' : 'Recenti',
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: LeviathanColors.muted,
+                    style: TextStyle(
+                      color: context.palette.muted,
                       fontSize: 13,
                     ),
                   ),
@@ -227,11 +244,11 @@ class _NoteList extends StatelessWidget {
         ),
         Expanded(
           child: notes.isEmpty
-              ? const Padding(
+              ? Padding(
                   padding: EdgeInsets.all(12),
                   child: Text(
                     'Nessuna nota',
-                    style: TextStyle(color: LeviathanColors.muted),
+                    style: TextStyle(color: context.palette.muted),
                   ),
                 )
               : ListView.builder(
@@ -248,8 +265,8 @@ class _NoteList extends StatelessWidget {
 }
 
 /// Barra colorata del primo tag (lo stesso colore del nodo nel grafo).
-Color _noteColor(Note note) => note.tags.isEmpty
-    ? LeviathanColors.muted.withValues(alpha: 0.4)
+Color _noteColor(BuildContext context, Note note) => note.tags.isEmpty
+    ? context.palette.muted.withValues(alpha: 0.4)
     : Tags.colorOf(note.tags.first);
 
 class _CompactTile extends StatelessWidget {
@@ -272,7 +289,7 @@ class _CompactTile extends StatelessWidget {
               height: 32,
               margin: const EdgeInsets.only(right: 8),
               decoration: BoxDecoration(
-                color: _noteColor(note),
+                color: _noteColor(context, note),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -312,7 +329,7 @@ class _ExpandedTile extends StatelessWidget {
               height: 44,
               margin: const EdgeInsets.only(right: 12, top: 2),
               decoration: BoxDecoration(
-                color: _noteColor(note),
+                color: _noteColor(context, note),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -335,9 +352,9 @@ class _ExpandedTile extends StatelessWidget {
                       ),
                       Text(
                         formatDate(note.created),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: LeviathanColors.muted,
+                          color: context.palette.muted,
                         ),
                       ),
                     ],
@@ -349,9 +366,9 @@ class _ExpandedTile extends StatelessWidget {
                         preview,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
-                          color: LeviathanColors.muted,
+                          color: context.palette.muted,
                         ),
                       ),
                     ),
@@ -401,7 +418,7 @@ class _WorkspaceButton extends StatelessWidget {
         state.currentWorkspace ?? '',
         style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
       ),
-      style: TextButton.styleFrom(foregroundColor: LeviathanColors.accent),
+      style: TextButton.styleFrom(foregroundColor: context.palette.accent),
     );
   }
 }
@@ -411,7 +428,7 @@ Future<void> showWorkspaceSwitcher(BuildContext context, AppState state) {
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
-    backgroundColor: LeviathanColors.surface,
+    backgroundColor: context.palette.surface,
     builder: (sheetContext) => SafeArea(
       child: ConstrainedBox(
         constraints: BoxConstraints(
@@ -421,11 +438,11 @@ Future<void> showWorkspaceSwitcher(BuildContext context, AppState state) {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Padding(
+            Padding(
               padding: EdgeInsets.fromLTRB(24, 0, 24, 8),
               child: Text(
                 'Workspace',
-                style: TextStyle(color: LeviathanColors.muted),
+                style: TextStyle(color: context.palette.muted),
               ),
             ),
             Flexible(
@@ -436,10 +453,7 @@ Future<void> showWorkspaceSwitcher(BuildContext context, AppState state) {
                     ListTile(
                       title: Text(name),
                       trailing: name == state.currentWorkspace
-                          ? const Icon(
-                              Icons.check,
-                              color: LeviathanColors.accent,
-                            )
+                          ? Icon(Icons.check, color: context.palette.accent)
                           : null,
                       onTap: () {
                         Navigator.pop(sheetContext);

@@ -64,7 +64,7 @@ class _SourcesScreenState extends State<SourcesScreen> {
         final visible = _visible(counts);
         return Scaffold(
           appBar: AppBar(
-            backgroundColor: LeviathanColors.background,
+            backgroundColor: context.palette.background,
             title: const Text('Fonti'),
           ),
           body: Column(
@@ -113,23 +113,21 @@ class _SourcesScreenState extends State<SourcesScreen> {
                           final source = visible[i - 1];
                           final count = counts[source]!;
                           return ListTile(
-                            leading: const CircleAvatar(
-                              backgroundColor: LeviathanColors.surface,
+                            leading: CircleAvatar(
+                              backgroundColor: context.palette.surface,
                               child: Icon(
                                 Icons.person,
-                                color: LeviathanColors.muted,
+                                color: context.palette.muted,
                               ),
                             ),
                             title: Text(source),
                             subtitle: Text(
                               count == 1 ? '1 nota' : '$count note',
-                              style: const TextStyle(
-                                color: LeviathanColors.muted,
-                              ),
+                              style: TextStyle(color: context.palette.muted),
                             ),
-                            trailing: const Icon(
+                            trailing: Icon(
                               Icons.chevron_right,
-                              color: LeviathanColors.muted,
+                              color: context.palette.muted,
                             ),
                             onTap: () => _open(source),
                           );
@@ -172,10 +170,10 @@ class SourceNotesScreen extends StatelessWidget {
         final hits = searchNotes(notes.notes, SearchQuery(sources: [source]));
         return Scaffold(
           appBar: AppBar(
-            backgroundColor: LeviathanColors.background,
+            backgroundColor: context.palette.background,
             title: Row(
               children: [
-                const Icon(Icons.person, color: LeviathanColors.muted),
+                Icon(Icons.person, color: context.palette.muted),
                 const SizedBox(width: 8),
                 Expanded(child: Text(source, overflow: TextOverflow.ellipsis)),
               ],
@@ -217,7 +215,7 @@ class _Empty extends StatelessWidget {
         child: Text(
           text,
           textAlign: TextAlign.center,
-          style: const TextStyle(color: LeviathanColors.muted),
+          style: TextStyle(color: context.palette.muted),
         ),
       ),
     );

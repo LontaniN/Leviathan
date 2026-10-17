@@ -245,7 +245,7 @@ class _GraphScreenState extends State<GraphScreen>
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      backgroundColor: LeviathanColors.surface,
+      backgroundColor: context.palette.surface,
       builder: (_) => _FilterSheet(
         tagCounts: widget.notes.tagCounts,
         sourceCounts: widget.notes.sourceCounts,
@@ -268,12 +268,12 @@ class _GraphScreenState extends State<GraphScreen>
     final hasFilter = _matching != null;
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: LeviathanColors.background,
+        backgroundColor: context.palette.background,
         title: Text(
           '${noteCount == 1 ? '1 nota' : '$noteCount note'} · '
           '${_graph.edges.length == 1 ? '1 collegamento' : '${_graph.edges.length} collegamenti'}',
           key: const Key('graph-stats'),
-          style: const TextStyle(fontSize: 14, color: LeviathanColors.muted),
+          style: TextStyle(fontSize: 14, color: context.palette.muted),
         ),
         actions: [
           IconButton(
@@ -281,7 +281,7 @@ class _GraphScreenState extends State<GraphScreen>
             onPressed: _editFilters,
             icon: Badge(
               isLabelVisible: hasFilter,
-              backgroundColor: LeviathanColors.accent,
+              backgroundColor: context.palette.accent,
               smallSize: 8,
               child: const Icon(Icons.filter_list),
             ),
@@ -311,10 +311,10 @@ class _GraphScreenState extends State<GraphScreen>
             ),
           Expanded(
             child: noteCount == 0
-                ? const Center(
+                ? Center(
                     child: Text(
                       'Scrivi qualche nota per vedere il grafo',
-                      style: TextStyle(color: LeviathanColors.muted),
+                      style: TextStyle(color: context.palette.muted),
                     ),
                   )
                 : LayoutBuilder(
@@ -342,6 +342,7 @@ class _GraphScreenState extends State<GraphScreen>
                                   view: _view,
                                   selected: _selected,
                                   matching: _matching,
+                                  palette: context.palette,
                                 ),
                               ),
                             ),
@@ -374,6 +375,7 @@ class _GraphPainter extends CustomPainter {
     required this.view,
     required this.selected,
     required this.matching,
+    required this.palette,
   }) : super(repaint: layout);
 
   final NoteGraph graph;
@@ -381,6 +383,7 @@ class _GraphPainter extends CustomPainter {
   final GraphViewport view;
   final int selected;
   final Set<String>? matching;
+  final LeviathanPalette palette;
 
   static const _labelZoom = 1.3;
   static final Map<String, TextPainter> _labels = {};
@@ -419,21 +422,21 @@ class _GraphPainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = hairline
-        ..color = LeviathanColors.link.withValues(alpha: 0.07),
+        ..color = palette.link.withValues(alpha: 0.07),
     );
     canvas.drawPath(
       normal,
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = hairline
-        ..color = LeviathanColors.link.withValues(alpha: 0.45),
+        ..color = palette.link.withValues(alpha: 0.45),
     );
     canvas.drawPath(
       highlight,
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = hairline * 1.8
-        ..color = LeviathanColors.accent.withValues(alpha: 0.85),
+        ..color = palette.accent.withValues(alpha: 0.85),
     );
 
     // Nodi.
@@ -451,7 +454,7 @@ class _GraphPainter extends CustomPainter {
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2 / view.scale
-          ..color = Colors.white,
+          ..color = palette.text,
       );
     }
     canvas.restore();
@@ -469,11 +472,14 @@ class _GraphPainter extends CustomPainter {
         continue;
       }
       final label = _labels.putIfAbsent(
-        '${node.note.id}|${node.note.displayTitle}',
+        '${node.note.id}|${node.note.displayTitle}|${palette.id}',
         () => TextPainter(
           text: TextSpan(
             text: node.note.displayTitle,
-            style: const TextStyle(color: Color(0xDDE6E6EA), fontSize: 11),
+            style: TextStyle(
+              color: palette.text.withValues(alpha: 0.87),
+              fontSize: 11,
+            ),
           ),
           textDirection: TextDirection.ltr,
           maxLines: 1,
@@ -490,6 +496,7 @@ class _GraphPainter extends CustomPainter {
       old.view != view ||
       old.selected != selected ||
       old.matching != matching ||
+      old.palette != palette ||
       old.graph != graph ||
       old.layout != layout;
 }
@@ -504,7 +511,7 @@ class _SelectedCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final note = node.note;
     return Material(
-      color: LeviathanColors.surface,
+      color: context.palette.surface,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         key: const Key('graph-card'),
@@ -533,9 +540,9 @@ class _SelectedCard extends StatelessWidget {
                       node.degree == 1
                           ? '1 nota collegata'
                           : '${node.degree} note collegate',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: LeviathanColors.muted,
+                        color: context.palette.muted,
                       ),
                     ),
                     if (note.tags.isNotEmpty || note.sources.isNotEmpty)
@@ -554,7 +561,7 @@ class _SelectedCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: LeviathanColors.muted),
+              Icon(Icons.chevron_right, color: context.palette.muted),
             ],
           ),
         ),
@@ -596,10 +603,7 @@ class _ActiveFilters extends StatelessWidget {
               ],
             ),
           ),
-          Text(
-            '$matches',
-            style: const TextStyle(color: LeviathanColors.muted),
-          ),
+          Text('$matches', style: TextStyle(color: context.palette.muted)),
         ],
       ),
     );
@@ -654,9 +658,9 @@ class _FilterSheetState extends State<_FilterSheet> {
                   Text('Tag', style: text.titleSmall),
                   const SizedBox(height: 8),
                   if (widget.tagCounts.isEmpty)
-                    const Text(
+                    Text(
                       'Nessun tag',
-                      style: TextStyle(color: LeviathanColors.muted),
+                      style: TextStyle(color: context.palette.muted),
                     ),
                   Wrap(
                     spacing: 6,
@@ -681,9 +685,9 @@ class _FilterSheetState extends State<_FilterSheet> {
                   Text('Fonti', style: text.titleSmall),
                   const SizedBox(height: 8),
                   if (widget.sourceCounts.isEmpty)
-                    const Text(
+                    Text(
                       'Nessuna fonte',
-                      style: TextStyle(color: LeviathanColors.muted),
+                      style: TextStyle(color: context.palette.muted),
                     ),
                   Wrap(
                     spacing: 6,

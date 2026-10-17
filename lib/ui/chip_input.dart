@@ -44,9 +44,9 @@ class SourceChip extends StatelessWidget {
       avatar: Icon(
         Icons.person_outline,
         size: dense ? 12 : 16,
-        color: LeviathanColors.muted,
+        color: context.palette.muted,
       ),
-      borderColor: LeviathanColors.muted.withValues(alpha: 0.4),
+      borderColor: context.palette.muted.withValues(alpha: 0.4),
       onDeleted: onDeleted,
       dense: dense,
     );
@@ -82,7 +82,7 @@ class _BaseChip extends StatelessWidget {
       padding: dense ? EdgeInsets.zero : null,
       labelPadding: dense ? const EdgeInsets.only(left: 2, right: 6) : null,
       side: BorderSide(color: borderColor),
-      backgroundColor: LeviathanColors.surface,
+      backgroundColor: context.palette.surface,
     );
   }
 }
@@ -142,10 +142,9 @@ class ChipKind {
     suggest: (input, counts, exclude) =>
         Sources.suggest(input, counts, exclude: exclude),
     chip: (value, onDeleted) => SourceChip(value, onDeleted: onDeleted),
-    suggestionAvatar: (_) => const Icon(
-      Icons.person_outline,
-      size: 16,
-      color: LeviathanColors.muted,
+    suggestionAvatar: (_) => Builder(
+      builder: (context) =>
+          Icon(Icons.person_outline, size: 16, color: context.palette.muted),
     ),
   );
 }

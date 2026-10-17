@@ -26,7 +26,7 @@ class OnboardingScreen extends StatelessWidget {
                   Text(
                     'Leviathan',
                     style: text.displaySmall?.copyWith(
-                      color: LeviathanColors.accent,
+                      color: context.palette.accent,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -35,7 +35,7 @@ class OnboardingScreen extends StatelessWidget {
                     'Ogni workspace raccoglie le sue note: '
                     'puoi crearne altri in qualsiasi momento.',
                     style: text.bodyLarge?.copyWith(
-                      color: LeviathanColors.muted,
+                      color: context.palette.muted,
                     ),
                   ),
                   const SizedBox(height: 32),

@@ -20,11 +20,7 @@ class PermissionScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(
-                Icons.folder_open,
-                size: 48,
-                color: LeviathanColors.accent,
-              ),
+              Icon(Icons.folder_open, size: 48, color: context.palette.accent),
               const SizedBox(height: 24),
               Text(
                 'Accesso ai file',
@@ -37,7 +33,7 @@ class PermissionScreen extends StatelessWidget {
                 'Documents/LeviathanNotes del telefono, così restano tue '
                 'anche se disinstalli l\'app. Per scriverci, Android chiede '
                 'il permesso "Accesso a tutti i file".',
-                style: text.bodyLarge?.copyWith(color: LeviathanColors.muted),
+                style: text.bodyLarge?.copyWith(color: context.palette.muted),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),

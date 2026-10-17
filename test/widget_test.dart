@@ -6,7 +6,9 @@ import 'package:leviathan/app.dart';
 import 'package:leviathan/data/storage_access.dart';
 import 'package:leviathan/data/workspace_repository.dart';
 import 'package:leviathan/state/app_state.dart';
+import 'package:leviathan/state/settings.dart';
 import 'package:leviathan/ui/graph_screen.dart';
+import 'package:leviathan/ui/theme.dart';
 
 class _FakeStorage implements StorageAccess {
   _FakeStorage(this.dir, {this.granted = true});
@@ -306,5 +308,35 @@ void main() {
     expect(find.text('Consiglio sul tempo'), findsOneWidget);
     expect(find.text('Ricetta'), findsOneWidget);
     expect(find.text('Libro'), findsNothing);
+  });
+
+  testWidgets('sceglie una palette dalle impostazioni e la salva', (
+    tester,
+  ) async {
+    final repo = WorkspaceRepository(root);
+    await tester.runAsync(() async {
+      await repo.createWorkspace('Lavoro');
+    });
+    final file = File('${root.path}/preferences.json');
+    final settings = Settings(file: file);
+
+    await tester.pumpWidget(
+      LeviathanApp(state: AppState(_FakeStorage(root)), settings: settings),
+    );
+    await settle(tester);
+
+    await tester.tap(find.byKey(const Key('settings-button')));
+    await settle(tester);
+    expect(find.text('Impostazioni'), findsOneWidget);
+
+    await tester.ensureVisible(find.byKey(const Key('palette-carta')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('palette-carta')));
+    await settle(tester);
+
+    expect(settings.palette, LeviathanPalette.carta);
+    final context = tester.element(find.text('Impostazioni'));
+    expect(Theme.of(context).brightness, Brightness.light);
+    expect(file.readAsStringSync(), contains('"carta"'));
   });
 }

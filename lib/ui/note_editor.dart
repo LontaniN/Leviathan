@@ -95,7 +95,7 @@ class _NoteEditorState extends State<NoteEditor> {
       children: [
         DecoratedBox(
           decoration: BoxDecoration(
-            color: LeviathanColors.surface,
+            color: context.palette.surface,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Padding(

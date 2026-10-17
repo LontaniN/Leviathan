@@ -238,7 +238,7 @@ class _SearchBar extends StatelessWidget {
           Expanded(
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: LeviathanColors.surface,
+                color: context.palette.surface,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Padding(
@@ -265,10 +265,10 @@ class _SearchBar extends StatelessWidget {
                       ),
                     Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.search,
                           size: 20,
-                          color: LeviathanColors.muted,
+                          color: context.palette.muted,
                         ),
                         Expanded(
                           child: TextField(
@@ -321,7 +321,7 @@ class _FilterOptions extends StatelessWidget {
         const SectionTitle('Filtri di ricerca'),
         ListTile(
           leading: const Icon(Icons.sell_outlined),
-          title: const Text.rich(
+          title: Text.rich(
             TextSpan(
               children: [
                 TextSpan(
@@ -330,7 +330,7 @@ class _FilterOptions extends StatelessWidget {
                 ),
                 TextSpan(
                   text: 'note con un tag',
-                  style: TextStyle(color: LeviathanColors.muted),
+                  style: TextStyle(color: context.palette.muted),
                 ),
               ],
             ),
@@ -340,7 +340,7 @@ class _FilterOptions extends StatelessWidget {
         ),
         ListTile(
           leading: const Icon(Icons.person_outline),
-          title: const Text.rich(
+          title: Text.rich(
             TextSpan(
               children: [
                 TextSpan(
@@ -349,7 +349,7 @@ class _FilterOptions extends StatelessWidget {
                 ),
                 TextSpan(
                   text: 'note da una fonte (persona)',
-                  style: TextStyle(color: LeviathanColors.muted),
+                  style: TextStyle(color: context.palette.muted),
                 ),
               ],
             ),
@@ -357,12 +357,12 @@ class _FilterOptions extends StatelessWidget {
           subtitle: const Text('scorciatoia: @'),
           onTap: () => onPick('da:'),
         ),
-        const Padding(
+        Padding(
           padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
           child: Text(
             'Testo e filtri si combinano: per esempio '
             '"esposizione tag:fotografia da:Mario Rossi".',
-            style: TextStyle(color: LeviathanColors.muted, fontSize: 13),
+            style: TextStyle(color: context.palette.muted, fontSize: 13),
           ),
         ),
       ],
@@ -397,21 +397,18 @@ class _FilterSuggestions extends StatelessWidget {
               isTag
                   ? 'Nessun tag corrispondente'
                   : 'Nessuna fonte corrispondente',
-              style: const TextStyle(color: LeviathanColors.muted),
+              style: TextStyle(color: context.palette.muted),
             ),
           ),
         for (final value in values)
           ListTile(
             leading: isTag
                 ? CircleAvatar(backgroundColor: Tags.colorOf(value), radius: 6)
-                : const Icon(
-                    Icons.person_outline,
-                    color: LeviathanColors.muted,
-                  ),
+                : Icon(Icons.person_outline, color: context.palette.muted),
             title: Text(value),
             trailing: Text(
               '${counts[value] ?? 0}',
-              style: const TextStyle(color: LeviathanColors.muted),
+              style: TextStyle(color: context.palette.muted),
             ),
             onTap: () => onPick(value),
           ),
@@ -434,10 +431,10 @@ class _Results extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (hits.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
           'Nessuna nota trovata',
-          style: TextStyle(color: LeviathanColors.muted),
+          style: TextStyle(color: context.palette.muted),
         ),
       );
     }
@@ -497,10 +494,7 @@ class NoteResultTile extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   formatDate(note.created),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: LeviathanColors.muted,
-                  ),
+                  style: TextStyle(fontSize: 12, color: context.palette.muted),
                 ),
               ],
             ),
@@ -511,10 +505,7 @@ class NoteResultTile extends StatelessWidget {
                   hit.snippet,
                   terms: terms,
                   maxLines: 3,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: LeviathanColors.muted,
-                  ),
+                  style: TextStyle(fontSize: 13, color: context.palette.muted),
                 ),
               ),
             if (note.tags.isNotEmpty || note.sources.isNotEmpty)
@@ -562,9 +553,9 @@ class HighlightText extends StatelessWidget {
       spans.add(
         TextSpan(
           text: text.substring(start, end),
-          style: const TextStyle(
+          style: TextStyle(
             color: Colors.black,
-            backgroundColor: LeviathanColors.accent,
+            backgroundColor: context.palette.accent,
           ),
         ),
       );
@@ -591,11 +582,11 @@ class SectionTitle extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
       child: Text(
         text.toUpperCase(),
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 12,
           letterSpacing: 0.8,
           fontWeight: FontWeight.w600,
-          color: LeviathanColors.muted,
+          color: context.palette.muted,
         ),
       ),
     );
