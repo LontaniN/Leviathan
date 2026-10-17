@@ -108,6 +108,20 @@ class LeviathanPalette extends ThemeExtension<LeviathanPalette> {
     muted: Color(0xFFA29BB0),
   );
 
+  /// Nero e bianco come l'icona dell'app; il nero pieno spegne i pixel OLED.
+  static const inchiostro = LeviathanPalette(
+    id: 'inchiostro',
+    name: 'Inchiostro',
+    brightness: Brightness.dark,
+    background: Color(0xFF000000),
+    surface: Color(0xFF161616),
+    accent: Color(0xFFFFFFFF),
+    onAccent: Color(0xFF000000),
+    link: Color(0xFF7A7A7A),
+    text: Color(0xFFE8E8E8),
+    muted: Color(0xFF8C8C8C),
+  );
+
   static const carta = LeviathanPalette(
     id: 'carta',
     name: 'Carta',
@@ -121,7 +135,15 @@ class LeviathanPalette extends ThemeExtension<LeviathanPalette> {
     muted: Color(0xFF6F6B63),
   );
 
-  static const all = [grafite, abisso, brace, muschio, ametista, carta];
+  static const all = [
+    grafite,
+    abisso,
+    brace,
+    muschio,
+    ametista,
+    inchiostro,
+    carta,
+  ];
 
   /// La palette con questo [id], o quella predefinita se non esiste più.
   static LeviathanPalette byId(String? id) =>
