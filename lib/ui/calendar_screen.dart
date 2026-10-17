@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 
 import '../model/demo_notes.dart';
 import '../model/note.dart';
+import '../model/search.dart';
 import '../model/tag_calendar.dart';
 import '../model/tags.dart';
 import '../state/notes_controller.dart';
 import 'period_notes_screen.dart';
+import 'search_screen.dart' show HighlightText;
 import 'theme.dart';
 
 /// Come mostrare il calendario: una casella per giorno o per mese.
@@ -24,6 +26,10 @@ String _capitalized(String s) => '${s[0].toUpperCase()}${s.substring(1)}';
 /// Calendario a caselle: in ogni giorno (o mese) i tag più usati, con
 /// accanto quante note li usano. Si scorre in su verso il passato e in giù
 /// verso il futuro; si apre sul periodo corrente.
+///
+/// Con la lente si cerca: restano solo le caselle dei giorni (o mesi) con
+/// note che contengono le parole, e in ognuna l'anteprima del testo che le
+/// contiene.
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key, required this.notes});
 
@@ -39,6 +45,26 @@ class _CalendarScreenState extends State<CalendarScreen> {
   /// Solo nelle build di sviluppo: mostra note finte al posto di quelle vere.
   bool _demo = kDebugMode;
   late final List<Note> _demoNotes = demoNotes(DateTime.now().year);
+
+  bool _searching = false;
+  final _query = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _query.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _query.dispose();
+    super.dispose();
+  }
+
+  void _closeSearch() {
+    _query.clear();
+    setState(() => _searching = false);
+  }
 
   void _showDetail(String title, TagTally tally, DateTime from, DateTime to) {
     showModalBottomSheet<void>(
@@ -57,7 +83,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  void _openNotes(String title, DateTime from, DateTime to) {
+  void _openNotes(
+    String title,
+    DateTime from,
+    DateTime to, {
+    String query = '',
+  }) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => PeriodNotesScreen(
@@ -66,6 +97,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           to: to,
           notes: widget.notes,
           demoNotes: _demo ? _demoNotes : null,
+          query: query,
         ),
       ),
     );
@@ -77,11 +109,41 @@ class _CalendarScreenState extends State<CalendarScreen> {
       listenable: widget.notes,
       builder: (context, _) {
         final notes = _demo ? _demoNotes : widget.notes.notes;
+        final query = SearchQuery(text: _query.text);
+        final searching = query.terms.isNotEmpty;
         return Scaffold(
           appBar: AppBar(
             backgroundColor: context.palette.background,
-            title: const Text('Calendario'),
+            title: _searching
+                ? TextField(
+                    key: const Key('calendar-search'),
+                    controller: _query,
+                    autofocus: true,
+                    autocorrect: false,
+                    textInputAction: TextInputAction.search,
+                    decoration: const InputDecoration(
+                      hintText: 'Cerca nel calendario',
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      filled: false,
+                    ),
+                  )
+                : const Text('Calendario'),
             actions: [
+              _searching
+                  ? IconButton(
+                      key: const Key('calendar-search-close'),
+                      tooltip: 'Chiudi la ricerca',
+                      icon: const Icon(Icons.close),
+                      onPressed: _closeSearch,
+                    )
+                  : IconButton(
+                      key: const Key('calendar-search-button'),
+                      tooltip: 'Cerca',
+                      icon: const Icon(Icons.search),
+                      onPressed: () => setState(() => _searching = true),
+                    ),
               if (kDebugMode)
                 IconButton(
                   key: const Key('demo-toggle'),
@@ -151,6 +213,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     ? const _Empty(
                         'Nessuna nota ancora: il calendario si riempie man '
                         'mano che scrivi.',
+                      )
+                    : searching
+                    ? _SearchView(
+                        key: ValueKey('search-$_mode-$_demo'),
+                        mode: _mode,
+                        hits: searchNotes(notes, query),
+                        terms: query.terms,
+                        onTap: (title, from, to) =>
+                            _openNotes(title, from, to, query: _query.text),
                       )
                     : switch (_mode) {
                         CalendarMode.days => _DaysView(
@@ -679,6 +750,317 @@ class _TallySheet extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// I risultati di una ricerca nel calendario: solo le caselle dei giorni
+/// (o mesi) con note che contengono le parole, ognuna con l'anteprima del
+/// testo trovato. Dal più recente in basso, come il calendario.
+class _SearchView extends StatelessWidget {
+  const _SearchView({
+    super.key,
+    required this.mode,
+    required this.hits,
+    required this.terms,
+    required this.onTap,
+  });
+
+  final CalendarMode mode;
+  final List<SearchHit> hits;
+  final List<String> terms;
+
+  /// [from] incluso, [to] escluso.
+  final void Function(String title, DateTime from, DateTime to) onTap;
+
+  static const _monthColumns = 3;
+
+  @override
+  Widget build(BuildContext context) {
+    if (hits.isEmpty) {
+      return const _Empty('Nessuna nota contiene queste parole.');
+    }
+    final days = mode == CalendarMode.days;
+    // Ogni casella con le sue note, dalla prima scritta.
+    final cells = <DateTime, List<Note>>{};
+    for (final hit in hits) {
+      final c = hit.note.created;
+      final key = days
+          ? DateTime(c.year, c.month, c.day)
+          : DateTime(c.year, c.month);
+      (cells[key] ??= []).add(hit.note);
+    }
+    for (final list in cells.values) {
+      list.sort((a, b) => a.created.compareTo(b.created));
+    }
+    // Le sezioni (mesi o anni) con almeno una casella, dalla più recente.
+    final sections = {
+      for (final k in cells.keys)
+        days ? DateTime(k.year, k.month) : DateTime(k.year),
+    }.toList()..sort((a, b) => b.compareTo(a));
+    final count = hits.length;
+    final where = cells.length == 1
+        ? (days ? '1 giorno' : '1 mese')
+        : '${cells.length} ${days ? 'giorni' : 'mesi'}';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: LeviathanSpacing.lg),
+          child: Text(
+            '${count == 1 ? '1 nota' : '$count note'} in $where',
+            style: LeviathanText.meta.copyWith(color: context.palette.muted),
+          ),
+        ),
+        Expanded(
+          // Al contrario: si apre in fondo, sul risultato più recente.
+          child: ListView.builder(
+            reverse: true,
+            padding: const EdgeInsets.only(bottom: LeviathanSpacing.xl),
+            itemCount: sections.length,
+            itemBuilder: (context, i) => days
+                ? _monthSection(context, sections[i], cells)
+                : _yearSection(context, sections[i].year, cells),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _section(
+    BuildContext context,
+    String title,
+    int notes,
+    List<Widget> rows,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        LeviathanSpacing.sm,
+        LeviathanSpacing.lg,
+        LeviathanSpacing.sm,
+        0,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(LeviathanSpacing.xs),
+            child: Row(
+              children: [
+                Expanded(child: Text(title, style: LeviathanText.title)),
+                Text(
+                  notes == 1 ? '1 nota' : '$notes note',
+                  style: LeviathanText.meta.copyWith(
+                    color: context.palette.muted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ...rows,
+        ],
+      ),
+    );
+  }
+
+  /// Un mese: solo le settimane con un risultato, e in queste solo i giorni
+  /// che ne hanno.
+  Widget _monthSection(
+    BuildContext context,
+    DateTime month,
+    Map<DateTime, List<Note>> cells,
+  ) {
+    final leading = month.weekday - DateTime.monday;
+    final days = DateTime(month.year, month.month + 1, 0).day;
+    final weeks = ((leading + days) / 7).ceil();
+    var total = 0;
+    final rows = <Widget>[
+      Row(
+        children: [
+          for (final initial in _weekdayInitials)
+            Expanded(
+              child: Text(
+                initial,
+                textAlign: TextAlign.center,
+                style: LeviathanText.tiny.copyWith(
+                  color: context.palette.muted,
+                ),
+              ),
+            ),
+        ],
+      ),
+      const SizedBox(height: LeviathanSpacing.xs),
+    ];
+    for (var week = 0; week < weeks; week++) {
+      final dates = [
+        for (var weekday = 0; weekday < 7; weekday++)
+          week * 7 + weekday - leading + 1,
+      ];
+      final found = [
+        for (final d in dates)
+          d < 1 || d > days
+              ? null
+              : cells[DateTime(month.year, month.month, d)],
+      ];
+      if (found.every((f) => f == null)) continue;
+      rows.add(
+        Row(
+          children: [
+            for (var i = 0; i < 7; i++)
+              Expanded(
+                child: AspectRatio(
+                  aspectRatio: LeviathanSizes.calendarDayAspect,
+                  child: found[i] == null
+                      ? const SizedBox.shrink()
+                      : _cell(
+                          context,
+                          label: '${dates[i]}',
+                          notes: found[i]!,
+                          onTap: () {
+                            final from = DateTime(
+                              month.year,
+                              month.month,
+                              dates[i],
+                            );
+                            onTap(
+                              '${dates[i]} ${_monthNames[month.month - 1]} ${month.year}',
+                              from,
+                              DateTime(from.year, from.month, from.day + 1),
+                            );
+                          },
+                        ),
+                ),
+              ),
+          ],
+        ),
+      );
+      total += found.fold(0, (a, f) => a + (f?.length ?? 0));
+    }
+    final name = '${_capitalized(_monthNames[month.month - 1])} ${month.year}';
+    return _section(context, name, total, rows);
+  }
+
+  /// Un anno: solo le file di mesi con un risultato.
+  Widget _yearSection(
+    BuildContext context,
+    int year,
+    Map<DateTime, List<Note>> cells,
+  ) {
+    var total = 0;
+    final rows = <Widget>[];
+    for (var row = 0; row < 12 ~/ _monthColumns; row++) {
+      final months = [
+        for (var col = 0; col < _monthColumns; col++)
+          DateTime(year, row * _monthColumns + col + 1),
+      ];
+      final found = [for (final m in months) cells[m]];
+      if (found.every((f) => f == null)) continue;
+      rows.add(
+        Row(
+          children: [
+            for (var i = 0; i < _monthColumns; i++)
+              Expanded(
+                child: AspectRatio(
+                  aspectRatio: LeviathanSizes.calendarMonthAspect,
+                  child: found[i] == null
+                      ? const SizedBox.shrink()
+                      : _cell(
+                          context,
+                          label: _capitalized(_monthNames[months[i].month - 1]),
+                          notes: found[i]!,
+                          onTap: () => onTap(
+                            '${_capitalized(_monthNames[months[i].month - 1])} $year',
+                            months[i],
+                            DateTime(year, months[i].month + 1),
+                          ),
+                        ),
+                ),
+              ),
+          ],
+        ),
+      );
+      total += found.fold(0, (a, f) => a + (f?.length ?? 0));
+    }
+    return _section(context, '$year', total, rows);
+  }
+
+  Widget _cell(
+    BuildContext context, {
+    required String label,
+    required List<Note> notes,
+    required VoidCallback onTap,
+  }) {
+    final palette = context.palette;
+    return _Cell(
+      highlighted: false,
+      filled: true,
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: LeviathanText.meta.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: palette.text,
+                  ),
+                ),
+              ),
+              if (notes.length > 1)
+                Text(
+                  '${notes.length}',
+                  style: LeviathanText.tiny.copyWith(color: palette.muted),
+                ),
+            ],
+          ),
+          const SizedBox(height: LeviathanSpacing.xxs),
+          Expanded(
+            child: _Previews([
+              for (final n in notes) matchPreview(n, terms),
+            ], terms: terms),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Le anteprime con le parole evidenziate, quante righe ne stanno.
+class _Previews extends StatelessWidget {
+  const _Previews(this.previews, {required this.terms});
+
+  final List<String> previews;
+  final List<String> terms;
+
+  @override
+  Widget build(BuildContext context) {
+    // Come in _TagLines: si misura una riga con lo stile davvero usato.
+    final style = DefaultTextStyle.of(context).style
+        .merge(LeviathanText.tiny)
+        .copyWith(color: context.palette.muted);
+    final painter = TextPainter(
+      text: TextSpan(text: 'Ag', style: style),
+      textDirection: TextDirection.ltr,
+      textScaler: MediaQuery.textScalerOf(context),
+    )..layout();
+    final lineHeight = painter.height;
+    painter.dispose();
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final fits = (constraints.maxHeight / lineHeight).floor();
+        if (fits < 1) return const SizedBox.shrink();
+        return HighlightText(
+          previews.join('\n'),
+          terms: terms,
+          style: style,
+          maxLines: fits,
+        );
+      },
     );
   }
 }

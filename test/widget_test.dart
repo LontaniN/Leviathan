@@ -490,6 +490,55 @@ void main() {
     expect(find.text('Chiamare Giulia'), findsOneWidget);
   });
 
+  testWidgets('calendario: la ricerca lascia solo i giorni trovati', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    final now = DateTime.now();
+    String day(int d) => DateTime(now.year, now.month, d).toIso8601String();
+    await tester.runAsync(() async {
+      await WorkspaceRepository(root).createWorkspace('Diario');
+      final dir = '${root.path}/Diario';
+      File('$dir/a.md').writeAsStringSync(
+        '---\ntitle: "Gita"\ncreated: "${day(1)}"\n---\n'
+        'Siamo andati al lago con Anna.',
+      );
+      File('$dir/b.md').writeAsStringSync(
+        '---\ntitle: "Spesa"\ncreated: "${day(2)}"\n---\nPane e latte.',
+      );
+    });
+
+    await tester.pumpWidget(LeviathanApp(state: AppState(_FakeStorage(root))));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('calendar-button')));
+    await settle(tester);
+    // Nei test è una build di sviluppo: via i dati di prova.
+    await tester.tap(find.byKey(const Key('demo-toggle')));
+    await settle(tester);
+
+    await tester.tap(find.byKey(const Key('calendar-search-button')));
+    await settle(tester);
+    await tester.enterText(find.byKey(const Key('calendar-search')), 'lago');
+    await settle(tester);
+
+    expect(find.text('1 nota in 1 giorno'), findsOneWidget);
+    expect(find.text('1'), findsOneWidget);
+    expect(find.text('2'), findsNothing);
+    expect(
+      find.textContaining('lago con Anna', findRichText: true),
+      findsOneWidget,
+    );
+
+    // La casella apre solo le note del giorno che contengono la parola.
+    await tester.tap(find.text('1'));
+    await settle(tester);
+    expect(find.text('Gita'), findsOneWidget);
+    expect(find.text('Spesa'), findsNothing);
+  });
+
   testWidgets('sceglie una palette dalle impostazioni e la salva', (
     tester,
   ) async {

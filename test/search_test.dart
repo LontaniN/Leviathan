@@ -194,4 +194,28 @@ void main() {
       expect(SearchInput.parse('C#').activeKind, isNull);
     });
   });
+
+  group('anteprima per il calendario', () {
+    test('parte poco prima della parola, senza tagliare parole', () {
+      final note = _note(
+        'p',
+        'Gita',
+        body: 'Siamo partiti presto e al lago abbiamo visto gli aironi.',
+      );
+      expect(
+        matchPreview(note, ['lago']),
+        '…e al lago abbiamo visto gli aironi.',
+      );
+    });
+
+    test('se la parola è nel titolo basta il titolo', () {
+      final note = _note('t', 'Lago di Como', body: 'Un giro in barca.');
+      expect(matchPreview(note, ['lago']), 'Lago di Como');
+    });
+
+    test("dall'inizio se la parola è in testa", () {
+      final note = _note('i', 'Gita', body: 'Lago ghiacciato.');
+      expect(matchPreview(note, ['lago']), 'Lago ghiacciato.');
+    });
+  });
 }

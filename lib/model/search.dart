@@ -209,3 +209,36 @@ class SearchInput {
     return SearchInput(raw.trim(), null, '');
   }
 }
+
+/// Un'anteprima corta di [note] che comincia vicino alla prima delle [terms]
+/// trovata, per le caselle piccole del calendario: se la parola è nel
+/// titolo basta il titolo, altrimenti il pezzo di testo che la contiene.
+String matchPreview(Note note, List<String> terms) {
+  const before = 12;
+  const length = 120;
+  final title = note.displayTitle;
+  final foldedTitle = foldText(title);
+  if (terms.any(foldedTitle.contains)) return title;
+
+  final body = plainText(note.body).replaceAll(RegExp(r'\s+'), ' ').trim();
+  final folded = foldText(body);
+  // foldText non cambia la lunghezza per l'italiano, ma per sicurezza:
+  if (folded.length != body.length) return title;
+  for (final term in terms) {
+    final at = folded.indexOf(term);
+    if (at == -1) continue;
+    var start = at > before ? at - before : 0;
+    // Non si comincia a metà parola.
+    if (start > 0) {
+      final space = body.indexOf(' ', start);
+      start = space != -1 && space < at ? space + 1 : at;
+    }
+    final end = (start + length).clamp(0, body.length);
+    var text = body.substring(start, end);
+    if (start > 0) text = '…$text';
+    if (end < body.length) text = '$text…';
+    return text;
+  }
+  // La parola è fra i tag o le fonti.
+  return title;
+}
