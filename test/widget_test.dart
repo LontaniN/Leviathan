@@ -444,6 +444,24 @@ void main() {
     expect(find.text('Senza tag'), findsOneWidget);
     expect(find.text('Chiamare Giulia'), findsNothing);
 
+    // Anche "Senza tag" ha la sua ricerca.
+    await tester.tap(find.text('Senza tag'));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('group-search-button')));
+    await settle(tester);
+    await tester.enterText(find.byKey(const Key('group-search')), 'libr');
+    await settle(tester);
+    expect(find.text('Libro'), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('group-search')), 'ricetta');
+    await settle(tester);
+    expect(find.text('Ricetta'), findsNothing);
+    expect(
+      find.text('Nessun risultato fra le note senza tag.'),
+      findsOneWidget,
+    );
+    await tester.pageBack();
+    await settle(tester);
+
     // Per fonte: una nota con due fonti compare in entrambi i gruppi.
     await tester.tap(find.text('Per fonte'));
     await settle(tester);
@@ -474,11 +492,11 @@ void main() {
     // La lente cerca solo fra le note di Anna.
     await tester.tap(find.byKey(const Key('group-search-button')));
     await settle(tester);
-    await tester.enterText(find.byKey(const Key('search-field')), 'libro');
+    await tester.enterText(find.byKey(const Key('group-search')), 'libro');
     await settle(tester);
     expect(find.text('Libro'), findsOneWidget);
     expect(find.text('Ricetta'), findsNothing);
-    for (var i = 0; i < 4; i++) {
+    for (var i = 0; i < 3; i++) {
       await tester.pageBack();
       await settle(tester);
     }

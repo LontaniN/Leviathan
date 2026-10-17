@@ -357,7 +357,7 @@ class _Titles extends StatelessWidget {
 
 /// La schermata di un tag o di una fonte: i suoi task o le sue note, dal
 /// più recente al più vecchio. In alto si passa dagli uni alle altre; la
-/// lente cerca solo dentro questo tag (o fonte).
+/// lente cerca solo dentro questo tag (o fonte), anche in "Senza tag".
 ///
 /// Si apre dai riquadri di [ListsScreen] e toccando un tag o una fonte in
 /// una nota.
@@ -384,23 +384,30 @@ class GroupScreen extends StatefulWidget {
 class _GroupScreenState extends State<GroupScreen> {
   late ListsView _view = widget.initialView;
 
+  bool _searching = false;
+  final _query = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _query.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _query.dispose();
+    super.dispose();
+  }
+
+  void _closeSearch() {
+    _query.clear();
+    setState(() => _searching = false);
+  }
+
   void _open(Note note) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => NoteScreen(noteId: note.id, notes: widget.notes),
-      ),
-    );
-  }
-
-  void _search(String name) {
-    final isTag = widget.grouping == NoteGrouping.tag;
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => SearchScreen(
-          notes: widget.notes,
-          initialTags: isTag ? [name] : const [],
-          initialSources: isTag ? const [] : [name],
-        ),
       ),
     );
   }
@@ -410,51 +417,77 @@ class _GroupScreenState extends State<GroupScreen> {
     final name = widget.name;
     final grouping = widget.grouping;
     final tasks = _view == ListsView.tasks;
+    final query = SearchQuery(text: _query.text);
     return ListenableBuilder(
       listenable: widget.notes,
       builder: (context, _) {
         // Ricalcolato a ogni modifica: una nota che perde il tag esce.
-        final items =
-            widget.notes.notes
-                .where(
-                  (n) =>
-                      n.isTask == tasks && groupsOf(n, grouping).contains(name),
-                )
-                .toList()
-              ..sort((a, b) => b.created.compareTo(a.created));
+        final items = widget.notes.notes
+            .where(
+              (n) => n.isTask == tasks && groupsOf(n, grouping).contains(name),
+            )
+            .toList();
+        // La ricerca resta dentro il gruppo, così vale anche per "Senza
+        // tag" e "Senza fonte".
+        final hits = query.terms.isEmpty
+            ? [for (final n in items) SearchHit(n, 0, plainText(n.body.trim()))]
+            : searchNotes(items, query);
+        hits.sort((a, b) => b.note.created.compareTo(a.note.created));
+        final found = hits.map((h) => h.note);
         final String summary;
         if (tasks) {
-          final open = items.where((n) => n.isOpenTask).length;
-          summary = '${items.length} task · $open da fare';
+          final open = found.where((n) => n.isOpenTask).length;
+          summary = '${hits.length} task · $open da fare';
         } else {
-          summary = items.length == 1 ? '1 nota' : '${items.length} note';
+          summary = hits.length == 1 ? '1 nota' : '${hits.length} note';
         }
+        final where = grouping == NoteGrouping.tag
+            ? (name == null ? 'fra le note senza tag' : 'in questo tag')
+            : (name == null ? 'fra le note senza fonte' : 'in questa fonte');
         return Scaffold(
           appBar: AppBar(
             backgroundColor: context.palette.background,
-            title: Row(
-              children: [
-                _GroupMarker(name: name, grouping: grouping),
-                const SizedBox(width: LeviathanSpacing.sm),
-                Expanded(
-                  child: Text(
-                    _groupName(name, grouping),
-                    overflow: TextOverflow.ellipsis,
+            title: _searching
+                ? TextField(
+                    key: const Key('group-search'),
+                    controller: _query,
+                    autofocus: true,
+                    autocorrect: false,
+                    textInputAction: TextInputAction.search,
+                    decoration: InputDecoration(
+                      hintText: 'Cerca $where',
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      filled: false,
+                    ),
+                  )
+                : Row(
+                    children: [
+                      _GroupMarker(name: name, grouping: grouping),
+                      const SizedBox(width: LeviathanSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          _groupName(name, grouping),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
             actions: [
-              // Senza tag (o fonte) non c'è un filtro da cui partire.
-              if (name != null)
-                IconButton(
-                  key: const Key('group-search-button'),
-                  tooltip: grouping == NoteGrouping.tag
-                      ? 'Cerca in questo tag'
-                      : 'Cerca in questa fonte',
-                  icon: const Icon(Icons.search),
-                  onPressed: () => _search(name),
-                ),
+              _searching
+                  ? IconButton(
+                      key: const Key('group-search-close'),
+                      tooltip: 'Chiudi la ricerca',
+                      icon: const Icon(Icons.close),
+                      onPressed: _closeSearch,
+                    )
+                  : IconButton(
+                      key: const Key('group-search-button'),
+                      tooltip: 'Cerca $where',
+                      icon: const Icon(Icons.search),
+                      onPressed: () => setState(() => _searching = true),
+                    ),
             ],
           ),
           body: Column(
@@ -473,23 +506,24 @@ class _GroupScreenState extends State<GroupScreen> {
                 ),
               ),
               Expanded(
-                child: items.isEmpty
-                    ? _Empty(tasks ? 'Nessun task qui.' : 'Nessuna nota qui.')
+                child: hits.isEmpty
+                    ? _Empty(
+                        items.isEmpty
+                            ? (tasks ? 'Nessun task qui.' : 'Nessuna nota qui.')
+                            : 'Nessun risultato $where.',
+                      )
                     : ListView.builder(
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
                         padding: const EdgeInsets.only(
                           bottom: LeviathanSpacing.xl,
                         ),
-                        itemCount: items.length + 1,
+                        itemCount: hits.length + 1,
                         itemBuilder: (context, i) {
                           if (i == 0) return SectionTitle(summary);
-                          final note = items[i - 1];
                           return NoteResultTile(
-                            hit: SearchHit(
-                              note,
-                              0,
-                              plainText(note.body.trim()),
-                            ),
-                            terms: const [],
+                            hit: hits[i - 1],
+                            terms: query.terms,
                             onTap: _open,
                             onToggleDone: widget.notes.setDone,
                           );
