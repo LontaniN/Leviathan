@@ -45,7 +45,7 @@ class WorkspaceRepository {
   }
 
   /// Rinomina il workspace [oldName] e ne restituisce il nuovo nome
-  /// normalizzato. Sposta anche cestino e disposizione del grafo.
+  /// normalizzato. Sposta anche cestino, disposizione del grafo e bozza.
   ///
   /// Lancia [ArgumentError] se il nome non è valido o è già in uso.
   Future<String> renameWorkspace(String oldName, String rawName) async {
@@ -64,12 +64,15 @@ class WorkspaceRepository {
     if (layout.existsSync()) {
       await layout.rename(graphLayoutFile(name).path);
     }
+    final draft = draftFile(oldName);
+    if (draft.existsSync()) await draft.rename(draftFile(name).path);
     if (await readLastWorkspace() == oldName) await writeLastWorkspace(name);
     return name;
   }
 
-  /// Elimina il workspace [name] senza cancellare nulla: note, cestino e
-  /// disposizione del grafo finiscono in `.leviathan/eliminati/<nome> <data>`.
+  /// Elimina il workspace [name] senza cancellare nulla: note, cestino,
+  /// disposizione del grafo e bozza finiscono in
+  /// `.leviathan/eliminati/<nome> <data>`.
   /// Restituisce la cartella in cui sono stati spostati.
   Future<Directory> deleteWorkspace(String name) async {
     final stamp = DateTime.now().toIso8601String().replaceAll(':', '-');
@@ -82,6 +85,10 @@ class WorkspaceRepository {
     final layout = graphLayoutFile(name);
     if (layout.existsSync()) {
       await layout.rename(p.join(target.path, 'grafo.json'));
+    }
+    final draft = draftFile(name);
+    if (draft.existsSync()) {
+      await draft.rename(p.join(target.path, 'bozza.json'));
     }
     return target;
   }
@@ -107,6 +114,10 @@ class WorkspaceRepository {
   /// Il file con le posizioni dei nodi del grafo del workspace [name].
   File graphLayoutFile(String name) =>
       File(p.join(root.path, _settingsDirName, 'graph', '$name.json'));
+
+  /// La bozza non salvata della home del workspace [name].
+  File draftFile(String name) =>
+      File(p.join(root.path, _settingsDirName, 'drafts', '$name.json'));
 
   /// Il workspace usato per ultimo, se registrato.
   ///

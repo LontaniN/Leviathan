@@ -145,6 +145,17 @@ class LeviathanPalette extends ThemeExtension<LeviathanPalette> {
     carta,
   ];
 
+  /// Un gradino sopra [surface]: chip, campi dentro i pannelli, menu.
+  Color get surfaceHigh =>
+      Color.alphaBlend(text.withValues(alpha: 0.06), surface);
+
+  /// Bordi sottili e separatori: si vedono appena sul fondo.
+  Color get outline => text.withValues(alpha: 0.10);
+
+  /// [accent] molto diluito sul fondo: selezioni, segmenti attivi.
+  Color get accentSoft =>
+      Color.alphaBlend(accent.withValues(alpha: 0.16), background);
+
   /// La palette con questo [id], o quella predefinita se non esiste più.
   static LeviathanPalette byId(String? id) =>
       all.firstWhere((p) => p.id == id, orElse: () => grafite);
@@ -205,6 +216,7 @@ class LeviathanSpacing {
   static const lg = 16.0;
   static const xl = 24.0;
   static const xxl = 32.0;
+  static const xxxl = 48.0;
 }
 
 /// Misure di contenitori.
@@ -212,8 +224,14 @@ class LeviathanSizes {
   /// Larghezza dei dialoghi con un campo di testo.
   static const dialogWidth = 360.0;
 
+  /// Larghezza massima dei moduli a schermo intero (primo avvio).
+  static const formWidth = 420.0;
+
   /// Spessore dei bordi sottili (es. il giorno di oggi nel calendario).
   static const outline = 1.5;
+
+  /// Bordo di un elemento scelto (es. la palette attiva).
+  static const selectedOutline = 2.0;
 
   /// Larghezza/altezza di una casella-giorno del calendario: più alta che
   /// larga, per farci stare qualche tag.
@@ -225,6 +243,32 @@ class LeviathanSizes {
   /// Larghezza/altezza di un riquadro tag o fonte nella schermata Task e
   /// note.
   static const groupTileAspect = 0.95;
+
+  /// Larghezza/altezza di una scheda palette nelle impostazioni.
+  static const paletteTileAspect = 0.82;
+
+  /// Larghezza della barretta colorata del primo tag accanto a una nota.
+  static const tagBar = 3.0;
+
+  /// Altezza della barretta nella lista compatta e in quella espansa.
+  static const tagBarCompact = 28.0;
+  static const tagBarExpanded = 40.0;
+
+  /// Altezza della barra di ricerca della home e dei pulsanti principali.
+  static const searchBar = 44.0;
+  static const button = 48.0;
+
+  /// La colonna delle recenti: frazione della larghezza e limiti.
+  static const listFraction = 0.32;
+  static const listMin = 112.0;
+  static const listMax = 220.0;
+
+  /// Raggio dei pallini dei tag nei chip normali e compatti.
+  static const tagDot = 5.0;
+  static const tagDotDense = 4.0;
+
+  /// Larghezza massima del titolo di un nodo del grafo.
+  static const graphLabelWidth = 140.0;
 }
 
 /// Durate delle animazioni.
@@ -234,12 +278,39 @@ class LeviathanDurations {
 
   /// Bagliore della voce appena salvata: si accende, resta e sfuma.
   static const saveFlash = Duration(milliseconds: 1400);
+
+  /// Attesa dopo l'ultima battuta prima di salvare la bozza.
+  static const draftSave = Duration(milliseconds: 600);
+
+  /// Cambi di stato piccoli (segmenti, chip, colori).
+  static const quick = Duration(milliseconds: 160);
 }
 
 /// Opacità dei colori usati come velo sopra il fondo.
 class LeviathanOpacity {
   /// Picco del bagliore della voce appena salvata, nel colore della nota.
   static const saveFlash = 0.35;
+
+  /// Barretta delle note senza tag.
+  static const untagged = 0.4;
+
+  /// Velo del colore del tag sui riquadri della schermata Task e note.
+  static const groupTint = 0.08;
+
+  /// Testo selezionato, nel colore d'accento.
+  static const selection = 0.35;
+
+  /// Nel grafo: collegamenti attenuati, normali ed evidenziati.
+  static const edgeDim = 0.07;
+  static const edge = 0.45;
+  static const edgeHighlight = 0.85;
+
+  /// Nel grafo: nodi fuori dal filtro e task fatti.
+  static const nodeDim = 0.12;
+  static const nodeDone = 0.35;
+
+  /// Titoli dei nodi del grafo.
+  static const graphLabel = 0.87;
 }
 
 class LeviathanRadii {
@@ -248,10 +319,16 @@ class LeviathanRadii {
   /// Caselle piccole, come i giorni del calendario.
   static const cell = 6.0;
   static const md = 12.0;
+
+  /// Pannelli grandi: l'editor, i fogli in basso, i dialoghi.
+  static const lg = 20.0;
 }
 
 /// Dimensioni delle icone.
 class LeviathanIconSize {
+  /// Icone minime, come la puntina di una nota fissata.
+  static const xs = 12.0;
+
   /// Icone dentro i chip e nelle righe dense.
   static const sm = 16.0;
 
@@ -260,19 +337,62 @@ class LeviathanIconSize {
 
   /// Icone da toccare spesso, come le caselle dei task.
   static const lg = 28.0;
+
+  /// Icone illustrative delle schermate vuote o di benvenuto.
+  static const xl = 48.0;
 }
 
 /// Stili di testo ricorrenti, ricavati dalle dimensioni già in uso. Non hanno
 /// colore: quello viene dalla palette (es. `copyWith(color: palette.muted)`).
 class LeviathanText {
+  /// Il nome dell'app nel primo avvio.
+  static const display = TextStyle(
+    fontSize: 40,
+    fontWeight: FontWeight.w800,
+    letterSpacing: -1.2,
+    height: 1.1,
+  );
+
+  /// Il titolo di una nota aperta in lettura.
+  static const heading = TextStyle(
+    fontSize: 26,
+    fontWeight: FontWeight.w700,
+    letterSpacing: -0.5,
+    height: 1.2,
+  );
+
+  /// Il nome del workspace in cima alla home.
+  static const workspace = TextStyle(
+    fontSize: 22,
+    fontWeight: FontWeight.w700,
+    letterSpacing: -0.4,
+  );
+
+  /// Il titolo nel riquadro dell'editor.
+  static const editorTitle = TextStyle(
+    fontSize: 20,
+    fontWeight: FontWeight.w700,
+    letterSpacing: -0.2,
+  );
+
   /// Titolo di una riga di elenco (nome della nota, voce di menu).
   static const title = TextStyle(fontSize: 15, fontWeight: FontWeight.w600);
+
+  /// Testo di lettura delle note: più arioso del resto.
+  static const reading = TextStyle(fontSize: 16, height: 1.6);
 
   /// Testo secondario: anteprime, descrizioni.
   static const body = TextStyle(fontSize: 13, height: 1.25);
 
   /// Metadati: date, conteggi, fonti. Di solito in `palette.muted`.
   static const meta = TextStyle(fontSize: 12);
+
+  /// Intestazioni di sezione in maiuscolo spaziato.
+  static const caption = TextStyle(
+    fontSize: 11,
+    fontWeight: FontWeight.w700,
+    letterSpacing: 1.0,
+  );
 
   /// Etichette minime: chip compatti, nodi del grafo.
   static const tiny = TextStyle(fontSize: 11);
@@ -286,20 +406,161 @@ ThemeData buildTheme(LeviathanPalette palette) {
       ).copyWith(
         primary: palette.accent,
         onPrimary: palette.onAccent,
+        primaryContainer: palette.accentSoft,
+        onPrimaryContainer: palette.accent,
         secondary: palette.link,
+        secondaryContainer: palette.accentSoft,
+        onSecondaryContainer: palette.accent,
         surface: palette.background,
         onSurface: palette.text,
         onSurfaceVariant: palette.muted,
+        surfaceContainerLowest: palette.background,
+        surfaceContainerLow: palette.surface,
         surfaceContainer: palette.surface,
+        surfaceContainerHigh: palette.surfaceHigh,
+        surfaceContainerHighest: palette.surfaceHigh,
+        outline: palette.muted,
+        outlineVariant: palette.outline,
+        surfaceTint: Colors.transparent,
       );
-  return ThemeData(
-    colorScheme: scheme,
+  final base = ThemeData(colorScheme: scheme);
+  final text = base.textTheme.apply(
+    bodyColor: palette.text,
+    displayColor: palette.text,
+  );
+  const pillShape = StadiumBorder();
+  final noBorder = OutlineInputBorder(
+    borderRadius: BorderRadius.circular(LeviathanRadii.md),
+    borderSide: BorderSide.none,
+  );
+  return base.copyWith(
     scaffoldBackgroundColor: palette.background,
+    canvasColor: palette.background,
     extensions: [palette],
+    textTheme: text.copyWith(
+      headlineSmall: text.headlineSmall?.merge(LeviathanText.heading),
+      titleLarge: text.titleLarge?.merge(LeviathanText.editorTitle),
+    ),
+    appBarTheme: AppBarTheme(
+      backgroundColor: palette.background,
+      foregroundColor: palette.text,
+      surfaceTintColor: Colors.transparent,
+      scrolledUnderElevation: 0,
+      elevation: 0,
+      titleTextStyle: LeviathanText.title.copyWith(color: palette.text),
+    ),
+    iconButtonTheme: IconButtonThemeData(
+      style: IconButton.styleFrom(foregroundColor: palette.text),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: palette.accent,
+        foregroundColor: palette.onAccent,
+        minimumSize: const Size(0, LeviathanSizes.button),
+        shape: pillShape,
+        textStyle: LeviathanText.title,
+        padding: const EdgeInsets.symmetric(horizontal: LeviathanSpacing.xl),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: palette.accent,
+        shape: pillShape,
+        textStyle: LeviathanText.title,
+      ),
+    ),
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: ButtonStyle(
+        side: WidgetStatePropertyAll(BorderSide(color: palette.outline)),
+        textStyle: WidgetStatePropertyAll(
+          LeviathanText.meta.copyWith(fontWeight: FontWeight.w600),
+        ),
+        backgroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? palette.accentSoft
+              : Colors.transparent,
+        ),
+        foregroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? palette.accent
+              : palette.muted,
+        ),
+        iconColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? palette.accent
+              : palette.muted,
+        ),
+      ),
+    ),
+    chipTheme: ChipThemeData(
+      backgroundColor: palette.surface,
+      selectedColor: palette.accentSoft,
+      side: BorderSide(color: palette.outline),
+      shape: pillShape,
+      labelStyle: LeviathanText.body.copyWith(color: palette.text),
+      iconTheme: IconThemeData(color: palette.muted),
+    ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: palette.surface,
-      border: const OutlineInputBorder(borderSide: BorderSide.none),
+      hintStyle: TextStyle(color: palette.muted),
+      prefixIconColor: palette.muted,
+      border: noBorder,
+      enabledBorder: noBorder,
+      focusedBorder: noBorder,
+    ),
+    textSelectionTheme: TextSelectionThemeData(
+      cursorColor: palette.accent,
+      selectionColor: palette.accent.withValues(
+        alpha: LeviathanOpacity.selection,
+      ),
+      selectionHandleColor: palette.accent,
+    ),
+    dividerTheme: DividerThemeData(color: palette.outline, space: 1),
+    listTileTheme: ListTileThemeData(
+      iconColor: palette.muted,
+      textColor: palette.text,
+    ),
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: palette.surface,
+      surfaceTintColor: Colors.transparent,
+      dragHandleColor: palette.muted,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(LeviathanRadii.lg),
+        ),
+      ),
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: palette.surface,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(LeviathanRadii.lg),
+      ),
+    ),
+    popupMenuTheme: PopupMenuThemeData(
+      color: palette.surfaceHigh,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(LeviathanRadii.md),
+      ),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: palette.surfaceHigh,
+      contentTextStyle: LeviathanText.body.copyWith(color: palette.text),
+      actionTextColor: palette.accent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(LeviathanRadii.md),
+      ),
+    ),
+    progressIndicatorTheme: ProgressIndicatorThemeData(color: palette.accent),
+    tooltipTheme: TooltipThemeData(
+      decoration: BoxDecoration(
+        color: palette.surfaceHigh,
+        borderRadius: BorderRadius.circular(LeviathanRadii.cell),
+      ),
+      textStyle: LeviathanText.meta.copyWith(color: palette.text),
     ),
   );
 }

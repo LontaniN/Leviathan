@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../model/dates.dart';
 import '../model/note.dart';
 import '../model/search.dart';
 import '../model/tags.dart';
 import '../state/notes_controller.dart';
 import 'chip_input.dart';
-import 'home_screen.dart' show formatDate;
 import 'note_screen.dart';
 import 'task_check.dart';
 import 'theme.dart';
@@ -217,7 +217,15 @@ class _SearchScreenState extends State<SearchScreen> {
                           onPick: (v) => _commit(parsed, v),
                         )
                       : query.isEmpty
-                      ? _FilterOptions(onPick: _insertMarker)
+                      ? _FilterOptions(
+                          onPick: _insertMarker,
+                          tagCounts: widget.notes.tagCounts,
+                          sourceCounts: widget.notes.sourceCounts,
+                          onAddTag: (t) =>
+                              setState(() => _tags = [..._tags, t]),
+                          onAddSource: (s) =>
+                              setState(() => _sources = [..._sources, s]),
+                        )
                       : _Results(
                           hits: searchNotes(widget.notes.notes, query),
                           terms: query.terms,
@@ -276,11 +284,11 @@ class _SearchBar extends StatelessWidget {
             child: DecoratedBox(
               decoration: BoxDecoration(
                 color: context.palette.surface,
-                borderRadius: BorderRadius.circular(LeviathanRadii.md),
+                borderRadius: BorderRadius.circular(LeviathanRadii.lg),
               ),
               child: Padding(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: LeviathanSpacing.sm,
+                  horizontal: LeviathanSpacing.md,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -354,16 +362,78 @@ class _SearchBar extends StatelessWidget {
   }
 }
 
-/// Ricerca vuota: spiega i filtri disponibili, toccandoli si inseriscono.
+/// Ricerca vuota: i tag e le fonti più usati, che toccati diventano subito
+/// filtri, e sotto la spiegazione dei filtri, che toccati si inseriscono.
 class _FilterOptions extends StatelessWidget {
-  const _FilterOptions({required this.onPick});
+  const _FilterOptions({
+    required this.onPick,
+    required this.tagCounts,
+    required this.sourceCounts,
+    required this.onAddTag,
+    required this.onAddSource,
+  });
 
   final ValueChanged<String> onPick;
+  final Map<String, int> tagCounts;
+  final Map<String, int> sourceCounts;
+  final ValueChanged<String> onAddTag;
+  final ValueChanged<String> onAddSource;
+
+  /// Quanti tag e quante fonti frequenti mostrare.
+  static const _frequent = 12;
 
   @override
   Widget build(BuildContext context) {
+    final tags = Tags.suggest('', tagCounts, limit: _frequent);
+    final sources = Sources.suggest('', sourceCounts, limit: _frequent);
+    Widget chips(List<Widget> children) => Padding(
+      padding: const EdgeInsets.fromLTRB(
+        LeviathanSpacing.lg,
+        LeviathanSpacing.xs,
+        LeviathanSpacing.lg,
+        LeviathanSpacing.md,
+      ),
+      child: Wrap(
+        spacing: LeviathanSpacing.sm,
+        runSpacing: LeviathanSpacing.sm,
+        children: children,
+      ),
+    );
     return ListView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       children: [
+        if (tags.isNotEmpty) ...[
+          const SectionTitle('Tag frequenti'),
+          chips([
+            for (final t in tags)
+              ActionChip(
+                key: Key('frequent-tag-$t'),
+                avatar: CircleAvatar(
+                  backgroundColor: Tags.colorOf(t),
+                  radius: LeviathanSizes.tagDot,
+                ),
+                label: _counted(context, t, tagCounts[t]),
+                visualDensity: VisualDensity.compact,
+                onPressed: () => onAddTag(t),
+              ),
+          ]),
+        ],
+        if (sources.isNotEmpty) ...[
+          const SectionTitle('Fonti frequenti'),
+          chips([
+            for (final s in sources)
+              ActionChip(
+                avatar: Icon(
+                  Icons.person_outline,
+                  size: LeviathanIconSize.sm,
+                  color: context.palette.muted,
+                ),
+                label: _counted(context, s, sourceCounts[s]),
+                visualDensity: VisualDensity.compact,
+                onPressed: () => onAddSource(s),
+              ),
+          ]),
+        ],
         const SectionTitle('Filtri di ricerca'),
         ListTile(
           leading: const Icon(Icons.sell_outlined),
@@ -372,7 +442,7 @@ class _FilterOptions extends StatelessWidget {
               children: [
                 TextSpan(
                   text: 'tag: ',
-                  style: TextStyle(fontWeight: FontWeight.w600),
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 TextSpan(
                   text: 'note con un tag',
@@ -391,7 +461,7 @@ class _FilterOptions extends StatelessWidget {
               children: [
                 TextSpan(
                   text: 'da: ',
-                  style: TextStyle(fontWeight: FontWeight.w600),
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 TextSpan(
                   text: 'note da una fonte (persona)',
@@ -410,7 +480,7 @@ class _FilterOptions extends StatelessWidget {
               children: [
                 TextSpan(
                   text: 'stato: ',
-                  style: TextStyle(fontWeight: FontWeight.w600),
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 TextSpan(
                   text: 'task da fare o fatti',
@@ -440,6 +510,19 @@ class _FilterOptions extends StatelessWidget {
     );
   }
 }
+
+/// Nome e, attenuato, quante note lo usano: come i suggerimenti dell'editor.
+Widget _counted(BuildContext context, String name, int? count) => Text.rich(
+  TextSpan(
+    text: name,
+    children: [
+      TextSpan(
+        text: '  ${count ?? 0}',
+        style: TextStyle(color: context.palette.muted),
+      ),
+    ],
+  ),
+);
 
 /// Mentre si scrive un filtro: i tag o le fonti che corrispondono.
 class _FilterSuggestions extends StatelessWidget {
@@ -521,9 +604,20 @@ class _Results extends StatelessWidget {
   Widget build(BuildContext context) {
     if (hits.isEmpty) {
       return Center(
-        child: Text(
-          'Nessuna nota trovata',
-          style: TextStyle(color: context.palette.muted),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.search_off,
+              size: LeviathanIconSize.xl,
+              color: context.palette.muted,
+            ),
+            const SizedBox(height: LeviathanSpacing.md),
+            Text(
+              'Nessuna nota trovata',
+              style: TextStyle(color: context.palette.muted),
+            ),
+          ],
         ),
       );
     }
@@ -702,11 +796,7 @@ class SectionTitle extends StatelessWidget {
       ),
       child: Text(
         text.toUpperCase(),
-        style: LeviathanText.meta.copyWith(
-          letterSpacing: 0.8,
-          fontWeight: FontWeight.w600,
-          color: context.palette.muted,
-        ),
+        style: LeviathanText.caption.copyWith(color: context.palette.muted),
       ),
     );
   }

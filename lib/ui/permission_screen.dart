@@ -15,19 +15,23 @@ class PermissionScreen extends StatelessWidget {
     return Scaffold(
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(32),
+          padding: const EdgeInsets.all(LeviathanSpacing.xxl),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Icon(Icons.folder_open, size: 48, color: context.palette.accent),
-              const SizedBox(height: 24),
+              Icon(
+                Icons.folder_open,
+                size: LeviathanIconSize.xl,
+                color: context.palette.accent,
+              ),
+              const SizedBox(height: LeviathanSpacing.xl),
               Text(
                 'Accesso ai file',
                 style: text.headlineSmall,
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: LeviathanSpacing.md),
               Text(
                 'Le note vengono salvate come file nella cartella '
                 'Documents/LeviathanNotes del telefono, così restano tue '
@@ -36,7 +40,7 @@ class PermissionScreen extends StatelessWidget {
                 style: text.bodyLarge?.copyWith(color: context.palette.muted),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: LeviathanSpacing.xxl),
               FilledButton(
                 onPressed: state.requestPermission,
                 child: const Text('Concedi accesso'),

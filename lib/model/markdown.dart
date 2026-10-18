@@ -38,6 +38,12 @@ String toggleCheckbox(String body, int index) {
   return body.replaceRange(at, at + 1, mark);
 }
 
+/// Quante parole ha il testo, senza contare i simboli Markdown.
+int wordCount(String markdown) => RegExp(
+  r"[\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+)*",
+  unicode: true,
+).allMatches(plainText(markdown)).length;
+
 /// Il testo senza i simboli Markdown, per anteprime e titoli ricavati dal
 /// corpo. Le caselle diventano ☐ e ☑.
 String plainText(String markdown) {

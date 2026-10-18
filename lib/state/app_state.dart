@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../data/draft_store.dart';
 import '../data/graph_layout_store.dart';
 import '../data/note_repository.dart';
 import '../data/storage_access.dart';
@@ -113,6 +114,9 @@ class AppState extends ChangeNotifier {
   /// Dove si salvano le posizioni dei nodi del grafo del workspace [name].
   GraphLayoutStore graphLayoutOf(String name) =>
       GraphLayoutStore(repository.graphLayoutFile(name));
+
+  /// Dove si tiene la bozza della home del workspace [name].
+  DraftStore draftOf(String name) => DraftStore(repository.draftFile(name));
 
   void _set(AppStatus next) {
     status = next;

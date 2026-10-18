@@ -245,7 +245,6 @@ class _GraphScreenState extends State<GraphScreen>
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      backgroundColor: context.palette.surface,
       builder: (_) => _FilterSheet(
         tagCounts: widget.notes.tagCounts,
         sourceCounts: widget.notes.sourceCounts,
@@ -273,7 +272,7 @@ class _GraphScreenState extends State<GraphScreen>
           '${noteCount == 1 ? '1 nota' : '$noteCount note'} · '
           '${_graph.edges.length == 1 ? '1 collegamento' : '${_graph.edges.length} collegamenti'}',
           key: const Key('graph-stats'),
-          style: TextStyle(fontSize: 14, color: context.palette.muted),
+          style: LeviathanText.body.copyWith(color: context.palette.muted),
         ),
         actions: [
           IconButton(
@@ -282,7 +281,7 @@ class _GraphScreenState extends State<GraphScreen>
             icon: Badge(
               isLabelVisible: hasFilter,
               backgroundColor: context.palette.accent,
-              smallSize: 8,
+              smallSize: LeviathanSpacing.sm,
               child: const Icon(Icons.filter_list),
             ),
           ),
@@ -349,9 +348,9 @@ class _GraphScreenState extends State<GraphScreen>
                           ),
                           if (_selected >= 0)
                             Positioned(
-                              left: 12,
-                              right: 12,
-                              bottom: 12,
+                              left: LeviathanSpacing.md,
+                              right: LeviathanSpacing.md,
+                              bottom: LeviathanSpacing.md,
                               child: _SelectedCard(
                                 node: _graph.nodes[_selected],
                                 onOpen: () => _openNote(_selected),
@@ -422,21 +421,23 @@ class _GraphPainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = hairline
-        ..color = palette.link.withValues(alpha: 0.07),
+        ..color = palette.link.withValues(alpha: LeviathanOpacity.edgeDim),
     );
     canvas.drawPath(
       normal,
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = hairline
-        ..color = palette.link.withValues(alpha: 0.45),
+        ..color = palette.link.withValues(alpha: LeviathanOpacity.edge),
     );
     canvas.drawPath(
       highlight,
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = hairline * 1.8
-        ..color = palette.accent.withValues(alpha: 0.85),
+        ..color = palette.accent.withValues(
+          alpha: LeviathanOpacity.edgeHighlight,
+        ),
     );
 
     // Nodi. I task eseguiti restano al loro posto ma sbiaditi.
@@ -445,9 +446,9 @@ class _GraphPainter extends CustomPainter {
       final node = graph.nodes[i];
       final done = node.note.isTask && node.note.done;
       fill.color = !_isIn(i)
-          ? node.color.withValues(alpha: 0.12)
+          ? node.color.withValues(alpha: LeviathanOpacity.nodeDim)
           : done
-          ? node.color.withValues(alpha: 0.35)
+          ? node.color.withValues(alpha: LeviathanOpacity.nodeDone)
           : node.color;
       canvas.drawCircle(Offset(xs[i], ys[i]), nodeRadius(node.degree), fill);
     }
@@ -481,15 +482,16 @@ class _GraphPainter extends CustomPainter {
         () => TextPainter(
           text: TextSpan(
             text: node.note.displayTitle,
-            style: TextStyle(
-              color: palette.text.withValues(alpha: 0.87),
-              fontSize: 11,
+            style: LeviathanText.tiny.copyWith(
+              color: palette.text.withValues(
+                alpha: LeviathanOpacity.graphLabel,
+              ),
             ),
           ),
           textDirection: TextDirection.ltr,
           maxLines: 1,
           ellipsis: '…',
-        )..layout(maxWidth: 140),
+        )..layout(maxWidth: LeviathanSizes.graphLabelWidth),
       );
       final r = nodeRadius(node.degree) * view.scale;
       label.paint(canvas, p + Offset(-label.width / 2, r + 3));
@@ -517,13 +519,18 @@ class _SelectedCard extends StatelessWidget {
     final note = node.note;
     return Material(
       color: context.palette.surface,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(LeviathanRadii.lg),
       child: InkWell(
         key: const Key('graph-card'),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(LeviathanRadii.lg),
         onTap: onOpen,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+          padding: const EdgeInsets.fromLTRB(
+            LeviathanSpacing.lg,
+            LeviathanSpacing.md,
+            LeviathanSpacing.sm,
+            LeviathanSpacing.md,
+          ),
           child: Row(
             children: [
               Expanded(
@@ -535,27 +542,25 @@ class _SelectedCard extends StatelessWidget {
                       note.displayTitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: LeviathanText.title,
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: LeviathanSpacing.xxs),
                     Text(
                       node.degree == 1
                           ? '1 nota collegata'
                           : '${node.degree} note collegate',
-                      style: TextStyle(
-                        fontSize: 12,
+                      style: LeviathanText.meta.copyWith(
                         color: context.palette.muted,
                       ),
                     ),
                     if (note.tags.isNotEmpty || note.sources.isNotEmpty)
                       Padding(
-                        padding: const EdgeInsets.only(top: 6),
+                        padding: const EdgeInsets.only(
+                          top: LeviathanSpacing.sm,
+                        ),
                         child: Wrap(
-                          spacing: 4,
-                          runSpacing: 4,
+                          spacing: LeviathanSpacing.xs,
+                          runSpacing: LeviathanSpacing.xs,
                           children: [
                             for (final t in note.tags) TagChip(t, dense: true),
                             for (final s in note.sources)
@@ -593,13 +598,18 @@ class _ActiveFilters extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      padding: const EdgeInsets.fromLTRB(
+        LeviathanSpacing.md,
+        0,
+        LeviathanSpacing.md,
+        LeviathanSpacing.sm,
+      ),
       child: Row(
         children: [
           Expanded(
             child: Wrap(
-              spacing: 6,
-              runSpacing: 6,
+              spacing: LeviathanSpacing.sm,
+              runSpacing: LeviathanSpacing.sm,
               children: [
                 for (final t in tags)
                   TagChip(t, onDeleted: () => onRemoveTag(t)),
@@ -658,24 +668,26 @@ class _FilterSheetState extends State<_FilterSheet> {
             Flexible(
               child: ListView(
                 shrinkWrap: true,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: LeviathanSpacing.lg,
+                ),
                 children: [
                   Text('Tag', style: text.titleSmall),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: LeviathanSpacing.sm),
                   if (widget.tagCounts.isEmpty)
                     Text(
                       'Nessun tag',
                       style: TextStyle(color: context.palette.muted),
                     ),
                   Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
+                    spacing: LeviathanSpacing.sm,
+                    runSpacing: LeviathanSpacing.sm,
                     children: [
                       for (final t in _byCount(widget.tagCounts))
                         FilterChip(
                           avatar: CircleAvatar(
                             backgroundColor: Tags.colorOf(t),
-                            radius: 5,
+                            radius: LeviathanSizes.tagDot,
                           ),
                           label: Text('$t  ${widget.tagCounts[t]}'),
                           selected: _tags.contains(t),
@@ -686,21 +698,24 @@ class _FilterSheetState extends State<_FilterSheet> {
                         ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: LeviathanSpacing.xl),
                   Text('Fonti', style: text.titleSmall),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: LeviathanSpacing.sm),
                   if (widget.sourceCounts.isEmpty)
                     Text(
                       'Nessuna fonte',
                       style: TextStyle(color: context.palette.muted),
                     ),
                   Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
+                    spacing: LeviathanSpacing.sm,
+                    runSpacing: LeviathanSpacing.sm,
                     children: [
                       for (final s in _byCount(widget.sourceCounts))
                         FilterChip(
-                          avatar: const Icon(Icons.person_outline, size: 16),
+                          avatar: const Icon(
+                            Icons.person_outline,
+                            size: LeviathanIconSize.sm,
+                          ),
                           label: Text('$s  ${widget.sourceCounts[s]}'),
                           selected: _sources.contains(s),
                           showCheckmark: false,
@@ -710,12 +725,17 @@ class _FilterSheetState extends State<_FilterSheet> {
                         ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: LeviathanSpacing.lg),
                 ],
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              padding: const EdgeInsets.fromLTRB(
+                LeviathanSpacing.lg,
+                LeviathanSpacing.sm,
+                LeviathanSpacing.lg,
+                LeviathanSpacing.md,
+              ),
               child: Row(
                 children: [
                   TextButton(

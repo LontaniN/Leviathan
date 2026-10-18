@@ -8,6 +8,12 @@ TextEditingValue _v(String text, int start, [int? end]) => TextEditingValue(
 );
 
 void main() {
+  test('conta le parole senza i simboli Markdown', () {
+    expect(wordCount(''), 0);
+    expect(wordCount('# Titolo\n\n- [ ] **latte** e _pane_'), 4);
+    expect(wordCount("l'acqua è 2 volte più fresca"), 6);
+  });
+
   group('checklist', () {
     const body =
         'Spesa:\n- [ ] latte\n- [x] pane\n\n```\n- [ ] non conta\n```\n'

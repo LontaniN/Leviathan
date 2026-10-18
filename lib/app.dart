@@ -70,7 +70,7 @@ class _LeviathanAppState extends State<LeviathanApp>
             AppStatus.error => Scaffold(
               body: Center(
                 child: Padding(
-                  padding: const EdgeInsets.all(32),
+                  padding: const EdgeInsets.all(LeviathanSpacing.xxl),
                   child: Text('Errore: ${state.errorMessage}'),
                 ),
               ),

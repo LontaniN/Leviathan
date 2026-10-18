@@ -17,7 +17,10 @@ class TagChip extends StatelessWidget {
     final color = Tags.colorOf(tag);
     return _BaseChip(
       label: tag,
-      avatar: CircleAvatar(backgroundColor: color, radius: dense ? 4 : 5),
+      avatar: CircleAvatar(
+        backgroundColor: color,
+        radius: dense ? LeviathanSizes.tagDotDense : LeviathanSizes.tagDot,
+      ),
       borderColor: color.withValues(alpha: 0.5),
       onDeleted: onDeleted,
       dense: dense,
@@ -44,7 +47,7 @@ class SourceChip extends StatelessWidget {
       label: source,
       avatar: Icon(
         Icons.person_outline,
-        size: dense ? 12 : 16,
+        size: dense ? LeviathanIconSize.xs : LeviathanIconSize.sm,
         color: context.palette.muted,
       ),
       borderColor: context.palette.muted.withValues(alpha: 0.4),
@@ -97,15 +100,23 @@ class _BaseChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Chip(
       avatar: avatar,
-      label: Text(label, style: TextStyle(fontSize: dense ? 11 : 13)),
+      label: Text(
+        label,
+        style: dense ? LeviathanText.tiny : LeviathanText.body,
+      ),
       onDeleted: onDeleted,
-      deleteIcon: const Icon(Icons.close, size: 16),
+      deleteIcon: const Icon(Icons.close, size: LeviathanIconSize.sm),
       visualDensity: VisualDensity.compact,
       materialTapTargetSize: dense
           ? MaterialTapTargetSize.shrinkWrap
           : MaterialTapTargetSize.padded,
       padding: dense ? EdgeInsets.zero : null,
-      labelPadding: dense ? const EdgeInsets.only(left: 2, right: 6) : null,
+      labelPadding: dense
+          ? const EdgeInsets.only(
+              left: LeviathanSpacing.xxs,
+              right: LeviathanSpacing.sm,
+            )
+          : null,
       side: BorderSide(color: borderColor),
       backgroundColor: context.palette.surface,
     );
@@ -151,18 +162,20 @@ class ChipKind {
   }
 
   static final tags = ChipKind(
-    hint: 'Tag (virgola o invio per aggiungere)',
+    hint: 'Aggiungi tag',
     icon: Icons.sell_outlined,
     canonical: (raw, _) => Tags.normalize(raw),
     suggest: (input, counts, exclude, limit) =>
         Tags.suggest(input, counts, exclude: exclude, limit: limit),
     chip: (value, onDeleted) => TagChip(value, onDeleted: onDeleted),
-    suggestionAvatar: (value) =>
-        CircleAvatar(backgroundColor: Tags.colorOf(value), radius: 5),
+    suggestionAvatar: (value) => CircleAvatar(
+      backgroundColor: Tags.colorOf(value),
+      radius: LeviathanSizes.tagDot,
+    ),
   );
 
   static final sources = ChipKind(
-    hint: 'Fonti, es. persone (virgola o invio)',
+    hint: 'Aggiungi fonti (es. persone)',
     icon: Icons.person_outline,
     canonical: Sources.canonical,
     suggest: (input, counts, exclude, limit) =>

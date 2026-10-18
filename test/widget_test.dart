@@ -586,6 +586,111 @@ void main() {
     expect(find.text('Spesa'), findsNothing);
   });
 
+  testWidgets('fissa una nota in cima tenendola premuta', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    await tester.runAsync(() async {
+      await WorkspaceRepository(root).createWorkspace('Lavoro');
+      final dir = '${root.path}/Lavoro';
+      File('$dir/vecchia.md').writeAsStringSync(
+        '---\ntitle: "Vecchia"\ncreated: "2026-01-01T00:00:00.000"\n---\n',
+      );
+      File('$dir/nuova.md').writeAsStringSync(
+        '---\ntitle: "Nuova"\ncreated: "2026-02-01T00:00:00.000"\n---\n',
+      );
+    });
+    await tester.pumpWidget(LeviathanApp(state: AppState(_FakeStorage(root))));
+    await settle(tester);
+    expect(find.text('FISSATE'), findsNothing);
+    expect(
+      tester.getTopLeft(find.text('Nuova')).dy,
+      lessThan(tester.getTopLeft(find.text('Vecchia')).dy),
+    );
+
+    await tester.longPress(find.text('Vecchia'));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('action-pin')));
+    await settle(tester);
+
+    expect(find.text('FISSATE'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('Vecchia')).dy,
+      lessThan(tester.getTopLeft(find.text('Nuova')).dy),
+    );
+    expect(
+      File('${root.path}/Lavoro/vecchia.md').readAsStringSync(),
+      contains('pinned: true'),
+    );
+  });
+
+  testWidgets('elimina una nota dalla lettura e annulla', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    final file = File('${root.path}/Lavoro/idea.md');
+    await tester.runAsync(() async {
+      await WorkspaceRepository(root).createWorkspace('Lavoro');
+      file.writeAsStringSync(
+        '---\ntitle: "Idea"\ncreated: "2026-01-01T00:00:00.000"\n---\n'
+        'Una frase di cinque parole.',
+      );
+    });
+    await tester.pumpWidget(LeviathanApp(state: AppState(_FakeStorage(root))));
+    await settle(tester);
+
+    await tester.tap(find.text('Idea'));
+    await settle(tester);
+    expect(find.textContaining('5 parole'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('note-menu')));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('delete-note')));
+    await settle(tester);
+
+    // Si torna alla home: la nota è nel cestino e l'avviso offre di
+    // annullare.
+    expect(file.existsSync(), isFalse);
+    expect(find.text('Idea'), findsNothing);
+    await tester.tap(find.text('Annulla'));
+    await settle(tester);
+    expect(file.existsSync(), isTrue);
+    expect(find.text('Idea'), findsOneWidget);
+  });
+
+  testWidgets('la bozza della home resta dopo la riapertura', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    await tester.runAsync(
+      () => WorkspaceRepository(root).createWorkspace('Lavoro'),
+    );
+    await tester.pumpWidget(LeviathanApp(state: AppState(_FakeStorage(root))));
+    await settle(tester);
+
+    await tester.enterText(find.byKey(const Key('title-field')), 'A metà');
+    await settle(tester);
+    final draft = File('${root.path}/.leviathan/drafts/Lavoro.json');
+    expect(draft.readAsStringSync(), contains('A metà'));
+
+    // L'app riparte da zero: il titolo è ancora nel campo.
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpWidget(LeviathanApp(state: AppState(_FakeStorage(root))));
+    await settle(tester);
+    final title = tester.widget<TextField>(
+      find.byKey(const Key('title-field')),
+    );
+    expect(title.controller!.text, 'A metà');
+
+    // Salvata la nota, la bozza sparisce.
+    await tester.ensureVisible(find.text('Salva nota'));
+    await tester.tap(find.text('Salva nota'));
+    await settle(tester);
+    expect(draft.existsSync(), isFalse);
+  });
+
   testWidgets('sceglie una palette dalle impostazioni e la salva', (
     tester,
   ) async {

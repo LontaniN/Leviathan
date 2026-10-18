@@ -77,7 +77,7 @@ class _Checkbox extends StatelessWidget {
 MarkdownStyleSheet markdownStyle(BuildContext context) {
   final theme = Theme.of(context);
   final palette = context.palette;
-  final body = theme.textTheme.bodyLarge!.copyWith(height: 1.5);
+  final body = LeviathanText.reading.copyWith(color: palette.text);
   final code = body.copyWith(
     fontFamily: 'monospace',
     fontSize: LeviathanText.body.fontSize,
@@ -96,19 +96,24 @@ MarkdownStyleSheet markdownStyle(BuildContext context) {
     blockquote: body.copyWith(color: palette.muted),
     blockquoteDecoration: BoxDecoration(
       color: palette.surface,
-      border: Border(left: BorderSide(color: palette.link, width: 3)),
+      border: Border(
+        left: BorderSide(color: palette.link, width: LeviathanSizes.tagBar),
+      ),
     ),
     blockquotePadding: const EdgeInsets.symmetric(
       horizontal: LeviathanSpacing.md,
       vertical: LeviathanSpacing.sm,
     ),
-    h1: theme.textTheme.headlineSmall,
-    h2: theme.textTheme.titleLarge,
-    h3: theme.textTheme.titleMedium,
+    h1: LeviathanText.heading.copyWith(color: palette.text),
+    h2: LeviathanText.editorTitle.copyWith(color: palette.text),
+    h3: LeviathanText.title.copyWith(color: palette.text),
+    strong: const TextStyle(fontWeight: FontWeight.w700),
+    h1Padding: const EdgeInsets.only(top: LeviathanSpacing.sm),
+    h2Padding: const EdgeInsets.only(top: LeviathanSpacing.sm),
     listIndent: LeviathanSpacing.xxl,
     blockSpacing: LeviathanSpacing.md,
     horizontalRuleDecoration: BoxDecoration(
-      border: Border(top: BorderSide(color: palette.muted, width: 0.5)),
+      border: Border(top: BorderSide(color: palette.outline)),
     ),
   );
 }

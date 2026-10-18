@@ -276,7 +276,7 @@ class _GroupTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final radius = BorderRadius.circular(LeviathanRadii.cell);
+    final radius = BorderRadius.circular(LeviathanRadii.md);
     final open = group.openTasks;
     // Con tutti i task, prima quelli da fare e poi i fatti.
     final shown = tasks && filter == TaskFilter.task
@@ -293,8 +293,19 @@ class _GroupTile extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.all(LeviathanSpacing.xxs),
       child: Material(
-        color: palette.surface,
-        shape: RoundedRectangleBorder(borderRadius: radius),
+        // Un velo del colore del tag: i riquadri si riconoscono a colpo
+        // d'occhio, come le barrette accanto alle note.
+        color: group.name != null && grouping == NoteGrouping.tag
+            ? Color.alphaBlend(
+                Tags.colorOf(group.name!)
+                    .withValues(alpha: LeviathanOpacity.groupTint),
+                palette.surface,
+              )
+            : palette.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: radius,
+          side: BorderSide(color: palette.outline),
+        ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           borderRadius: radius,

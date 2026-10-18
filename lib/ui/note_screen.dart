@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
+import '../model/dates.dart';
+import '../model/markdown.dart';
 import '../model/note.dart';
 import '../model/note_groups.dart';
+import '../model/tags.dart';
 import '../state/notes_controller.dart';
-import 'home_screen.dart' show formatDate;
 import 'lists_screen.dart';
+import 'note_actions.dart';
 import 'note_body.dart';
 import 'note_editor.dart';
 import 'task_check.dart';
@@ -12,7 +16,9 @@ import 'chip_input.dart';
 import 'theme.dart';
 
 /// Lettura di una nota a schermo intero, con modifica ed eliminazione.
-/// Un task si spunta da qui.
+/// Un task si spunta da qui; la puntina la fissa in cima alle recenti.
+///
+/// Sopra il titolo il primo tag fa da occhiello, nel suo colore.
 class NoteScreen extends StatelessWidget {
   const NoteScreen({
     super.key,
@@ -48,30 +54,23 @@ class NoteScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _confirmDelete(BuildContext context, Note note) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Eliminare la nota?'),
-        content: const Text(
-          'La nota viene spostata nel cestino del workspace '
-          '(cartella .leviathan/trash), non cancellata.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Annulla'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Elimina'),
-          ),
-        ],
+  void _delete(BuildContext context, Note note) {
+    // Il messenger è quello dell'app: l'avviso resta anche chiusa la nota.
+    final messenger = ScaffoldMessenger.of(context);
+    Navigator.pop(context);
+    deleteWithUndo(messenger, notes, note);
+  }
+
+  Future<void> _copy(BuildContext context, Note note) async {
+    final title = note.title.trim();
+    await Clipboard.setData(
+      ClipboardData(
+        text: title.isEmpty ? note.body : '# $title\n\n${note.body}',
       ),
     );
-    if (ok != true || !context.mounted) return;
-    Navigator.pop(context);
-    notes.delete(note);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Testo copiato')));
   }
 
   @override
@@ -82,12 +81,26 @@ class NoteScreen extends StatelessWidget {
         final note = preview ?? notes.byId(noteId);
         if (note == null) return const Scaffold();
         final readOnly = preview != null;
-        final text = Theme.of(context).textTheme;
+        final palette = context.palette;
+        final words = wordCount(note.body);
+        final meta = [
+          formatDate(note.created),
+          if (note.updated.isAfter(note.created))
+            'modificata ${formatDate(note.updated)}',
+          words == 1 ? '1 parola' : '$words parole',
+        ].join(' · ');
         return Scaffold(
           appBar: AppBar(
-            backgroundColor: context.palette.background,
             actions: [
               if (!readOnly) ...[
+                IconButton(
+                  key: const Key('pin-button'),
+                  tooltip: note.pinned ? 'Stacca dalla cima' : 'Fissa in cima',
+                  isSelected: note.pinned,
+                  icon: const Icon(Icons.push_pin_outlined),
+                  selectedIcon: Icon(Icons.push_pin, color: palette.accent),
+                  onPressed: () => notes.setPinned(note, !note.pinned),
+                ),
                 IconButton(
                   tooltip: 'Modifica',
                   icon: const Icon(Icons.edit_outlined),
@@ -97,10 +110,27 @@ class NoteScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-                IconButton(
-                  tooltip: 'Elimina',
-                  icon: const Icon(Icons.delete_outline),
-                  onPressed: () => _confirmDelete(context, note),
+                PopupMenuButton<VoidCallback>(
+                  key: const Key('note-menu'),
+                  tooltip: 'Altro',
+                  onSelected: (action) => action(),
+                  itemBuilder: (_) => [
+                    PopupMenuItem(
+                      value: () => _copy(context, note),
+                      child: const ListTile(
+                        leading: Icon(Icons.copy_outlined),
+                        title: Text('Copia il testo'),
+                      ),
+                    ),
+                    PopupMenuItem(
+                      key: const Key('delete-note'),
+                      value: () => _delete(context, note),
+                      child: const ListTile(
+                        leading: Icon(Icons.delete_outline),
+                        title: Text('Sposta nel cestino'),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ],
@@ -111,20 +141,27 @@ class NoteScreen extends StatelessWidget {
                 LeviathanSpacing.xl,
                 LeviathanSpacing.xs,
                 LeviathanSpacing.xl,
-                LeviathanSpacing.xxl,
+                LeviathanSpacing.xxxl,
               ),
               children: [
+                if (note.tags.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: LeviathanSpacing.sm),
+                    child: Text(
+                      note.tags.first.toUpperCase(),
+                      style: LeviathanText.caption.copyWith(
+                        color: Tags.colorOf(note.tags.first),
+                      ),
+                    ),
+                  ),
                 Text(
                   note.displayTitle,
-                  style: taskTitleStyle(context, note, text.headlineSmall!),
+                  style: taskTitleStyle(context, note, LeviathanText.heading),
                 ),
                 const SizedBox(height: LeviathanSpacing.sm),
                 Text(
-                  note.updated.isAfter(note.created)
-                      ? '${formatDate(note.created)} · modificata '
-                            '${formatDate(note.updated)}'
-                      : formatDate(note.created),
-                  style: text.bodySmall?.copyWith(color: context.palette.muted),
+                  meta,
+                  style: LeviathanText.meta.copyWith(color: palette.muted),
                 ),
                 if (note.isTask) ...[
                   const SizedBox(height: LeviathanSpacing.md),
@@ -135,8 +172,8 @@ class NoteScreen extends StatelessWidget {
                         : (done) => notes.setDone(note, done),
                   ),
                 ],
-                if (note.tags.isNotEmpty) ...[
-                  const SizedBox(height: LeviathanSpacing.md),
+                if (note.tags.isNotEmpty || note.sources.isNotEmpty) ...[
+                  const SizedBox(height: LeviathanSpacing.lg),
                   Wrap(
                     spacing: LeviathanSpacing.sm,
                     runSpacing: LeviathanSpacing.sm,
@@ -153,15 +190,6 @@ class NoteScreen extends StatelessWidget {
                                 ),
                           child: TagChip(tag),
                         ),
-                    ],
-                  ),
-                ],
-                if (note.sources.isNotEmpty) ...[
-                  const SizedBox(height: LeviathanSpacing.sm),
-                  Wrap(
-                    spacing: LeviathanSpacing.sm,
-                    runSpacing: LeviathanSpacing.sm,
-                    children: [
                       for (final source in note.sources)
                         GestureDetector(
                           onTap: readOnly
@@ -177,13 +205,19 @@ class NoteScreen extends StatelessWidget {
                     ],
                   ),
                 ],
-                const Divider(height: LeviathanSpacing.xxl),
-                NoteBody(
-                  note.body,
-                  onChanged: readOnly
-                      ? null
-                      : (body) => notes.update(note.copyWith(body: body)),
-                ),
+                const Divider(height: LeviathanSpacing.xxxl),
+                if (note.body.trim().isEmpty)
+                  Text(
+                    'Nessun testo.',
+                    style: LeviathanText.reading.copyWith(color: palette.muted),
+                  )
+                else
+                  NoteBody(
+                    note.body,
+                    onChanged: readOnly
+                        ? null
+                        : (body) => notes.update(note.copyWith(body: body)),
+                  ),
               ],
             ),
           ),
@@ -251,10 +285,7 @@ class _EditNotePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Modifica nota'),
-        backgroundColor: context.palette.background,
-      ),
+      appBar: AppBar(title: const Text('Modifica nota')),
       body: NoteEditor(
         initial: note,
         tagCounts: notes.tagCounts,

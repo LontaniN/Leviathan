@@ -68,10 +68,11 @@ class NoteRepository {
     _file(note.id).writeAsStringSync(note.toMarkdown());
   }
 
-  /// Sposta la nota nel cestino.
-  void delete(Note note) {
+  /// Sposta la nota nel cestino e restituisce dove è finita (null se il
+  /// file non c'era già più).
+  String? delete(Note note) {
     final file = _file(note.id);
-    if (!file.existsSync()) return;
+    if (!file.existsSync()) return null;
     trashDir.createSync(recursive: true);
     var target = p.join(trashDir.path, '${note.id}.md');
     if (File(target).existsSync()) {
@@ -81,6 +82,19 @@ class NoteRepository {
       );
     }
     file.renameSync(target);
+    return target;
+  }
+
+  /// Riporta fuori dal cestino una nota eliminata da [delete], che aveva
+  /// restituito [trashPath]. Se nel frattempo è nata un'altra nota con lo
+  /// stesso id non la sovrascrive e restituisce false.
+  bool restore(Note note, String trashPath) {
+    final trashed = File(trashPath);
+    final file = _file(note.id);
+    if (!trashed.existsSync() || file.existsSync()) return false;
+    dir.createSync(recursive: true);
+    trashed.renameSync(file.path);
+    return true;
   }
 
   File _file(String id) => File(p.join(dir.path, '$id.md'));

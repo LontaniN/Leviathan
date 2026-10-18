@@ -17,19 +17,28 @@ class OnboardingScreen extends StatelessWidget {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(32),
+            padding: const EdgeInsets.all(LeviathanSpacing.xxl),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
+              constraints: const BoxConstraints(
+                maxWidth: LeviathanSizes.formWidth,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
                     'Leviathan',
-                    style: text.displaySmall?.copyWith(
+                    style: LeviathanText.display.copyWith(
                       color: context.palette.accent,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: LeviathanSpacing.xs),
+                  Text(
+                    'Il tuo secondo cervello.',
+                    style: LeviathanText.editorTitle.copyWith(
+                      color: context.palette.text,
+                    ),
+                  ),
+                  const SizedBox(height: LeviathanSpacing.lg),
                   Text(
                     'Dai un nome al tuo primo workspace. '
                     'Ogni workspace raccoglie le sue note: '
@@ -38,7 +47,7 @@ class OnboardingScreen extends StatelessWidget {
                       color: context.palette.muted,
                     ),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: LeviathanSpacing.xxl),
                   WorkspaceNameForm(
                     validate: state.validateNewName,
                     onSubmit: state.createWorkspace,

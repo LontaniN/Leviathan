@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../data/draft_store.dart';
 import '../model/markdown.dart';
 import '../model/note.dart';
 import 'chip_input.dart';
@@ -20,6 +23,10 @@ typedef NoteDraft = ({
 /// Markdown: mentre lo si scrive compare una barra di formattazione sopra la
 /// tastiera, e un invio in un elenco lo continua. Senza [initial] scrive una
 /// nota nuova e dopo il salvataggio si svuota.
+///
+/// Con [draft] quello che si scrive viene tenuto da parte poco dopo ogni
+/// modifica (e subito se l'app va in secondo piano): riaprendo l'app la nota
+/// non salvata è ancora lì.
 class NoteEditor extends StatefulWidget {
   const NoteEditor({
     super.key,
@@ -28,6 +35,7 @@ class NoteEditor extends StatefulWidget {
     required this.sourceCounts,
     required this.onSave,
     this.saveLabel = 'Salva nota',
+    this.draft,
   });
 
   final Note? initial;
@@ -35,6 +43,7 @@ class NoteEditor extends StatefulWidget {
   final Map<String, int> sourceCounts;
   final void Function(NoteDraft draft) onSave;
   final String saveLabel;
+  final DraftStore? draft;
 
   @override
   State<NoteEditor> createState() => _NoteEditorState();
@@ -52,13 +61,55 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
   late List<String> _sources = [...?widget.initial?.sources];
   late bool _isTask = widget.initial?.isTask ?? false;
 
+  Timer? _draftTimer;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    if (widget.initial == null) _restoreDraft();
     _body.addListener(_onBodyChanged);
+    _title.addListener(_scheduleDraft);
     _titleFocus.addListener(() => setState(() {}));
     _bodyFocus.addListener(() => setState(() {}));
+  }
+
+  void _restoreDraft() {
+    final draft = widget.draft?.read();
+    if (draft == null) return;
+    _title.text = draft.title;
+    _body.text = draft.body;
+    _lastBody = _body.value;
+    _tags = [...draft.tags];
+    _sources = [...draft.sources];
+    _isTask = draft.isTask;
+  }
+
+  /// La bozza si scrive poco dopo l'ultima modifica, non a ogni lettera.
+  void _scheduleDraft() {
+    if (widget.draft == null || widget.initial != null) return;
+    _draftTimer?.cancel();
+    _draftTimer = Timer(LeviathanDurations.draftSave, _writeDraft);
+  }
+
+  void _writeDraft() {
+    _draftTimer?.cancel();
+    _draftTimer = null;
+    widget.draft?.write((
+      title: _title.text,
+      body: _body.text,
+      tags: _tags,
+      sources: _sources,
+      isTask: _isTask,
+    ));
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Android può chiudere l'app in secondo piano senza avvisare.
+    if (state != AppLifecycleState.resumed && _draftTimer != null) {
+      _writeDraft();
+    }
   }
 
   void _onBodyChanged() {
@@ -67,6 +118,7 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
     // Assegnare il valore richiama il listener, che a quel punto non trova
     // più un invio da completare.
     if (next != _body.value) _body.value = next;
+    _scheduleDraft();
   }
 
   /// Si sta scrivendo titolo o corpo con la tastiera aperta: tag, fonti e
@@ -118,6 +170,7 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    if (_draftTimer != null) _writeDraft();
     _title.dispose();
     _body.dispose();
     _titleFocus.dispose();
@@ -165,6 +218,9 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
         _sources = [];
         _isTask = false;
       });
+      _draftTimer?.cancel();
+      _draftTimer = null;
+      widget.draft?.clear();
       FocusScope.of(context).unfocus();
     }
   }
@@ -197,16 +253,25 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
   }
 
   Widget _textCard(TextTheme text) {
-    return DecoratedBox(
+    final palette = context.palette;
+    final focused = _titleFocus.hasFocus || _bodyFocus.hasFocus;
+    return AnimatedContainer(
+      duration: LeviathanDurations.quick,
       decoration: BoxDecoration(
-        color: context.palette.surface,
-        borderRadius: BorderRadius.circular(LeviathanRadii.md),
+        color: palette.surface,
+        borderRadius: BorderRadius.circular(LeviathanRadii.lg),
+        // Il bordo si accende mentre si scrive: si vede dove va il testo.
+        border: Border.all(
+          color: focused
+              ? palette.accent.withValues(alpha: LeviathanOpacity.selection)
+              : palette.outline,
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(
-          LeviathanSpacing.md,
+          LeviathanSpacing.lg,
           LeviathanSpacing.xs,
-          LeviathanSpacing.md,
+          LeviathanSpacing.lg,
           LeviathanSpacing.sm,
         ),
         child: Column(
@@ -221,6 +286,9 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
                 hintText: _isTask ? 'Cosa c\'è da fare?' : 'Titolo',
                 filled: false,
                 border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: LeviathanSpacing.md,
+                ),
               ),
             ),
             const Divider(height: 1),
@@ -236,10 +304,14 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
                 textAlignVertical: TextAlignVertical.top,
                 keyboardType: TextInputType.multiline,
                 textCapitalization: TextCapitalization.sentences,
+                style: LeviathanText.reading.copyWith(color: palette.text),
                 decoration: const InputDecoration(
                   hintText: 'Scrivi la nota…',
                   filled: false,
                   border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(
+                    vertical: LeviathanSpacing.md,
+                  ),
                 ),
               ),
             ),
@@ -278,7 +350,10 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
               visualDensity: VisualDensity.compact,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            onSelectionChanged: (s) => setState(() => _isTask = s.first),
+            onSelectionChanged: (s) {
+              setState(() => _isTask = s.first);
+              _scheduleDraft();
+            },
           ),
         ),
         const SizedBox(height: LeviathanSpacing.sm),
@@ -307,7 +382,10 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
                     kind: ChipKind.tags,
                     fieldKey: const Key('tag-field'),
                     values: _tags,
-                    onChanged: (tags) => setState(() => _tags = tags),
+                    onChanged: (tags) {
+                      setState(() => _tags = tags);
+                      _scheduleDraft();
+                    },
                     counts: widget.tagCounts,
                     pending: _pendingTag,
                   ),
@@ -316,7 +394,10 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
                     kind: ChipKind.sources,
                     fieldKey: const Key('source-field'),
                     values: _sources,
-                    onChanged: (sources) => setState(() => _sources = sources),
+                    onChanged: (sources) {
+                      setState(() => _sources = sources);
+                      _scheduleDraft();
+                    },
                     counts: widget.sourceCounts,
                     pending: _pendingSource,
                   ),

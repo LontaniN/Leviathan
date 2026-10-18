@@ -18,7 +18,8 @@ import 'markdown.dart';
 /// ```
 ///
 /// Un task ha in più `type: "task"`, `done` e, se fatto, `done_at`; le note
-/// normali non scrivono questi campi.
+/// normali non scrivono questi campi. Una nota fissata in cima alle recenti
+/// ha `pinned: true`.
 ///
 /// I valori sono scritti come JSON, che è anche YAML valido: il file resta
 /// leggibile da Obsidian e da qualsiasi editor.
@@ -34,6 +35,7 @@ class Note {
     this.isTask = false,
     this.done = false,
     this.doneAt,
+    this.pinned = false,
   });
 
   /// Nome del file senza estensione; non cambia se si modifica il titolo.
@@ -57,6 +59,9 @@ class Note {
   /// Quando il task è stato spuntato (se lo si sa).
   final DateTime? doneAt;
 
+  /// Fissata in cima alle recenti.
+  final bool pinned;
+
   /// Un task ancora da fare.
   bool get isOpenTask => isTask && !done;
 
@@ -71,6 +76,7 @@ class Note {
     bool? isTask,
     bool? done,
     DateTime? doneAt,
+    bool? pinned,
   }) {
     final task = isTask ?? this.isTask;
     final isDone = task && (done ?? this.done);
@@ -85,6 +91,7 @@ class Note {
       isTask: task,
       done: isDone,
       doneAt: isDone ? (doneAt ?? this.doneAt) : null,
+      pinned: pinned ?? this.pinned,
     );
   }
 
@@ -112,6 +119,7 @@ class Note {
         buffer.writeln('done_at: ${jsonEncode(doneAt!.toIso8601String())}');
       }
     }
+    if (pinned) buffer.writeln('pinned: true');
     buffer
       ..writeln('---')
       ..write(body);
@@ -154,6 +162,7 @@ class Note {
       isTask: isTask,
       done: done,
       doneAt: done ? _parseDate(fields['done_at']) : null,
+      pinned: fields['pinned'] == true || fields['pinned'] == 'true',
     );
   }
 

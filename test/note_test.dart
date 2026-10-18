@@ -111,6 +111,25 @@ void main() {
       expect(plain.doneAt, isNull);
     });
 
+    test('una nota fissata: andata e ritorno', () {
+      final note = Note(
+        id: 'x',
+        title: 'In cima',
+        body: '',
+        tags: [],
+        sources: [],
+        created: date,
+        updated: date,
+        pinned: true,
+      );
+      final text = note.toMarkdown();
+      expect(text, contains('pinned: true'));
+      expect(Note.fromMarkdown('x', text, date).pinned, isTrue);
+      final unpinned = note.copyWith(pinned: false).toMarkdown();
+      expect(unpinned, isNot(contains('pinned')));
+      expect(Note.fromMarkdown('x', unpinned, date).pinned, isFalse);
+    });
+
     test('file senza intestazione: tutto è corpo', () {
       final note = Note.fromMarkdown('z', 'Solo testo\nsu due righe', date);
       expect(note.body, 'Solo testo\nsu due righe');
@@ -212,6 +231,23 @@ void main() {
       repo.delete(first);
       expect(repo.loadAll().map((n) => n.title), ['Seconda nota!']);
       expect(File('${root.path}/trash/${first.id}.md').existsSync(), isTrue);
+    });
+
+    test('una nota eliminata torna fuori dal cestino', () {
+      final note = repo.create(
+        title: 'Ripensamento',
+        body: 'a',
+        tags: [],
+        sources: [],
+        now: DateTime(2026, 1, 1),
+      );
+      final trashed = repo.delete(note)!;
+      expect(repo.loadAll(), isEmpty);
+      expect(repo.restore(note, trashed), isTrue);
+      expect(repo.loadAll().single.title, 'Ripensamento');
+      expect(File(trashed).existsSync(), isFalse);
+      // Una seconda volta non c'è più niente da riportare.
+      expect(repo.restore(note, trashed), isFalse);
     });
 
     test('due note nello stesso secondo non si sovrascrivono', () {

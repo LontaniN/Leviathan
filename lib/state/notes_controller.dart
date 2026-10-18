@@ -1,7 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 
 import '../data/note_repository.dart';
 import '../model/note.dart';
+
+/// Una nota appena spostata nel cestino, con il file dove è finita.
+typedef DeletedNote = ({Note note, String trashPath});
 
 /// Le note del workspace aperto e i tag che usano.
 class NotesController extends ChangeNotifier {
@@ -19,8 +24,17 @@ class NotesController extends ChangeNotifier {
   /// Ogni fonte con il numero di note che la citano.
   Map<String, int> sourceCounts = const {};
 
+  /// Perché le note non si sono potute leggere; null se è andato tutto bene.
+  String? error;
+
   void reload() {
-    notes = _repo.loadAll();
+    try {
+      notes = _repo.loadAll();
+      error = null;
+    } on FileSystemException catch (e) {
+      notes = const [];
+      error = e.message;
+    }
     _refreshCounts();
     notifyListeners();
   }
@@ -67,9 +81,31 @@ class NotesController extends ChangeNotifier {
     return changed;
   }
 
-  void delete(Note note) {
-    _repo.delete(note);
+  /// Fissa la nota in cima alle recenti, o la stacca. Come la spunta, non
+  /// conta come modifica.
+  Note setPinned(Note note, bool pinned) {
+    final changed = note.copyWith(pinned: pinned);
+    _repo.save(changed);
+    notes = [for (final n in notes) n.id == changed.id ? changed : n];
+    notifyListeners();
+    return changed;
+  }
+
+  /// Sposta la nota nel cestino. Il risultato serve a [restore] per
+  /// annullare.
+  DeletedNote? delete(Note note) {
+    final trashPath = _repo.delete(note);
     notes = notes.where((n) => n.id != note.id).toList();
+    _refreshCounts();
+    notifyListeners();
+    return trashPath == null ? null : (note: note, trashPath: trashPath);
+  }
+
+  /// Annulla un [delete]: la nota torna al suo posto nell'elenco.
+  void restore(DeletedNote deleted) {
+    if (!_repo.restore(deleted.note, deleted.trashPath)) return;
+    notes = [...notes, deleted.note]
+      ..sort((a, b) => b.created.compareTo(a.created));
     _refreshCounts();
     notifyListeners();
   }
