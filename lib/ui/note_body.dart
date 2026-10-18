@@ -19,8 +19,11 @@ class NoteBody extends StatelessWidget {
   Widget build(BuildContext context) {
     // Il pacchetto non dice quale casella sta disegnando: le costruisce in
     // ordine di testo, quindi le si numera contando. Il modulo protegge da
-    // una seconda costruzione con lo stesso widget.
+    // una seconda costruzione con lo stesso widget. Se le caselle disegnate
+    // non sono quelle trovate nel testo (una sintassi che [checkboxOffsets]
+    // non conosce), il conto sbaglierebbe: restano in sola lettura.
     final total = checkboxOffsets(body).length;
+    final tappable = onChanged != null && total == renderedCheckboxCount(body);
     var next = 0;
     return MarkdownBody(
       data: body,
@@ -33,9 +36,9 @@ class NoteBody extends StatelessWidget {
         final index = total == 0 ? 0 : next++ % total;
         return _Checkbox(
           checked: checked,
-          onTap: onChanged == null
-              ? null
-              : () => onChanged!(toggleCheckbox(body, index)),
+          onTap: tappable
+              ? () => onChanged!(toggleCheckbox(body, index))
+              : null,
         );
       },
     );

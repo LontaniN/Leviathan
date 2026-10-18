@@ -31,6 +31,19 @@ void main() {
       expect(toggleCheckbox(body, 2), contains('  * [x] rientrata'));
       expect(toggleCheckbox(body, 9), body);
     });
+
+    test('conta anche le caselle numerate e nelle citazioni', () {
+      const mixed = '1. [ ] primo\n> - [ ] citato\n- [ ] terzo';
+      expect(checkboxOffsets(mixed), hasLength(3));
+      expect(renderedCheckboxCount(mixed), 3);
+      expect(toggleCheckbox(mixed, 0), startsWith('1. [x] primo'));
+      expect(toggleCheckbox(mixed, 1), contains('> - [x] citato'));
+    });
+
+    test('le caselle disegnate sono quelle trovate nel testo', () {
+      expect(renderedCheckboxCount(body), checkboxOffsets(body).length);
+      expect(renderedCheckboxCount('niente caselle'), 0);
+    });
   });
 
   test('testo semplice per le anteprime', () {
