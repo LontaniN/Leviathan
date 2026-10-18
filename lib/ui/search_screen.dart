@@ -112,18 +112,20 @@ class _SearchScreenState extends State<SearchScreen> {
     _focus.requestFocus();
   }
 
+  /// Con un filtro di tag o fonte aperto li propone tutti (quelli che
+  /// corrispondono a quanto scritto), in un elenco che si scorre.
   List<String> _suggestions(SearchInput parsed) => switch (parsed.activeKind) {
     FilterKind.tag => Tags.suggest(
       parsed.activeValue,
       widget.notes.tagCounts,
       exclude: _tags,
-      limit: 8,
+      limit: widget.notes.tagCounts.length,
     ),
     FilterKind.source => Sources.suggest(
       parsed.activeValue,
       widget.notes.sourceCounts,
       exclude: _sources,
-      limit: 8,
+      limit: widget.notes.sourceCounts.length,
     ),
     FilterKind.status => [
       for (final f in TaskFilter.suggest(parsed.activeValue))
@@ -384,7 +386,7 @@ class _FilterOptions extends StatelessWidget {
   final ValueChanged<String> onAddSource;
 
   /// Quanti tag e quante fonti frequenti mostrare.
-  static const _frequent = 12;
+  static const _frequent = 6;
 
   @override
   Widget build(BuildContext context) {

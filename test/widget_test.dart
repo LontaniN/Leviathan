@@ -440,6 +440,37 @@ void main() {
     expect(find.text('Teorema'), findsNothing);
   });
 
+  testWidgets('ricerca: "tag:" elenca tutti i tag, da scorrere', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    await tester.runAsync(() async {
+      await WorkspaceRepository(root).createWorkspace('Lavoro');
+      for (var i = 1; i <= 12; i++) {
+        File(
+          '${root.path}/Lavoro/n$i.md',
+        ).writeAsStringSync('---\ntitle: "Nota $i"\ntags: ["tema-$i"]\n---\n');
+      }
+    });
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('search-button')));
+    await settle(tester);
+    await tester.enterText(find.byKey(const Key('search-field')), 'tag:');
+    await settle(tester);
+
+    final last = find.text('tema-12');
+    await tester.scrollUntilVisible(
+      last,
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(last, findsOneWidget);
+  });
+
   testWidgets('ricerca con testo, filtro tag e filtro fonte', (tester) async {
     tester.view.physicalSize = const Size(1080, 2424);
     tester.view.devicePixelRatio = 2.625;
