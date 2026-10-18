@@ -21,6 +21,9 @@ void deleteWithUndo(
     ..showSnackBar(
       SnackBar(
         content: Text(l.movedToTrash(note.displayTitle(l.untitled))),
+        // Con un'azione Flutter la terrebbe aperta finché non la si tocca.
+        persist: false,
+        duration: LeviathanDurations.undoSnackBar,
         action: deleted == null
             ? null
             : SnackBarAction(

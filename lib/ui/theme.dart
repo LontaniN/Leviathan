@@ -305,6 +305,9 @@ class LeviathanDurations {
 
   /// Cambi di stato piccoli (segmenti, chip, colori).
   static const quick = Duration(milliseconds: 160);
+
+  /// Tempo massimo per cui resta l'avviso con "Annulla" dopo un'eliminazione.
+  static const undoSnackBar = Duration(seconds: 8);
 }
 
 /// Opacità dei colori usati come velo sopra il fondo.
@@ -568,6 +571,8 @@ ThemeData buildTheme(LeviathanPalette palette) {
     ),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
+      // Si toglie trascinandola di lato.
+      dismissDirection: DismissDirection.horizontal,
       backgroundColor: palette.surfaceHigh,
       contentTextStyle: LeviathanText.body.copyWith(color: palette.text),
       actionTextColor: palette.accent,
