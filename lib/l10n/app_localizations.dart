@@ -221,7 +221,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingTagline.
   ///
   /// In en, this message translates to:
-  /// **'Your second brain.'**
+  /// **'Face the outside world through bytes.'**
   String get onboardingTagline;
 
   /// No description provided for @onboardingBody.

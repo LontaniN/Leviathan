@@ -82,7 +82,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get continueButton => 'Continue';
 
   @override
-  String get onboardingTagline => 'Your second brain.';
+  String get onboardingTagline => 'Face the outside world through bytes.';
 
   @override
   String get onboardingBody =>
