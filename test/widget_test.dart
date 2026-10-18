@@ -747,9 +747,6 @@ void main() {
     await settle(tester);
     await tester.tap(find.byKey(const Key('calendar-button')));
     await settle(tester);
-    // Nei test è una build di sviluppo: via i dati di prova.
-    await tester.tap(find.byKey(const Key('demo-toggle')));
-    await settle(tester);
 
     await tester.tap(find.byKey(const Key('calendar-search-button')));
     await settle(tester);
