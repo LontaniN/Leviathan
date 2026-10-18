@@ -14,7 +14,7 @@ import '../ui/theme.dart';
 /// già con i colori giusti.
 class Settings extends ChangeNotifier {
   /// Senza [file] le preferenze vivono solo in memoria (usato nei test).
-  Settings({this.file, this.palette = LeviathanPalette.grafite});
+  Settings({this.file, this.palette = LeviathanPalette.inchiostro});
 
   final File? file;
   LeviathanPalette palette;

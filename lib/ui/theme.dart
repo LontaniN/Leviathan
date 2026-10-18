@@ -122,6 +122,36 @@ class LeviathanPalette extends ThemeExtension<LeviathanPalette> {
     muted: Color(0xFF8C8C8C),
   );
 
+  /// Inchiostro seppia: nero caldo appena sopra lo zero (niente scie OLED
+  /// scorrendo) e accento color carta vecchia.
+  static const seppia = LeviathanPalette(
+    id: 'seppia',
+    name: 'Seppia',
+    brightness: Brightness.dark,
+    background: Color(0xFF0B0907),
+    surface: Color(0xFF1A1612),
+    accent: Color(0xFFF0E4D0),
+    onAccent: Color(0xFF0B0907),
+    link: Color(0xFF8A7A66),
+    text: Color(0xFFE9E1D6),
+    muted: Color(0xFF948779),
+  );
+
+  /// Inchiostro su lavagna: nero freddo, appena bluastro, e accento grigio
+  /// ghiaccio.
+  static const lavagna = LeviathanPalette(
+    id: 'lavagna',
+    name: 'Lavagna',
+    brightness: Brightness.dark,
+    background: Color(0xFF06080B),
+    surface: Color(0xFF12161C),
+    accent: Color(0xFFDCE5F0),
+    onAccent: Color(0xFF06080B),
+    link: Color(0xFF66768A),
+    text: Color(0xFFE1E6EC),
+    muted: Color(0xFF8590A0),
+  );
+
   static const carta = LeviathanPalette(
     id: 'carta',
     name: 'Carta',
@@ -136,12 +166,14 @@ class LeviathanPalette extends ThemeExtension<LeviathanPalette> {
   );
 
   static const all = [
+    inchiostro,
+    seppia,
+    lavagna,
     grafite,
     abisso,
     brace,
     muschio,
     ametista,
-    inchiostro,
     carta,
   ];
 
@@ -158,7 +190,7 @@ class LeviathanPalette extends ThemeExtension<LeviathanPalette> {
 
   /// La palette con questo [id], o quella predefinita se non esiste più.
   static LeviathanPalette byId(String? id) =>
-      all.firstWhere((p) => p.id == id, orElse: () => grafite);
+      all.firstWhere((p) => p.id == id, orElse: () => inchiostro);
 
   @override
   LeviathanPalette copyWith({
@@ -203,7 +235,8 @@ class LeviathanPalette extends ThemeExtension<LeviathanPalette> {
 
 extension LeviathanPaletteContext on BuildContext {
   LeviathanPalette get palette =>
-      Theme.of(this).extension<LeviathanPalette>() ?? LeviathanPalette.grafite;
+      Theme.of(this).extension<LeviathanPalette>() ??
+      LeviathanPalette.inchiostro;
 }
 
 /// Scala delle spaziature (multipli di 4): usarla per padding e SizedBox
