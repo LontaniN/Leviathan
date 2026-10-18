@@ -924,4 +924,15 @@ class AppLocalizationsIt extends AppLocalizations {
   String taskCompleted(String title) {
     return 'Fatto: $title';
   }
+
+  @override
+  String get shareToWorkspace => 'Dove salvare il testo condiviso';
+
+  @override
+  String get sharedAppended => 'Testo condiviso aggiunto in fondo alla bozza';
+
+  @override
+  String sharedSavedToDraft(String workspace) {
+    return 'Testo condiviso aggiunto alla bozza di «$workspace»';
+  }
 }

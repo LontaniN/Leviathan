@@ -2,8 +2,8 @@
 
 This round of work came out of a review of the app: what it does, how it
 compares with similar note apps, and what current documentation recommends.
-It covers six changes, each in its own commit on the `improvements` branch.
-No feature was removed and the UI is unchanged.
+It covers six changes plus one new feature, each in its own commit on the
+`improvements` branch. No feature was removed.
 
 ## What changed and why
 
@@ -119,6 +119,42 @@ because they share the same functions.
   accent table.
 - Removed `cupertino_icons`, which no code used.
 
+### 7. Receive text from the Android share sheet
+
+**Problem.** Capturing from other apps was part of the app's spec and
+roadmap (#2), but Leviathan didn't appear in Android's *Share* menu.
+
+**Change.**
+- `MainActivity` declares an `ACTION_SEND` `text/plain` intent filter and
+  keeps the shared subject and text until Dart takes them over the
+  `leviathan/share` channel. This is about 60 lines of Kotlin, with no
+  package. It accepts a cold start and a share that arrives while the app
+  is open. Text is capped at 100,000 characters, as Android's guidance
+  warns content may be unexpectedly large. A relaunch from Recents
+  doesn't deliver the old share again.
+- The launch mode moves from `singleTop` to `singleTask`. A share then
+  reaches the app's single instance instead of creating a second copy
+  inside the sending app's task, where two in-memory states would write
+  the same files.
+- `ShareInbox` queues shares until the home can show them, so shares
+  aren't lost if they arrive during language choice or onboarding.
+- The home then places each share in the editor, using the pure
+  `mergeShared` function. Decisions agreed with the user:
+  - the subject becomes the title if the draft has none;
+  - a draft already in progress keeps its text, and the shared text is
+    added at the end, with a snackbar saying so;
+  - with more than one workspace, a dialog asks which one, and dismissing
+    the dialog discards the share;
+  - if a saved note is open in edit mode, that page is not closed, so no
+    edits are lost; the text goes into the home draft and a snackbar names
+    the workspace.
+
+**Tests.** 5 unit tests for `mergeShared` and the queue, and 5 widget
+tests: cold start, appending to a draft, workspace choice, the expanded
+list (editor not mounted), and an edit page left open. The Kotlin side
+compiles (`flutter build apk --debug`); the end-to-end flow still needs to
+be tested on the phone.
+
 ## Before and after
 
 All numbers come from a throwaway benchmark run with `flutter test` on the
@@ -136,8 +172,9 @@ assumption, not a measurement.
 | Obsidian block-list tags read | `[]` (lost on save) | read and kept |
 | Unknown frontmatter properties | dropped on save | kept verbatim |
 | Outside edits while running | invisible; overwritten on save | reloaded on resume; overwritten version copied to trash |
-| Tests | 153 | 167 |
+| Tests | 153 | 178 |
 | CI | none | format + analyze + test |
+| Share from other apps | not possible | Share → Leviathan opens the text in the editor |
 
 Loading 3000 notes took ~680 ms on the same PC and was not changed in this
 round (see below).
@@ -180,11 +217,9 @@ round (see below).
 
 ## Not done yet, and ideas
 
-- **Receive from the Android share sheet** (roadmap #2). This is the main
-  missing capture path. The plan is an `ACTION_SEND` `text/plain` intent
-  filter plus a small MethodChannel in `MainActivity`, with no package. The
-  shared text opens in the editor for the user to confirm, as Android's
-  guidance recommends.
+- **Share sheet, more types.** Only text is accepted. Shared files
+  (`text/markdown` documents, several items at once with `SEND_MULTIPLE`)
+  could follow if needed.
 - **Load notes off the UI thread.** Loading 3000 notes took ~680 ms
   synchronously on the PC. That isn't noticeable at today's note counts,
   but it will grow. The fix is `Isolate.run` plus a loading state in

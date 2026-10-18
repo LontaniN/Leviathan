@@ -117,6 +117,9 @@ class NoteScreen extends StatelessWidget {
                   icon: const Icon(Icons.edit_outlined),
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
+                      settings: const RouteSettings(
+                        name: NoteEditor.editRouteName,
+                      ),
                       builder: (_) => _EditNotePage(note: note, notes: notes),
                     ),
                   ),

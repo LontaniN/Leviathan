@@ -7,6 +7,7 @@ import 'package:leviathan/data/storage_access.dart';
 import 'package:leviathan/data/workspace_repository.dart';
 import 'package:leviathan/state/app_state.dart';
 import 'package:leviathan/state/settings.dart';
+import 'package:leviathan/state/share_inbox.dart';
 import 'package:leviathan/ui/app_tour.dart';
 import 'package:leviathan/ui/graph_screen.dart';
 import 'package:leviathan/ui/search_screen.dart';
@@ -30,9 +31,10 @@ class _FakeStorage implements StorageAccess {
 
 /// L'app in italiano, come se la lingua fosse già stata scelta: la maggior
 /// parte dei test controlla i testi italiani.
-LeviathanApp _app(AppState state) => LeviathanApp(
+LeviathanApp _app(AppState state, {ShareInbox? shares}) => LeviathanApp(
   state: state,
   settings: Settings(language: 'it'),
+  shares: shares,
 );
 
 void main() {
@@ -966,6 +968,150 @@ void main() {
     ]);
     await settle(tester);
     expect(find.text('Scritta con Obsidian'), findsOneWidget);
+  });
+
+  group("testo condiviso da un'altra app", () {
+    String field(WidgetTester tester, String key) =>
+        tester.widget<TextField>(find.byKey(Key(key))).controller!.text;
+
+    Future<void> phone(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1080, 2424);
+      tester.view.devicePixelRatio = 2.625;
+      addTearDown(tester.view.reset);
+    }
+
+    testWidgets("aprendo l'app da Condividi il testo è nell'editor", (
+      tester,
+    ) async {
+      await phone(tester);
+      await tester.runAsync(
+        () => WorkspaceRepository(root).createWorkspace('Lavoro'),
+      );
+      final shares = ShareInbox()
+        ..receive((subject: 'Limiti notevoli', text: 'https://esempio.it'));
+      await tester.pumpWidget(
+        _app(AppState(_FakeStorage(root)), shares: shares),
+      );
+      await settle(tester);
+      expect(field(tester, 'title-field'), 'Limiti notevoli');
+      expect(field(tester, 'body-field'), 'https://esempio.it');
+      expect(shares.hasPending, isFalse);
+      // La bozza è già salvata: sopravvive se Android chiude l'app.
+      final draft = File('${root.path}/.leviathan/drafts/Lavoro.json');
+      expect(draft.readAsStringSync(), contains('esempio.it'));
+    });
+
+    testWidgets('con una bozza a metà il testo va in fondo', (tester) async {
+      await phone(tester);
+      await tester.runAsync(
+        () => WorkspaceRepository(root).createWorkspace('Lavoro'),
+      );
+      final shares = ShareInbox();
+      await tester.pumpWidget(
+        _app(AppState(_FakeStorage(root)), shares: shares),
+      );
+      await settle(tester);
+      await tester.enterText(find.byKey(const Key('title-field')), 'Idea');
+      await tester.enterText(find.byKey(const Key('body-field')), 'Inizio');
+      await settle(tester);
+
+      shares.receive((subject: '', text: 'Citazione condivisa'));
+      await settle(tester);
+      expect(field(tester, 'title-field'), 'Idea');
+      expect(field(tester, 'body-field'), 'Inizio\n\nCitazione condivisa');
+      expect(
+        find.text('Testo condiviso aggiunto in fondo alla bozza'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('con più workspace si sceglie dove salvarlo', (tester) async {
+      await phone(tester);
+      await tester.runAsync(() async {
+        final repo = WorkspaceRepository(root);
+        await repo.createWorkspace('Lavoro');
+        await repo.createWorkspace('Studio');
+        await repo.writeLastWorkspace('Lavoro');
+      });
+      final shares = ShareInbox();
+      await tester.pumpWidget(
+        _app(AppState(_FakeStorage(root)), shares: shares),
+      );
+      await settle(tester);
+
+      shares.receive((subject: '', text: "Per l'esame"));
+      await settle(tester);
+      expect(find.text('Dove salvare il testo condiviso'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('share-to-Studio')));
+      await settle(tester);
+
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('workspace-button')),
+          matching: find.text('Studio'),
+        ),
+        findsOneWidget,
+      );
+      expect(field(tester, 'body-field'), "Per l'esame");
+    });
+
+    testWidgets('non chiude la modifica di una nota già salvata', (
+      tester,
+    ) async {
+      await phone(tester);
+      await tester.runAsync(() async {
+        await WorkspaceRepository(root).createWorkspace('Lavoro');
+        await File('${root.path}/Lavoro/nota.md')
+            .writeAsString('---\ntitle: "Da rivedere"\n---\nCorpo');
+      });
+      final shares = ShareInbox();
+      await tester.pumpWidget(
+        _app(AppState(_FakeStorage(root)), shares: shares),
+      );
+      await settle(tester);
+      await tester.tap(find.text('Da rivedere').first);
+      await settle(tester);
+      await tester.tap(find.byTooltip('Modifica'));
+      await settle(tester);
+      await tester.enterText(
+        find.byKey(const Key('body-field')),
+        'Modifica a metà',
+      );
+      await settle(tester);
+
+      shares.receive((subject: '', text: 'Arrivato ora'));
+      await settle(tester);
+      // La pagina di modifica resta aperta col suo testo.
+      expect(find.text('Salva modifiche'), findsOneWidget);
+      expect(field(tester, 'body-field'), 'Modifica a metà');
+      expect(
+        find.text('Testo condiviso aggiunto alla bozza di «Lavoro»'),
+        findsOneWidget,
+      );
+      final draft = File('${root.path}/.leviathan/drafts/Lavoro.json');
+      expect(draft.readAsStringSync(), contains('Arrivato ora'));
+    });
+
+    testWidgets("con la lista espansa l'editor si riapre col testo", (
+      tester,
+    ) async {
+      await phone(tester);
+      await tester.runAsync(
+        () => WorkspaceRepository(root).createWorkspace('Lavoro'),
+      );
+      final shares = ShareInbox();
+      await tester.pumpWidget(
+        _app(AppState(_FakeStorage(root)), shares: shares),
+      );
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('list-toggle')));
+      await settle(tester);
+      expect(find.byKey(const Key('body-field')), findsNothing);
+
+      shares.receive((subject: '', text: 'Dalla lista'));
+      await settle(tester);
+      expect(field(tester, 'body-field'), 'Dalla lista');
+    });
   });
 
   testWidgets('sceglie una palette dalle impostazioni e la salva', (

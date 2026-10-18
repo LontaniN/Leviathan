@@ -1579,6 +1579,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Done: {title}'**
   String taskCompleted(String title);
+
+  /// No description provided for @shareToWorkspace.
+  ///
+  /// In en, this message translates to:
+  /// **'Save shared text to'**
+  String get shareToWorkspace;
+
+  /// No description provided for @sharedAppended.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared text added to the end of your draft'**
+  String get sharedAppended;
+
+  /// No description provided for @sharedSavedToDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared text added to the draft in “{workspace}”'**
+  String sharedSavedToDraft(String workspace);
 }
 
 class _AppLocalizationsDelegate

@@ -265,5 +265,8 @@
   "compareQuestionsLeft": "{count, plural, =1{Al massimo 1 domanda} other{Al massimo {count} domande}}",
   "compareNewTask": "Nuovo",
   "compareSkip": "Salta",
-  "taskCompleted": "Fatto: {title}"
+  "taskCompleted": "Fatto: {title}",
+  "shareToWorkspace": "Dove salvare il testo condiviso",
+  "sharedAppended": "Testo condiviso aggiunto in fondo alla bozza",
+  "sharedSavedToDraft": "Testo condiviso aggiunto alla bozza di «{workspace}»"
 }
