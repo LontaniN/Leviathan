@@ -221,5 +221,26 @@ void main() {
       expect([...ranks]..sort(), ranks);
       expect(ranks.toSet().length, 3);
     });
+
+    test('rinumera anche con posizioni non valide scritte a mano', () {
+      final a = _task('a', day: 1).placed(TaskBand.now, 'A');
+      final b = _task('b', day: 2).placed(TaskBand.now, 'B');
+      final ten = _task('t', day: 3).placed(TaskBand.now, '10');
+      expect(rankAt([a, b], 1), isNull);
+      expect(rankAt([ten], 0), isNull);
+      expect(rankAt([ten], 1), isNull);
+
+      final repo = NoteRepository(
+        Directory('${dir.path}/ws'),
+        trashDir: Directory('${dir.path}/trash'),
+      );
+      repo.save(notes.byId('a')!.placed(TaskBand.now, 'A'));
+      repo.save(notes.byId('b')!.placed(TaskBand.now, 'B'));
+      notes.reload();
+      put('c', TaskBand.now, 1);
+      expect(now(), ['a', 'c', 'b']);
+      final ranks = [for (final id in now()) notes.byId(id)!.rank!];
+      expect([...ranks]..sort(), ranks);
+    });
   });
 }
