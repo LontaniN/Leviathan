@@ -218,6 +218,27 @@ void main() {
       final empty = Note.fromMarkdown('v', '', date);
       expect(empty.displayTitle('Untitled'), 'Untitled');
     });
+
+    test('intestazione vuota lasciata da Obsidian', () {
+      final note = Note.fromMarkdown('o', '---\n---\nCorpo', date);
+      expect(note.body, 'Corpo');
+      expect(note.extraFrontmatter, '');
+      // Riscritta, l'intestazione è una sola.
+      final again = Note.fromMarkdown('o', note.toMarkdown(), date);
+      expect(again.body, 'Corpo');
+      expect('---'.allMatches(note.toMarkdown()), hasLength(2));
+      expect(Note.fromMarkdown('o', '---\n---', date).body, '');
+    });
+
+    test('una riga con più trattini non chiude l\'intestazione', () {
+      final note = Note.fromMarkdown(
+        'r',
+        '---\ntitle: "T"\nnota: |\n----\n---\nCorpo',
+        date,
+      );
+      expect(note.title, 'T');
+      expect(note.body, 'Corpo');
+    });
   });
 
   group('tag', () {

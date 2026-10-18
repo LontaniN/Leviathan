@@ -202,11 +202,13 @@ class Note {
     var extra = '';
     var body = text;
     if (text.startsWith('---\n')) {
-      final end = text.indexOf('\n---', 4);
-      if (end != -1) {
-        (fields, extra) = _parseHeader(text.substring(4, end));
-        final afterHeader = text.indexOf('\n', end + 1);
-        body = afterHeader == -1 ? '' : text.substring(afterHeader + 1);
+      // La riga di chiusura può seguire subito quella di apertura: Obsidian
+      // lascia `---` e `---` quando si tolgono tutte le proprietà.
+      final close = _headerClose.allMatches(text, 3).firstOrNull;
+      if (close != null) {
+        final end = close.start;
+        (fields, extra) = _parseHeader(end > 4 ? text.substring(4, end) : '');
+        body = close.end < text.length ? text.substring(close.end + 1) : '';
       }
     }
     final tags = _parseList(fields['tags']);
@@ -253,6 +255,10 @@ class Note {
     'knowledge',
     'pinned',
   };
+
+  /// La riga che chiude l'intestazione: solo `---` (al più con spazi dopo),
+  /// non `----` o `---testo`.
+  static final _headerClose = RegExp(r'\n---[ \t]*(?=\n|$)');
 
   /// Una riga che apre una voce dell'intestazione: `chiave:` a inizio riga.
   static final _entryStart = RegExp(r'^[^\s#-][^:]*:');
