@@ -291,6 +291,9 @@ class LeviathanSizes {
   static const tagDot = 5.0;
   static const tagDotDense = 4.0;
 
+  /// Altezza minima delle due schede da confrontare nel task manager.
+  static const compareCard = 120.0;
+
   /// Larghezza massima del titolo di un nodo del grafo.
   static const graphLabelWidth = 140.0;
 

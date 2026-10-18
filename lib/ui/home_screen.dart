@@ -6,7 +6,6 @@ import '../l10n/l10n.dart';
 import '../model/dates.dart';
 import '../model/markdown.dart';
 import '../model/note.dart';
-import '../model/tags.dart';
 import '../state/app_state.dart';
 import '../state/notes_controller.dart';
 import '../state/settings.dart';
@@ -21,6 +20,8 @@ import 'note_screen.dart';
 import 'pinned_screen.dart';
 import 'search_screen.dart';
 import 'settings_screen.dart';
+import 'tag_bar.dart';
+import 'task_manager_screen.dart';
 import 'task_check.dart';
 import 'theme.dart';
 import 'workspace_name_form.dart';
@@ -192,6 +193,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 onGraph: _openGraph,
                 onLists: () => _push(ListsScreen(notes: _notes)),
                 onCalendar: () => _push(CalendarScreen(notes: _notes)),
+                onTaskManager: () => _push(TaskManagerScreen(notes: _notes)),
                 onSettings: () => _push(
                   SettingsScreen(
                     settings: widget.settings,
@@ -301,6 +303,7 @@ class _Header extends StatelessWidget {
     required this.onGraph,
     required this.onLists,
     required this.onCalendar,
+    required this.onTaskManager,
     required this.onSettings,
   });
 
@@ -313,6 +316,7 @@ class _Header extends StatelessWidget {
   final VoidCallback onGraph;
   final VoidCallback onLists;
   final VoidCallback onCalendar;
+  final VoidCallback onTaskManager;
   final VoidCallback onSettings;
 
   @override
@@ -379,6 +383,12 @@ class _Header extends StatelessWidget {
                 tooltip: l.calendar,
                 icon: const Icon(Icons.calendar_month_outlined),
                 onPressed: onCalendar,
+              ),
+              IconButton(
+                key: const Key('task-manager-button'),
+                tooltip: l.taskManager,
+                icon: const Icon(Icons.low_priority),
+                onPressed: onTaskManager,
               ),
               IconButton(
                 key: const Key('settings-button'),
@@ -629,7 +639,7 @@ class _NoteList extends StatelessWidget {
                     // nota quando una nuova entra in cima.
                     _NoteEntry(:final note) => _SaveFlash(
                       key: ValueKey(note.id),
-                      color: _noteColor(context, note),
+                      color: noteColor(context, note),
                       seq: note.id == flashId ? flashSeq : null,
                       child: _NoteDivider(
                         // Fra due note una linea sottile le separa; prima di
@@ -715,11 +725,6 @@ class _SectionLabel extends StatelessWidget {
     );
   }
 }
-
-/// Barra colorata del primo tag (lo stesso colore del nodo nel grafo).
-Color _noteColor(BuildContext context, Note note) => note.tags.isEmpty
-    ? context.palette.muted.withValues(alpha: LeviathanOpacity.untagged)
-    : Tags.colorOf(note.tags.first);
 
 /// Fa illuminare per un attimo una voce della lista nel colore della sua
 /// nota, al posto di un avviso di salvataggio.
@@ -809,26 +814,6 @@ class _SaveFlashState extends State<_SaveFlash>
   }
 }
 
-/// La barretta del primo tag accanto a una voce.
-class _TagBar extends StatelessWidget {
-  const _TagBar({required this.note, required this.height});
-
-  final Note note;
-  final double height;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: LeviathanSizes.tagBar,
-      height: height,
-      decoration: BoxDecoration(
-        color: _noteColor(context, note),
-        borderRadius: BorderRadius.circular(LeviathanRadii.sm),
-      ),
-    );
-  }
-}
-
 /// La data corta della voce, con la puntina se la nota è fissata.
 class _When extends StatelessWidget {
   const _When({required this.note});
@@ -888,7 +873,7 @@ class _CompactTile extends StatelessWidget {
         ),
         child: Row(
           children: [
-            _TagBar(note: note, height: LeviathanSizes.tagBarCompact),
+            TagBar(note: note, height: LeviathanSizes.tagBarCompact),
             const SizedBox(width: LeviathanSpacing.sm),
             if (note.isTask)
               TaskCheck(
@@ -952,7 +937,7 @@ class _ExpandedTile extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.only(top: LeviathanSpacing.xxs),
-              child: _TagBar(note: note, height: LeviathanSizes.tagBarExpanded),
+              child: TagBar(note: note, height: LeviathanSizes.tagBarExpanded),
             ),
             const SizedBox(width: LeviathanSpacing.md),
             Expanded(

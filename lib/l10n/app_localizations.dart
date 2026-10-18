@@ -1385,7 +1385,7 @@ abstract class AppLocalizations {
   /// No description provided for @tourViewsBody.
   ///
   /// In en, this message translates to:
-  /// **'Pinned notes, the graph of notes linked by tags, task and note lists, the calendar, and the settings, where you can replay this tour.'**
+  /// **'Pinned notes, the graph of notes linked by tags, task and note lists, the calendar, the task manager to put tasks in order, and the settings, where you can replay this tour.'**
   String get tourViewsBody;
 
   /// No description provided for @guide.
@@ -1399,6 +1399,132 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Replay the tour'**
   String get replayTour;
+
+  /// No description provided for @taskManager.
+  ///
+  /// In en, this message translates to:
+  /// **'Task manager'**
+  String get taskManager;
+
+  /// No description provided for @taskManagerOpenTab.
+  ///
+  /// In en, this message translates to:
+  /// **'To do'**
+  String get taskManagerOpenTab;
+
+  /// No description provided for @taskManagerDoneTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get taskManagerDoneTab;
+
+  /// No description provided for @bandUnsorted.
+  ///
+  /// In en, this message translates to:
+  /// **'To sort'**
+  String get bandUnsorted;
+
+  /// No description provided for @bandNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Now'**
+  String get bandNow;
+
+  /// No description provided for @bandNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get bandNext;
+
+  /// No description provided for @bandLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get bandLater;
+
+  /// No description provided for @bandLoad.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}/{limit}'**
+  String bandLoad(int count, int limit);
+
+  /// No description provided for @nowOverLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'More than {limit} at once: is it all really for now?'**
+  String nowOverLimit(int limit);
+
+  /// No description provided for @bandEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag a task here'**
+  String get bandEmpty;
+
+  /// No description provided for @taskManagerEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No tasks to do.\nWrite one from the home screen by choosing \"Task\" in the editor.'**
+  String get taskManagerEmpty;
+
+  /// No description provided for @taskManagerDoneEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No completed tasks yet.\nTick a task and it shows up here.'**
+  String get taskManagerDoneEmpty;
+
+  /// No description provided for @dragToReorder.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag to move'**
+  String get dragToReorder;
+
+  /// No description provided for @sortByComparing.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort by comparing'**
+  String get sortByComparing;
+
+  /// No description provided for @sortAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort all'**
+  String get sortAll;
+
+  /// No description provided for @compareChooseBand.
+  ///
+  /// In en, this message translates to:
+  /// **'Which band does it go in?'**
+  String get compareChooseBand;
+
+  /// No description provided for @compareQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Which comes first?'**
+  String get compareQuestion;
+
+  /// No description provided for @compareQuestionsLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{At most 1 question left} other{At most {count} questions left}}'**
+  String compareQuestionsLeft(int count);
+
+  /// No description provided for @compareNewTask.
+  ///
+  /// In en, this message translates to:
+  /// **'New'**
+  String get compareNewTask;
+
+  /// No description provided for @compareSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get compareSkip;
+
+  /// No description provided for @taskCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Done: {title}'**
+  String taskCompleted(String title);
 }
 
 class _AppLocalizationsDelegate

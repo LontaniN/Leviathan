@@ -1141,4 +1141,123 @@ void main() {
     expect(find.byKey(const Key('tour-welcome')), findsNothing);
     expect(find.text('1 DI 5'), findsOneWidget);
   });
+
+  testWidgets('task manager: ordina a confronti, spunta e ritrova', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    await tester.runAsync(() async {
+      await WorkspaceRepository(root).createWorkspace('Lavoro');
+      final dir = '${root.path}/Lavoro';
+      void task(String id, String extra) => File('$dir/$id.md')
+          .writeAsStringSync(
+            '---\ntitle: "$id"\ntags: ["casa"]\n'
+            'created: "2026-10-01T00:00:00.000"\n'
+            'type: "task"\ndone: false\n$extra---\n',
+          );
+      task('Primo', 'priority: "now"\nrank: "c"\n');
+      task('Terzo', 'priority: "now"\nrank: "m"\n');
+      task('Nuovo', '');
+    });
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+    await settle(tester);
+
+    await tester.tap(find.byKey(const Key('task-manager-button')));
+    await settle(tester);
+    expect(find.text('DA ORDINARE'), findsOneWidget);
+    expect(find.byKey(const Key('now-load')), findsOneWidget);
+    expect(find.text('2/3'), findsOneWidget);
+    expect(find.text('Trascina qui un task'), findsNWidgets(2));
+
+    // "Nuovo" va in Ora, dopo "Primo" e prima di "Terzo".
+    await tester.tap(find.byKey(const Key('compare-Nuovo')));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('choose-now')));
+    await settle(tester);
+    expect(find.text('Quale viene prima?'), findsOneWidget);
+    // Il primo confronto è con "Terzo" (a metà): viene prima il nuovo.
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('compare-pivot')),
+        matching: find.text('Terzo'),
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const Key('compare-new')));
+    await settle(tester);
+    // Poi con "Primo": viene prima lui.
+    await tester.tap(find.byKey(const Key('compare-pivot')));
+    await settle(tester);
+
+    expect(find.text('DA ORDINARE'), findsNothing);
+    expect(find.text('3/3'), findsOneWidget);
+    double y(String t) => tester.getTopLeft(find.text(t)).dy;
+    expect(y('Primo'), lessThan(y('Nuovo')));
+    expect(y('Nuovo'), lessThan(y('Terzo')));
+    final file = File('${root.path}/Lavoro/Nuovo.md').readAsStringSync();
+    expect(file, contains('priority: "now"'));
+
+    // Spuntato esce da "Da fare" e compare fra i completati.
+    await tester.tap(find.byKey(const Key('task-check-Primo')));
+    await settle(tester);
+    expect(find.text('Primo'), findsNothing);
+    expect(find.text('Fatto: Primo'), findsOneWidget);
+    await tester.tap(find.text('Completati'));
+    await settle(tester);
+    expect(find.text('Primo'), findsOneWidget);
+    expect(find.text('OGGI'), findsOneWidget);
+  });
+
+  testWidgets('task manager: trascina nella fascia e fra le fasce', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    await tester.runAsync(() async {
+      await WorkspaceRepository(root).createWorkspace('Lavoro');
+      final dir = '${root.path}/Lavoro';
+      void task(String id, String extra) =>
+          File('$dir/$id.md').writeAsStringSync(
+            '---\ntitle: "$id"\ncreated: "2026-10-01T00:00:00.000"\n'
+            'type: "task"\ndone: false\n$extra---\n',
+          );
+      task('Uno', 'priority: "now"\nrank: "c"\n');
+      task('Due', 'priority: "now"\nrank: "m"\n');
+      task('Tre', 'priority: "later"\nrank: "i"\n');
+    });
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('task-manager-button')));
+    await settle(tester);
+
+    double y(String t) => tester.getCenter(find.text(t)).dy;
+    Future<void> drag(String id, double dy) async {
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.byKey(Key('drag-$id'))),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      for (var i = 0; i < 10; i++) {
+        await gesture.moveBy(Offset(0, dy / 10));
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      await gesture.up();
+      await settle(tester);
+    }
+
+    // "Due" sopra "Uno".
+    await drag('Due', y('Uno') - y('Due') - 10);
+    expect(y('Due'), lessThan(y('Uno')));
+
+    // "Tre" da Più avanti in cima a Ora.
+    await drag('Tre', y('Due') - y('Tre') - 10);
+    expect(y('Tre'), lessThan(y('Due')));
+    expect(find.text('3/3'), findsOneWidget);
+    final file = File('${root.path}/Lavoro/Tre.md').readAsStringSync();
+    expect(file, contains('priority: "now"'));
+  });
 }

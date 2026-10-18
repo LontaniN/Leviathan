@@ -821,11 +821,90 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tourViewsBody =>
-      'Pinned notes, the graph of notes linked by tags, task and note lists, the calendar, and the settings, where you can replay this tour.';
+      'Pinned notes, the graph of notes linked by tags, task and note lists, the calendar, the task manager to put tasks in order, and the settings, where you can replay this tour.';
 
   @override
   String get guide => 'Guide';
 
   @override
   String get replayTour => 'Replay the tour';
+
+  @override
+  String get taskManager => 'Task manager';
+
+  @override
+  String get taskManagerOpenTab => 'To do';
+
+  @override
+  String get taskManagerDoneTab => 'Completed';
+
+  @override
+  String get bandUnsorted => 'To sort';
+
+  @override
+  String get bandNow => 'Now';
+
+  @override
+  String get bandNext => 'Next';
+
+  @override
+  String get bandLater => 'Later';
+
+  @override
+  String bandLoad(int count, int limit) {
+    return '$count/$limit';
+  }
+
+  @override
+  String nowOverLimit(int limit) {
+    return 'More than $limit at once: is it all really for now?';
+  }
+
+  @override
+  String get bandEmpty => 'Drag a task here';
+
+  @override
+  String get taskManagerEmpty =>
+      'No tasks to do.\nWrite one from the home screen by choosing \"Task\" in the editor.';
+
+  @override
+  String get taskManagerDoneEmpty =>
+      'No completed tasks yet.\nTick a task and it shows up here.';
+
+  @override
+  String get dragToReorder => 'Drag to move';
+
+  @override
+  String get sortByComparing => 'Sort by comparing';
+
+  @override
+  String get sortAll => 'Sort all';
+
+  @override
+  String get compareChooseBand => 'Which band does it go in?';
+
+  @override
+  String get compareQuestion => 'Which comes first?';
+
+  @override
+  String compareQuestionsLeft(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'At most $count questions left',
+      one: 'At most 1 question left',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get compareNewTask => 'New';
+
+  @override
+  String get compareSkip => 'Skip';
+
+  @override
+  String taskCompleted(String title) {
+    return 'Done: $title';
+  }
 }

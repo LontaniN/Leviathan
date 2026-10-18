@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'markdown.dart';
+import 'task_order.dart';
 
 /// Che domanda si fa una nota: cos'è successo (nota), cosa c'è da fare
 /// (task) o cosa so (conoscenza).
@@ -23,7 +24,9 @@ enum NoteKind { note, task, knowledge }
 /// ```
 ///
 /// Un task ha in più `type: "task"`, `done` e, se fatto, `done_at`; le note
-/// normali non scrivono questi campi. Una nota di conoscenza ha
+/// normali non scrivono questi campi. Nel task manager un task ha anche una
+/// fascia (`priority: "now"`, `"next"` o `"later"`) e una posizione nella
+/// fascia (`rank`, vedi [rankBetween]); senza fascia è "da ordinare". Una nota di conoscenza ha
 /// `knowledge: true`; una fissata in cima alle recenti ha `pinned: true`.
 ///
 /// I valori sono scritti come JSON, che è anche YAML valido: il file resta
@@ -42,6 +45,8 @@ class Note {
     this.doneAt,
     this.knowledge = false,
     this.pinned = false,
+    this.band,
+    this.rank,
   });
 
   /// Nome del file senza estensione; non cambia se si modifica il titolo.
@@ -71,6 +76,12 @@ class Note {
   /// Fissata in cima alle recenti.
   final bool pinned;
 
+  /// Solo per i task: la fascia del task manager; null se da ordinare.
+  final TaskBand? band;
+
+  /// Solo per i task: la posizione nella fascia (si confronta come testo).
+  final String? rank;
+
   /// Un task ancora da fare.
   bool get isOpenTask => isTask && !done;
 
@@ -81,8 +92,8 @@ class Note {
       : NoteKind.note;
 
   /// Togliendo [isTask] o [done] si perdono anche spunta e data di
-  /// esecuzione, così non restano valori senza senso; un task non è mai
-  /// conoscenza.
+  /// esecuzione, e togliendo [isTask] anche fascia e posizione, così non
+  /// restano valori senza senso; un task non è mai conoscenza.
   Note copyWith({
     String? title,
     String? body,
@@ -111,8 +122,29 @@ class Note {
       doneAt: isDone ? (doneAt ?? this.doneAt) : null,
       knowledge: !task && (knowledge ?? this.knowledge),
       pinned: pinned ?? this.pinned,
+      band: task ? band : null,
+      rank: task ? rank : null,
     );
   }
+
+  /// Lo stesso task in un altro posto del task manager: [band] null lo
+  /// rimette fra quelli da ordinare (e allora non ha posizione).
+  Note placed(TaskBand? band, String? rank) => Note(
+    id: id,
+    title: title,
+    body: body,
+    tags: tags,
+    sources: sources,
+    created: created,
+    updated: updated,
+    isTask: isTask,
+    done: done,
+    doneAt: doneAt,
+    knowledge: knowledge,
+    pinned: pinned,
+    band: isTask ? band : null,
+    rank: isTask && band != null ? rank : null,
+  );
 
   /// Il titolo, oppure l'inizio del corpo se il titolo è vuoto; [untitled]
   /// se non c'è nemmeno quello.
@@ -138,6 +170,8 @@ class Note {
       if (doneAt != null) {
         buffer.writeln('done_at: ${jsonEncode(doneAt!.toIso8601String())}');
       }
+      if (band != null) buffer.writeln('priority: ${jsonEncode(band!.key)}');
+      if (rank != null) buffer.writeln('rank: ${jsonEncode(rank)}');
     }
     if (knowledge) buffer.writeln('knowledge: true');
     if (pinned) buffer.writeln('pinned: true');
@@ -172,6 +206,8 @@ class Note {
     final created = _parseDate(fields['created']) ?? fallbackDate;
     final isTask = '${fields['type'] ?? ''}'.trim().toLowerCase() == 'task';
     final done = isTask && (fields['done'] == true || fields['done'] == 'true');
+    final band = isTask ? TaskBand.fromKey(fields['priority']) : null;
+    final rank = '${fields['rank'] ?? ''}'.trim();
     return Note(
       id: id,
       title: '${fields['title'] ?? ''}',
@@ -185,6 +221,8 @@ class Note {
       doneAt: done ? _parseDate(fields['done_at']) : null,
       knowledge: !isTask && _isTrue(fields['knowledge']),
       pinned: fields['pinned'] == true || fields['pinned'] == 'true',
+      band: band,
+      rank: band != null && rank.isNotEmpty ? rank : null,
     );
   }
 

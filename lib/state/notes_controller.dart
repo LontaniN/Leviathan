@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../data/note_repository.dart';
 import '../model/note.dart';
+import '../model/task_order.dart';
 
 /// Una nota appena spostata nel cestino, con il file dove è finita.
 typedef DeletedNote = ({Note note, String trashPath});
@@ -96,6 +97,46 @@ class NotesController extends ChangeNotifier {
     notes = [for (final n in notes) n.id == changed.id ? changed : n];
     notifyListeners();
     return changed;
+  }
+
+  /// Mette un task del task manager nella fascia [band] fra i task di
+  /// [list] agli indici `index - 1` e `index` ([list] è la fascia nel suo
+  /// ordine; può contenere il task stesso). Con [band] null il task torna
+  /// fra quelli da ordinare. Come la spunta, non conta come modifica.
+  ///
+  /// Se i vicini non lasciano posto (posizioni mancanti o uguali, es. file
+  /// scritti a mano) l'intera fascia viene rinumerata.
+  void place(Note task, TaskBand? band, List<Note> list, int index) {
+    if (band == null) {
+      _saveAll([task.placed(null, null)]);
+      return;
+    }
+    final rank = rankAt(list, index, moving: task);
+    if (rank != null) {
+      _saveAll([task.placed(band, rank)]);
+      return;
+    }
+    final others = [
+      for (final n in list)
+        if (n.id != task.id) n,
+    ];
+    final ordered = [...others]..insert(index.clamp(0, others.length), task);
+    final ranks = spreadRanks(ordered.length);
+    _saveAll([
+      for (var i = 0; i < ordered.length; i++)
+        if (ordered[i].band != band || ordered[i].rank != ranks[i])
+          ordered[i].placed(band, ranks[i]),
+    ]);
+  }
+
+  void _saveAll(List<Note> changed) {
+    if (changed.isEmpty) return;
+    final byId = {for (final n in changed) n.id: n};
+    for (final note in changed) {
+      _repo.save(note);
+    }
+    notes = [for (final n in notes) byId[n.id] ?? n];
+    notifyListeners();
   }
 
   /// Sposta la nota nel cestino. Il risultato serve a [restore] per

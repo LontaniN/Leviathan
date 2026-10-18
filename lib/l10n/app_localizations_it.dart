@@ -809,11 +809,90 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get tourViewsBody =>
-      'Le note fissate, il grafo delle note unite dai tag, gli elenchi di task e note, il calendario e le impostazioni, dove puoi rivedere questo tour.';
+      'Le note fissate, il grafo delle note unite dai tag, gli elenchi di task e note, il calendario, il task manager per mettere in ordine i task e le impostazioni, dove puoi rivedere questo tour.';
 
   @override
   String get guide => 'Guida';
 
   @override
   String get replayTour => 'Rivedi il tour';
+
+  @override
+  String get taskManager => 'Task manager';
+
+  @override
+  String get taskManagerOpenTab => 'Da fare';
+
+  @override
+  String get taskManagerDoneTab => 'Completati';
+
+  @override
+  String get bandUnsorted => 'Da ordinare';
+
+  @override
+  String get bandNow => 'Ora';
+
+  @override
+  String get bandNext => 'Prossimo';
+
+  @override
+  String get bandLater => 'Più avanti';
+
+  @override
+  String bandLoad(int count, int limit) {
+    return '$count/$limit';
+  }
+
+  @override
+  String nowOverLimit(int limit) {
+    return 'Più di $limit insieme: è davvero tutto per ora?';
+  }
+
+  @override
+  String get bandEmpty => 'Trascina qui un task';
+
+  @override
+  String get taskManagerEmpty =>
+      'Nessun task da fare.\nScrivine uno dalla home scegliendo \"Task\" nell\'editor.';
+
+  @override
+  String get taskManagerDoneEmpty =>
+      'Nessun task completato.\nSpunta un task e lo ritrovi qui.';
+
+  @override
+  String get dragToReorder => 'Trascina per spostare';
+
+  @override
+  String get sortByComparing => 'Ordina confrontando';
+
+  @override
+  String get sortAll => 'Ordina tutti';
+
+  @override
+  String get compareChooseBand => 'In quale fascia va?';
+
+  @override
+  String get compareQuestion => 'Quale viene prima?';
+
+  @override
+  String compareQuestionsLeft(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Al massimo $count domande',
+      one: 'Al massimo 1 domanda',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get compareNewTask => 'Nuovo';
+
+  @override
+  String get compareSkip => 'Salta';
+
+  @override
+  String taskCompleted(String title) {
+    return 'Fatto: $title';
+  }
 }
