@@ -944,6 +944,24 @@ abstract class AppLocalizations {
   /// **'in this source'**
   String get whereSource;
 
+  /// No description provided for @whereTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'among tasks'**
+  String get whereTasks;
+
+  /// No description provided for @whereNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'among notes'**
+  String get whereNotes;
+
+  /// No description provided for @whereKnowledge.
+  ///
+  /// In en, this message translates to:
+  /// **'in knowledge'**
+  String get whereKnowledge;
+
   /// No description provided for @searchWhere.
   ///
   /// In en, this message translates to:

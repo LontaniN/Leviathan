@@ -513,6 +513,15 @@ class AppLocalizationsIt extends AppLocalizations {
   String get whereSource => 'in questa fonte';
 
   @override
+  String get whereTasks => 'fra i task';
+
+  @override
+  String get whereNotes => 'fra le note';
+
+  @override
+  String get whereKnowledge => 'nella conoscenza';
+
+  @override
   String searchWhere(String where) {
     return 'Cerca $where';
   }

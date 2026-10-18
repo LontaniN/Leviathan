@@ -8,6 +8,7 @@ import 'package:leviathan/data/workspace_repository.dart';
 import 'package:leviathan/state/app_state.dart';
 import 'package:leviathan/state/settings.dart';
 import 'package:leviathan/ui/graph_screen.dart';
+import 'package:leviathan/ui/search_screen.dart';
 import 'package:leviathan/ui/theme.dart';
 
 class _FakeStorage implements StorageAccess {
@@ -438,6 +439,50 @@ void main() {
     await settle(tester);
     expect(find.text('Diario'), findsOneWidget);
     expect(find.text('Teorema'), findsNothing);
+  });
+
+  testWidgets('task e note: la barra cerca solo nell\'elenco scelto', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    await tester.runAsync(() async {
+      await WorkspaceRepository(root).createWorkspace('Studio');
+      File('${root.path}/Studio/teorema.md').writeAsStringSync(
+        '---\ntitle: "Teorema di Pitagora"\nknowledge: true\n---\n',
+      );
+      File('${root.path}/Studio/diario.md')
+          .writeAsStringSync('---\ntitle: "Ripasso"\n---\nOggi Pitagora.\n');
+    });
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+    await settle(tester);
+
+    await tester.tap(find.byKey(const Key('lists-button')));
+    await settle(tester);
+    await tester.tap(find.text('Conoscenza'));
+    await settle(tester);
+    expect(find.text('Cerca nella conoscenza'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const Key('lists-search')), 'pitagora');
+    await settle(tester);
+    expect(find.byType(NoteResultTile), findsOneWidget);
+    expect(find.byKey(const Key('grouping-toggle')), findsNothing);
+
+    await tester.tap(find.text('Note').last);
+    await settle(tester);
+    expect(find.byType(NoteResultTile), findsOneWidget);
+    expect(find.text('Ripasso', findRichText: true), findsOneWidget);
+
+    await tester.tap(find.text('Task').last);
+    await settle(tester);
+    expect(find.byType(NoteResultTile), findsNothing);
+    expect(find.text('Nessun risultato fra i task.'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('lists-search-clear')));
+    await settle(tester);
+    expect(find.byKey(const Key('grouping-toggle')), findsOneWidget);
   });
 
   testWidgets('ricerca: "tag:" elenca tutti i tag, da scorrere', (

@@ -20,6 +20,10 @@ import 'theme.dart';
 /// Ogni tag (o fonte) è un riquadro, come le caselle del calendario, così
 /// anche con molte note la schermata resta corta. Toccando un riquadro si
 /// apre l'elenco dei suoi task o delle sue note, dal più recente.
+///
+/// La barra in cima cerca solo nell'elenco scelto (e, fra i task, solo in
+/// quelli mostrati dalla tendina): mentre si scrive i riquadri lasciano il
+/// posto ai risultati.
 class ListsScreen extends StatefulWidget {
   const ListsScreen({
     super.key,
@@ -38,8 +42,29 @@ class _ListsScreenState extends State<ListsScreen> {
   late NoteKind _view = widget.initialView;
   NoteGrouping _grouping = NoteGrouping.tag;
   TaskFilter _filter = TaskFilter.aperto;
+  final _query = TextEditingController();
 
   bool get _tasks => _view == NoteKind.task;
+
+  @override
+  void initState() {
+    super.initState();
+    _query.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _query.dispose();
+    super.dispose();
+  }
+
+  void _openNote(Note note) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => NoteScreen(noteId: note.id, notes: widget.notes),
+      ),
+    );
+  }
 
   void _openGroup(String? name) {
     Navigator.of(context).push(
@@ -67,6 +92,13 @@ class _ListsScreenState extends State<ListsScreen> {
         final summary = _tasks
             ? _taskSummary(l, all.where((n) => n.isTask), _filter)
             : l.noteCount(all.where((n) => n.kind == _view).length);
+        final query = SearchQuery(text: _query.text);
+        final searching = query.terms.isNotEmpty;
+        final where = switch (_view) {
+          NoteKind.task => l.whereTasks,
+          NoteKind.note => l.whereNotes,
+          NoteKind.knowledge => l.whereKnowledge,
+        };
         return Scaffold(
           appBar: AppBar(
             backgroundColor: context.palette.background,
@@ -82,6 +114,10 @@ class _ListsScreenState extends State<ListsScreen> {
           body: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              _ContextSearchField(
+                controller: _query,
+                hint: l.searchWhere(where),
+              ),
               // Sotto la barra e a tutta larghezza: tre voci non ci stanno
               // accanto alla tendina dei task.
               Padding(
@@ -96,47 +132,65 @@ class _ListsScreenState extends State<ListsScreen> {
                   onChanged: (v) => setState(() => _view = v),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  LeviathanSpacing.lg,
-                  0,
-                  LeviathanSpacing.lg,
-                  LeviathanSpacing.sm,
-                ),
-                // A tutta larghezza: ogni metà ha il suo spazio anche con
-                // caratteri grandi.
-                child: SegmentedButton<NoteGrouping>(
-                  key: const Key('grouping-toggle'),
-                  segments: [
-                    ButtonSegment(
-                      value: NoteGrouping.tag,
-                      icon: const Icon(
-                        Icons.sell_outlined,
-                        size: LeviathanIconSize.sm,
-                      ),
-                      label: Text(l.byTag),
-                    ),
-                    ButtonSegment(
-                      value: NoteGrouping.source,
-                      icon: const Icon(
-                        Icons.person_outline,
-                        size: LeviathanIconSize.sm,
-                      ),
-                      label: Text(l.bySource),
-                    ),
-                  ],
-                  selected: {_grouping},
-                  showSelectedIcon: false,
-                  style: const ButtonStyle(
-                    visualDensity: VisualDensity.compact,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              // Con la ricerca i risultati sono un elenco unico: raggruppare
+              // non serve.
+              if (!searching)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    LeviathanSpacing.lg,
+                    0,
+                    LeviathanSpacing.lg,
+                    LeviathanSpacing.sm,
                   ),
-                  onSelectionChanged: (s) =>
-                      setState(() => _grouping = s.first),
+                  // A tutta larghezza: ogni metà ha il suo spazio anche con
+                  // caratteri grandi.
+                  child: SegmentedButton<NoteGrouping>(
+                    key: const Key('grouping-toggle'),
+                    segments: [
+                      ButtonSegment(
+                        value: NoteGrouping.tag,
+                        icon: const Icon(
+                          Icons.sell_outlined,
+                          size: LeviathanIconSize.sm,
+                        ),
+                        label: Text(l.byTag),
+                      ),
+                      ButtonSegment(
+                        value: NoteGrouping.source,
+                        icon: const Icon(
+                          Icons.person_outline,
+                          size: LeviathanIconSize.sm,
+                        ),
+                        label: Text(l.bySource),
+                      ),
+                    ],
+                    selected: {_grouping},
+                    showSelectedIcon: false,
+                    style: const ButtonStyle(
+                      visualDensity: VisualDensity.compact,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    onSelectionChanged: (s) =>
+                        setState(() => _grouping = s.first),
+                  ),
                 ),
-              ),
               Expanded(
-                child: groups.isEmpty
+                child: searching
+                    ? _SearchResults(
+                        notes: widget.notes,
+                        hits: searchNotes([
+                          for (final n in all)
+                            if (n.kind == _view &&
+                                (!_tasks || _filter.matches(n)))
+                              n,
+                        ], query),
+                        query: query,
+                        tasks: _tasks,
+                        filter: _filter,
+                        empty: l.noResultsWhere(where),
+                        onOpen: _openNote,
+                      )
+                    : groups.isEmpty
                     ? _Empty(
                         _view == NoteKind.note
                             ? l.listsNoNotes
@@ -158,6 +212,121 @@ class _ListsScreenState extends State<ListsScreen> {
               ),
             ],
           ),
+        );
+      },
+    );
+  }
+}
+
+/// La barra di ricerca semplificata: solo testo, senza filtri, dentro
+/// l'elenco scelto.
+class _ContextSearchField extends StatelessWidget {
+  const _ContextSearchField({required this.controller, required this.hint});
+
+  final TextEditingController controller;
+  final String hint;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        LeviathanSpacing.lg,
+        0,
+        LeviathanSpacing.lg,
+        LeviathanSpacing.sm,
+      ),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: palette.surface,
+          borderRadius: BorderRadius.circular(LeviathanRadii.lg),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.only(left: LeviathanSpacing.md),
+          child: Row(
+            children: [
+              Icon(
+                Icons.search,
+                size: LeviathanIconSize.md,
+                color: palette.muted,
+              ),
+              Expanded(
+                child: TextField(
+                  key: const Key('lists-search'),
+                  controller: controller,
+                  autocorrect: false,
+                  textInputAction: TextInputAction.search,
+                  decoration: InputDecoration(
+                    hintText: hint,
+                    filled: false,
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: LeviathanSpacing.sm,
+                      vertical: LeviathanSpacing.md,
+                    ),
+                  ),
+                  onTapOutside: (_) => FocusScope.of(context).unfocus(),
+                ),
+              ),
+              if (controller.text.isNotEmpty)
+                IconButton(
+                  key: const Key('lists-search-clear'),
+                  tooltip: context.l10n.clear,
+                  icon: const Icon(Icons.close, size: LeviathanIconSize.md),
+                  onPressed: controller.clear,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// I risultati della ricerca nell'elenco scelto, dai più pertinenti.
+class _SearchResults extends StatelessWidget {
+  const _SearchResults({
+    required this.notes,
+    required this.hits,
+    required this.query,
+    required this.tasks,
+    required this.filter,
+    required this.empty,
+    required this.onOpen,
+  });
+
+  final NotesController notes;
+  final List<SearchHit> hits;
+  final SearchQuery query;
+  final bool tasks;
+  final TaskFilter filter;
+
+  /// Il testo da mostrare se non si trova niente.
+  final String empty;
+  final ValueChanged<Note> onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    if (hits.isEmpty) return _Empty(empty);
+    final l = context.l10n;
+    final summary = tasks
+        ? _taskSummary(l, hits.map((h) => h.note), filter)
+        : l.noteCount(hits.length);
+    return ListView.builder(
+      key: const Key('lists-search-results'),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: const EdgeInsets.only(bottom: LeviathanSpacing.xl),
+      itemCount: hits.length + 1,
+      itemBuilder: (context, i) {
+        if (i == 0) return SectionTitle(summary);
+        return NoteResultTile(
+          hit: hits[i - 1],
+          terms: query.terms,
+          onTap: onOpen,
+          onToggleDone: notes.setDone,
+          onTogglePin: notes.setPinned,
+          divider: i < hits.length,
         );
       },
     );
