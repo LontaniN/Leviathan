@@ -3,12 +3,14 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 
 import '../model/note.dart';
+import 'atomic_write.dart';
 
 /// Legge e scrive le note di un workspace: un file `.md` per nota.
 ///
-/// Le operazioni sono sincrone: i file sono piccoli e così una nota non resta
-/// mai scritta a metà. Se un giorno i workspace diventeranno enormi, la lettura
-/// iniziale potrà passare a un indice.
+/// Le operazioni sono sincrone: i file sono piccoli. Ogni nota si scrive con
+/// [writeFileAtomic], così non resta mai scritta a metà. Se un giorno i
+/// workspace diventeranno enormi, la lettura iniziale potrà passare a un
+/// indice.
 class NoteRepository {
   NoteRepository(this.dir, {required this.trashDir});
 
@@ -66,8 +68,7 @@ class NoteRepository {
   }
 
   void save(Note note) {
-    dir.createSync(recursive: true);
-    _file(note.id).writeAsStringSync(note.toMarkdown());
+    writeFileAtomic(_file(note.id), note.toMarkdown());
   }
 
   /// Sposta la nota nel cestino e restituisce dove è finita (null se il

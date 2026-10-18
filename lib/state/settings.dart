@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../data/atomic_write.dart';
 import '../ui/theme.dart';
 
 /// Preferenze dell'app: lingua dell'interfaccia, palette e tour già visto.
@@ -77,8 +78,8 @@ class Settings extends ChangeNotifier {
   void _save() {
     final file = this.file;
     if (file == null) return;
-    file.parent.createSync(recursive: true);
-    file.writeAsStringSync(
+    writeFileAtomic(
+      file,
       jsonEncode({
         'palette': palette.id,
         'language': ?language,
