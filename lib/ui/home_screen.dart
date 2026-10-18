@@ -53,7 +53,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   late final NotesController _notes = NotesController(
     widget.state.notesOf(widget.state.currentWorkspace!),
   );
@@ -80,6 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     // Arrivando dall'onboarding la tastiera del nome può essere ancora
     // aperta e nasconderebbe parte della home.
     if (_touring) FocusManager.instance.primaryFocus?.unfocus();
@@ -87,8 +88,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _notes.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState lifecycle) {
+    // Mentre l'app era in secondo piano le note possono essere cambiate da
+    // fuori (Obsidian, sincronizzazione, file manager).
+    if (lifecycle == AppLifecycleState.resumed) _notes.reloadIfChanged();
   }
 
   /// Riapre il tour dalle impostazioni: senza benvenuto, con la lista

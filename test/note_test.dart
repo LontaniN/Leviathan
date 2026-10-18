@@ -352,5 +352,59 @@ void main() {
       expect(a.id, isNot(b.id));
       expect(repo.loadAll(), hasLength(2));
     });
+
+    group('modifiche da fuori', () {
+      late Note note;
+      late File file;
+
+      setUp(() {
+        note = repo.create(title: 'Nota', body: 'a', tags: [], sources: []);
+        file = File('${root.path}/ws/${note.id}.md');
+        repo.loadAll();
+      });
+
+      /// Come un altro programma: nuovo contenuto e un'altra data.
+      void editOutside(String content) {
+        final before = file.lastModifiedSync();
+        file.writeAsStringSync(content);
+        file.setLastModifiedSync(before.add(const Duration(seconds: 5)));
+      }
+
+      test('senza modifiche non c\'è niente da rileggere', () {
+        expect(repo.hasExternalChanges(), isFalse);
+        repo.save(note.copyWith(body: 'b'));
+        expect(repo.hasExternalChanges(), isFalse);
+      });
+
+      test('vede un file cambiato, aggiunto o tolto', () {
+        editOutside('---\ntitle: "Da Obsidian"\n---\n');
+        expect(repo.hasExternalChanges(), isTrue);
+        expect(repo.loadAll().single.title, 'Da Obsidian');
+        expect(repo.hasExternalChanges(), isFalse);
+
+        File('${root.path}/ws/nuova.md').writeAsStringSync('ciao');
+        expect(repo.hasExternalChanges(), isTrue);
+        repo.loadAll();
+
+        File('${root.path}/ws/nuova.md').deleteSync();
+        expect(repo.hasExternalChanges(), isTrue);
+      });
+
+      test('salvando sopra una modifica esterna la mette nel cestino', () {
+        editOutside('---\ntitle: "Da Obsidian"\n---\nTesto esterno');
+        repo.save(note.copyWith(body: 'mia versione'));
+        expect(file.readAsStringSync(), contains('mia versione'));
+        final trashed = Directory('${root.path}/trash').listSync().single;
+        expect((trashed as File).readAsStringSync(), contains('Testo esterno'));
+        // Un secondo salvataggio è di nuovo normale.
+        repo.save(note.copyWith(body: 'ancora mia'));
+        expect(Directory('${root.path}/trash').listSync(), hasLength(1));
+      });
+
+      test('un salvataggio normale non tocca il cestino', () {
+        repo.save(note.copyWith(body: 'b'));
+        expect(Directory('${root.path}/trash').existsSync(), isFalse);
+      });
+    });
   });
 }

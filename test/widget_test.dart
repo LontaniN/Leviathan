@@ -931,6 +931,43 @@ void main() {
     expect(draft.existsSync(), isFalse);
   });
 
+  testWidgets('tornando nell\'app mostra le note cambiate da fuori', (
+    tester,
+  ) async {
+    await tester.runAsync(
+      () => WorkspaceRepository(root).createWorkspace('Lavoro'),
+    );
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+    await settle(tester);
+    expect(find.text('Scritta con Obsidian'), findsNothing);
+
+    // Mentre l'app è in secondo piano un altro programma aggiunge una nota.
+    // Le transizioni vanno fatte una per una, come su Android.
+    void lifecycle(List<AppLifecycleState> states) {
+      for (final state in states) {
+        tester.binding.handleAppLifecycleStateChanged(state);
+      }
+    }
+
+    lifecycle(const [
+      AppLifecycleState.inactive,
+      AppLifecycleState.hidden,
+      AppLifecycleState.paused,
+    ]);
+    await tester.runAsync(
+      () => File('${root.path}/Lavoro/esterna.md').writeAsString(
+        '---\ntitle: Scritta con Obsidian\ntags:\n  - fuori\n---\nTesto',
+      ),
+    );
+    lifecycle(const [
+      AppLifecycleState.hidden,
+      AppLifecycleState.inactive,
+      AppLifecycleState.resumed,
+    ]);
+    await settle(tester);
+    expect(find.text('Scritta con Obsidian'), findsOneWidget);
+  });
+
   testWidgets('sceglie una palette dalle impostazioni e la salva', (
     tester,
   ) async {
