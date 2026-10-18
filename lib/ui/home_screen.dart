@@ -41,10 +41,25 @@ class _HomeScreenState extends State<HomeScreen> {
   );
   bool _listExpanded = false;
 
+  /// La nota appena salvata, la cui voce nella lista si illumina; [_flashSeq]
+  /// cambia a ogni salvataggio, così il bagliore riparte anche sulla stessa.
+  String? _flashId;
+  int _flashSeq = 0;
+
   @override
   void dispose() {
     _notes.dispose();
     super.dispose();
+  }
+
+  void _flash(Note note) {
+    final seq = ++_flashSeq;
+    setState(() => _flashId = note.id);
+    // Finito il bagliore la voce torna normale: scorrendo via e tornando non
+    // si riaccende.
+    Future<void>.delayed(LeviathanDurations.saveFlash, () {
+      if (mounted && _flashSeq == seq) setState(() => _flashId = null);
+    });
   }
 
   void _openNote(Note note) {
@@ -165,7 +180,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         AnimatedContainer(
-                          duration: const Duration(milliseconds: 220),
+                          duration: LeviathanDurations.panel,
                           curve: Curves.easeOutCubic,
                           width: listWidth,
                           // Durante l'animazione la lista è già impaginata
@@ -183,6 +198,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                                 onOpen: _openNote,
                                 onToggleDone: _notes.setDone,
+                                flashId: _flashId,
+                                flashSeq: _flashSeq,
                               ),
                             ),
                           ),
@@ -192,25 +209,15 @@ class _HomeScreenState extends State<HomeScreen> {
                             child: NoteEditor(
                               tagCounts: _notes.tagCounts,
                               sourceCounts: _notes.sourceCounts,
-                              onSave: (draft) {
+                              onSave: (draft) => _flash(
                                 _notes.create(
                                   title: draft.title,
                                   body: draft.body,
                                   tags: draft.tags,
                                   sources: draft.sources,
                                   isTask: draft.isTask,
-                                );
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      draft.isTask
-                                          ? 'Task salvato'
-                                          : 'Nota salvata',
-                                    ),
-                                    duration: Duration(seconds: 2),
-                                  ),
-                                );
-                              },
+                                ),
+                              ),
                             ),
                           ),
                       ],
@@ -234,6 +241,8 @@ class _NoteList extends StatelessWidget {
     required this.onToggle,
     required this.onOpen,
     required this.onToggleDone,
+    this.flashId,
+    this.flashSeq = 0,
   });
 
   final List<Note> notes;
@@ -241,6 +250,10 @@ class _NoteList extends StatelessWidget {
   final VoidCallback onToggle;
   final ValueChanged<Note> onOpen;
   final void Function(Note note, bool done) onToggleDone;
+
+  /// La nota da illuminare e il numero del salvataggio (vedi [_SaveFlash]).
+  final String? flashId;
+  final int flashSeq;
 
   @override
   Widget build(BuildContext context) {
@@ -261,7 +274,7 @@ class _NoteList extends StatelessWidget {
               children: [
                 AnimatedRotation(
                   turns: expanded ? 0.5 : 0,
-                  duration: const Duration(milliseconds: 220),
+                  duration: LeviathanDurations.panel,
                   child: Icon(
                     Icons.keyboard_arrow_down,
                     size: LeviathanIconSize.md,
@@ -294,17 +307,27 @@ class _NoteList extends StatelessWidget {
               : ListView.builder(
                   padding: const EdgeInsets.only(bottom: LeviathanSpacing.xl),
                   itemCount: notes.length,
-                  itemBuilder: (context, i) => expanded
-                      ? _ExpandedTile(
-                          note: notes[i],
-                          onTap: onOpen,
-                          onToggleDone: onToggleDone,
-                        )
-                      : _CompactTile(
-                          note: notes[i],
-                          onTap: onOpen,
-                          onToggleDone: onToggleDone,
-                        ),
+                  itemBuilder: (context, i) {
+                    final note = notes[i];
+                    // La chiave tiene lo stato del bagliore attaccato alla
+                    // nota quando una nuova entra in cima.
+                    return _SaveFlash(
+                      key: ValueKey(note.id),
+                      color: _noteColor(context, note),
+                      seq: note.id == flashId ? flashSeq : null,
+                      child: expanded
+                          ? _ExpandedTile(
+                              note: note,
+                              onTap: onOpen,
+                              onToggleDone: onToggleDone,
+                            )
+                          : _CompactTile(
+                              note: note,
+                              onTap: onOpen,
+                              onToggleDone: onToggleDone,
+                            ),
+                    );
+                  },
                 ),
         ),
       ],
@@ -316,6 +339,94 @@ class _NoteList extends StatelessWidget {
 Color _noteColor(BuildContext context, Note note) => note.tags.isEmpty
     ? context.palette.muted.withValues(alpha: 0.4)
     : Tags.colorOf(note.tags.first);
+
+/// Fa illuminare per un attimo una voce della lista nel colore della sua
+/// nota, al posto di un avviso di salvataggio.
+///
+/// Si accende quando riceve un [seq] nuovo, anche alla prima comparsa.
+class _SaveFlash extends StatefulWidget {
+  const _SaveFlash({
+    super.key,
+    required this.color,
+    required this.seq,
+    required this.child,
+  });
+
+  final Color color;
+  final int? seq;
+  final Widget child;
+
+  @override
+  State<_SaveFlash> createState() => _SaveFlashState();
+}
+
+class _SaveFlashState extends State<_SaveFlash>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: LeviathanDurations.saveFlash,
+  );
+
+  // Si accende in fretta, resta acceso circa un secondo, poi sfuma.
+  late final Animation<double> _glow = TweenSequence<double>([
+    TweenSequenceItem(
+      tween: Tween(
+        begin: 0.0,
+        end: 1.0,
+      ).chain(CurveTween(curve: Curves.easeOut)),
+      weight: 10,
+    ),
+    TweenSequenceItem(tween: ConstantTween(1.0), weight: 55),
+    TweenSequenceItem(
+      tween: Tween(
+        begin: 1.0,
+        end: 0.0,
+      ).chain(CurveTween(curve: Curves.easeIn)),
+      weight: 35,
+    ),
+  ]).animate(_controller);
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.seq != null) _controller.forward();
+  }
+
+  @override
+  void didUpdateWidget(_SaveFlash oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.seq != null && widget.seq != oldWidget.seq) {
+      _controller.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _glow,
+      child: widget.child,
+      // Il riquadro c'è sempre, trasparente a riposo: se comparisse e
+      // sparisse, la voce sotto perderebbe il suo stato.
+      builder: (context, child) => DecoratedBox(
+        key: const Key('save-flash'),
+        decoration: BoxDecoration(
+          // L'opacità si sostituisce a quella della barretta, che per le
+          // note senza tag è attenuata e renderebbe il bagliore invisibile.
+          color: widget.color.withValues(
+            alpha: LeviathanOpacity.saveFlash * _glow.value,
+          ),
+        ),
+        child: child,
+      ),
+    );
+  }
+}
 
 class _CompactTile extends StatelessWidget {
   const _CompactTile({

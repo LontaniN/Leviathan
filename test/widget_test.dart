@@ -144,7 +144,25 @@ void main() {
     await tester.pump();
     await tester.ensureVisible(find.text('Salva nota'));
     await tester.tap(find.text('Salva nota'));
+    // Niente avviso in basso: la voce della nota nuova si illumina e poi
+    // torna normale.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.byType(SnackBar), findsNothing);
+    Color flashOf(String title) {
+      final box = tester.widget<DecoratedBox>(
+        find.ancestor(
+          of: find.text(title),
+          matching: find.byKey(const Key('save-flash')),
+        ),
+      );
+      return (box.decoration as BoxDecoration).color!;
+    }
+
+    expect(flashOf('Luce').a, greaterThan(0));
+    expect(flashOf('Vecchia').a, 0);
     await settle(tester);
+    expect(flashOf('Luce').a, 0);
 
     // La nota nuova è in cima alla lista e su disco.
     final files = Directory('${root.path}/Lavoro')

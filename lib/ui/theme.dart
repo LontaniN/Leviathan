@@ -227,6 +227,21 @@ class LeviathanSizes {
   static const groupTileAspect = 0.95;
 }
 
+/// Durate delle animazioni.
+class LeviathanDurations {
+  /// Apertura e chiusura della lista delle note.
+  static const panel = Duration(milliseconds: 220);
+
+  /// Bagliore della voce appena salvata: si accende, resta e sfuma.
+  static const saveFlash = Duration(milliseconds: 1400);
+}
+
+/// Opacità dei colori usati come velo sopra il fondo.
+class LeviathanOpacity {
+  /// Picco del bagliore della voce appena salvata, nel colore della nota.
+  static const saveFlash = 0.35;
+}
+
 class LeviathanRadii {
   static const sm = 2.0;
 
