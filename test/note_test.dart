@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart' hide Tags;
 import 'package:leviathan/data/note_repository.dart';
 import 'package:leviathan/model/note.dart';
 import 'package:leviathan/model/tags.dart';
+import 'package:leviathan/model/task_order.dart';
 
 void main() {
   group('formato Markdown', () {
@@ -37,6 +38,49 @@ void main() {
       expect(note.tags, ['lavoro', 'idee']);
       expect(note.body, 'Testo');
       expect(note.created, date);
+    });
+
+    test('legge le liste YAML a trattini scritte da Obsidian', () {
+      const content =
+          '---\ntitle: Limiti\ntags:\n  - analisi\n  - "esame"\n'
+          'sources:\n- Prof. Rossi\ncreated: 2026-10-17T14:05\n---\nTesto';
+      final note = Note.fromMarkdown('o', content, DateTime(2000));
+      expect(note.tags, ['analisi', 'esame']);
+      expect(note.sources, ['Prof. Rossi']);
+      expect(note.created, DateTime(2026, 10, 17, 14, 5));
+      expect(note.body, 'Testo');
+    });
+
+    test('conserva le proprietà che non conosce', () {
+      const content =
+          '---\n# scritto in Obsidian\ntitle: "Idea"\naliases:\n  - pensiero\n'
+          'tags:\n  - lavoro\nrating: 4\ncssclasses: []\n---\nCorpo';
+      final note = Note.fromMarkdown('e', content, date);
+      expect(note.tags, ['lavoro']);
+      expect(
+        note.extraFrontmatter,
+        '# scritto in Obsidian\naliases:\n  - pensiero\nrating: 4\n'
+        'cssclasses: []',
+      );
+      // Modificata e risalvata, le righe sconosciute restano tutte; un
+      // secondo giro non cambia più nulla.
+      final saved = note.copyWith(title: 'Idea nuova').toMarkdown();
+      expect(saved, contains('aliases:\n  - pensiero\nrating: 4\n'));
+      final again = Note.fromMarkdown('e', saved, date);
+      expect(again.title, 'Idea nuova');
+      expect(again.tags, ['lavoro']);
+      expect(again.extraFrontmatter, note.extraFrontmatter);
+      expect(again.toMarkdown(), saved);
+      expect(again.body, 'Corpo');
+    });
+
+    test('le proprietà sconosciute restano anche spostando un task', () {
+      const content =
+          '---\ntitle: "T"\ntype: "task"\ndone: false\nproject: casa\n---\n';
+      final task = Note.fromMarkdown('t', content, date);
+      final placed = task.placed(TaskBand.now, 'm');
+      expect(placed.extraFrontmatter, 'project: casa');
+      expect(placed.copyWith(done: true).extraFrontmatter, 'project: casa');
     });
 
     test('legge la fonte singola delle prime versioni', () {

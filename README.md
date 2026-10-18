@@ -229,7 +229,9 @@ Note body in **Markdown**…
 Tasks also have `type: "task"`, `done` and `done_at`, plus `priority`
 (`now`, `next` or `later`) and `rank` once placed in the task manager;
 knowledge notes have `knowledge: true` and pinned notes `pinned: true`. Files can be copied, synced or edited by hand: Leviathan
-also reads files written without a header.
+also reads files written without a header, understands the YAML lists
+Obsidian writes (`tags:` followed by `  - tag` lines) and keeps any property
+it doesn't use (`aliases`, custom fields) untouched when it saves a note.
 
 ---
 
