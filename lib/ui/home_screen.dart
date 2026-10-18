@@ -16,6 +16,7 @@ import 'lists_screen.dart';
 import 'note_actions.dart';
 import 'note_editor.dart';
 import 'note_screen.dart';
+import 'pinned_screen.dart';
 import 'search_screen.dart';
 import 'settings_screen.dart';
 import 'task_check.dart';
@@ -97,6 +98,7 @@ class _HomeScreenState extends State<HomeScreen> {
               _Header(
                 state: widget.state,
                 notes: _notes.notes,
+                onPinned: () => _push(PinnedScreen(notes: _notes)),
                 onGraph: _openGraph,
                 onLists: () => _push(ListsScreen(notes: _notes)),
                 onCalendar: () => _push(CalendarScreen(notes: _notes)),
@@ -192,6 +194,7 @@ class _Header extends StatelessWidget {
   const _Header({
     required this.state,
     required this.notes,
+    required this.onPinned,
     required this.onGraph,
     required this.onLists,
     required this.onCalendar,
@@ -200,6 +203,7 @@ class _Header extends StatelessWidget {
 
   final AppState state;
   final List<Note> notes;
+  final VoidCallback onPinned;
   final VoidCallback onGraph;
   final VoidCallback onLists;
   final VoidCallback onCalendar;
@@ -240,6 +244,12 @@ class _Header extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+          IconButton(
+            key: const Key('pinned-button'),
+            tooltip: 'Fissate',
+            icon: const Icon(Icons.push_pin_outlined),
+            onPressed: onPinned,
           ),
           IconButton(
             key: const Key('graph-button'),
@@ -507,23 +517,60 @@ class _NoteList extends StatelessWidget {
                       key: ValueKey(note.id),
                       color: _noteColor(context, note),
                       seq: note.id == flashId ? flashSeq : null,
-                      child: expanded
-                          ? _ExpandedTile(
-                              note: note,
-                              onTap: onOpen,
-                              onLongPress: onLongPress,
-                              onToggleDone: onToggleDone,
-                            )
-                          : _CompactTile(
-                              note: note,
-                              onTap: onOpen,
-                              onLongPress: onLongPress,
-                              onToggleDone: onToggleDone,
-                            ),
+                      child: _NoteDivider(
+                        // Fra due note una linea sottile le separa; prima di
+                        // un'intestazione di sezione non serve.
+                        show: _isNote(entries, i + 1),
+                        indent: expanded
+                            ? LeviathanSpacing.lg
+                            : LeviathanSpacing.md,
+                        child: expanded
+                            ? _ExpandedTile(
+                                note: note,
+                                onTap: onOpen,
+                                onLongPress: onLongPress,
+                                onToggleDone: onToggleDone,
+                              )
+                            : _CompactTile(
+                                note: note,
+                                onTap: onOpen,
+                                onLongPress: onLongPress,
+                                onToggleDone: onToggleDone,
+                              ),
+                      ),
                     ),
                   },
                 ),
         ),
+      ],
+    );
+  }
+}
+
+/// La riga [i] esiste ed è una nota.
+bool _isNote(List<_Entry> entries, int i) =>
+    i < entries.length && entries[i] is _NoteEntry;
+
+/// Una voce con, se [show], una linea sottile sotto.
+class _NoteDivider extends StatelessWidget {
+  const _NoteDivider({
+    required this.show,
+    required this.indent,
+    required this.child,
+  });
+
+  final bool show;
+  final double indent;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!show) return child;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        child,
+        Divider(height: 1, indent: indent, endIndent: indent),
       ],
     );
   }
@@ -684,9 +731,16 @@ class _When extends StatelessWidget {
           Icon(Icons.push_pin, size: LeviathanIconSize.xs, color: muted),
           const SizedBox(width: LeviathanSpacing.xxs),
         ],
-        Text(
-          formatRelative(note.created, DateTime.now()),
-          style: LeviathanText.tiny.copyWith(color: muted),
+        // Nella colonna stretta una data con l'anno e la puntina possono non
+        // starci: la data si accorcia invece di sforare.
+        Flexible(
+          child: Text(
+            formatRelative(note.created, DateTime.now()),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            softWrap: false,
+            style: LeviathanText.tiny.copyWith(color: muted),
+          ),
         ),
       ],
     );

@@ -109,6 +109,7 @@ class PeriodNotesScreen extends StatelessWidget {
                       // In un giorno solo la data è sempre la stessa: meglio
                       // l'ora.
                       dateLabel: singleDay ? _formatTime(note.created) : null,
+                      divider: i < hits.length,
                     );
                   },
                 ),

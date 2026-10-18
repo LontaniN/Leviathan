@@ -625,6 +625,64 @@ void main() {
     );
   });
 
+  testWidgets('fissa dagli elenchi e ritrova tutto fra le fissate', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    await tester.runAsync(() async {
+      await WorkspaceRepository(root).createWorkspace('Lavoro');
+      File('${root.path}/Lavoro/antica.md').writeAsStringSync(
+        '---\ntitle: "Antica"\ntags: ["storia"]\n'
+        'created: "2025-01-01T00:00:00.000"\n---\n',
+      );
+    });
+    await tester.pumpWidget(LeviathanApp(state: AppState(_FakeStorage(root))));
+    await settle(tester);
+
+    // Senza fissate la schermata lo spiega.
+    await tester.tap(find.byKey(const Key('pinned-button')));
+    await settle(tester);
+    expect(find.textContaining('Nessuna nota fissata'), findsOneWidget);
+    await tester.pageBack();
+    await settle(tester);
+
+    // Dal riquadro del tag, la puntina accanto alla nota la fissa.
+    await tester.tap(find.byKey(const Key('lists-button')));
+    await settle(tester);
+    await tester.tap(find.text('Note'));
+    await settle(tester);
+    await tester.tap(find.text('storia'));
+    await settle(tester);
+    final pin = find.byKey(const Key('pin-antica'));
+    await tester.tap(pin);
+    await settle(tester);
+    expect(tester.widget<IconButton>(pin).isSelected, isTrue);
+    for (var i = 0; i < 2; i++) {
+      await tester.pageBack();
+      await settle(tester);
+    }
+
+    await tester.tap(find.byKey(const Key('pinned-button')));
+    await settle(tester);
+    expect(find.text('1 NOTA FISSATA'), findsOneWidget);
+    expect(find.text('Antica'), findsOneWidget);
+
+    // Staccata, esce dall'elenco; "Annulla" la rimette.
+    await tester.tap(find.byKey(const Key('pin-antica')));
+    await settle(tester);
+    expect(find.text('Antica'), findsNothing);
+    await tester.tap(find.text('Annulla'));
+    await settle(tester);
+    expect(find.text('Antica'), findsOneWidget);
+    expect(
+      File('${root.path}/Lavoro/antica.md').readAsStringSync(),
+      contains('pinned: true'),
+    );
+  });
+
   testWidgets('elimina una nota dalla lettura e annulla', (tester) async {
     tester.view.physicalSize = const Size(1080, 2424);
     tester.view.devicePixelRatio = 2.625;

@@ -637,6 +637,7 @@ class _Results extends StatelessWidget {
           terms: terms,
           onTap: onOpen,
           onToggleDone: onToggleDone,
+          divider: i < hits.length,
         );
       },
     );
@@ -644,7 +645,10 @@ class _Results extends StatelessWidget {
 }
 
 /// Una nota in un elenco di risultati: titolo, data, estratto, tag e fonti.
-/// I task hanno la casella, che si spunta se c'è [onToggleDone].
+/// I task hanno la casella, che si spunta se c'è [onToggleDone]. Con
+/// [onTogglePin] accanto alla data c'è la puntina, che fissa la nota in cima
+/// alle recenti o la stacca. Con [divider] sotto c'è una linea sottile, che
+/// separa la nota dalla successiva.
 class NoteResultTile extends StatelessWidget {
   const NoteResultTile({
     super.key,
@@ -652,7 +656,9 @@ class NoteResultTile extends StatelessWidget {
     required this.terms,
     required this.onTap,
     this.onToggleDone,
+    this.onTogglePin,
     this.dateLabel,
+    this.divider = false,
   });
 
   final SearchHit hit;
@@ -662,11 +668,14 @@ class NoteResultTile extends StatelessWidget {
   final List<String> terms;
   final ValueChanged<Note> onTap;
   final void Function(Note note, bool done)? onToggleDone;
+  final void Function(Note note, bool pinned)? onTogglePin;
+  final bool divider;
 
   @override
   Widget build(BuildContext context) {
     final note = hit.note;
-    return InkWell(
+    final palette = context.palette;
+    final tile = InkWell(
       onTap: () => onTap(note),
       child: Padding(
         padding: const EdgeInsets.symmetric(
@@ -699,10 +708,30 @@ class NoteResultTile extends StatelessWidget {
                 const SizedBox(width: LeviathanSpacing.sm),
                 Text(
                   dateLabel ?? formatDate(note.created),
-                  style: LeviathanText.meta.copyWith(
-                    color: context.palette.muted,
-                  ),
+                  style: LeviathanText.meta.copyWith(color: palette.muted),
                 ),
+                if (onTogglePin != null)
+                  IconButton(
+                    key: Key('pin-${note.id}'),
+                    tooltip: note.pinned
+                        ? 'Stacca dalla cima'
+                        : 'Fissa in cima',
+                    visualDensity: VisualDensity.compact,
+                    iconSize: LeviathanIconSize.md,
+                    isSelected: note.pinned,
+                    icon: Icon(Icons.push_pin_outlined, color: palette.muted),
+                    selectedIcon: Icon(Icons.push_pin, color: palette.accent),
+                    onPressed: () => onTogglePin!(note, !note.pinned),
+                  )
+                else if (note.pinned)
+                  Padding(
+                    padding: const EdgeInsets.only(left: LeviathanSpacing.xs),
+                    child: Icon(
+                      Icons.push_pin,
+                      size: LeviathanIconSize.sm,
+                      color: palette.muted,
+                    ),
+                  ),
               ],
             ),
             if (hit.snippet.isNotEmpty && note.title.trim().isNotEmpty)
@@ -733,6 +762,18 @@ class NoteResultTile extends StatelessWidget {
           ],
         ),
       ),
+    );
+    if (!divider) return tile;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        tile,
+        const Divider(
+          height: 1,
+          indent: LeviathanSpacing.lg,
+          endIndent: LeviathanSpacing.lg,
+        ),
+      ],
     );
   }
 }

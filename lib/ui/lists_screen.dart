@@ -584,6 +584,8 @@ class _GroupScreenState extends State<GroupScreen> {
                             terms: query.terms,
                             onTap: _open,
                             onToggleDone: widget.notes.setDone,
+                            onTogglePin: widget.notes.setPinned,
+                            divider: i < hits.length,
                           );
                         },
                       ),
