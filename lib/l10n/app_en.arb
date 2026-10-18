@@ -307,5 +307,9 @@
   "compareNewTask": "New",
   "compareSkip": "Skip",
   "taskCompleted": "Done: {title}",
-  "@taskCompleted": {"placeholders": {"title": {"type": "String", "example": "Call Mario"}}}
+  "@taskCompleted": {"placeholders": {"title": {"type": "String", "example": "Call Mario"}}},
+  "shareToWorkspace": "Save shared text to",
+  "sharedAppended": "Shared text added to the end of your draft",
+  "sharedSavedToDraft": "Shared text added to the draft in “{workspace}”",
+  "@sharedSavedToDraft": {"placeholders": {"workspace": {"type": "String", "example": "University"}}}
 }

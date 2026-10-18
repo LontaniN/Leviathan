@@ -6,9 +6,11 @@ import '../l10n/l10n.dart';
 import '../model/dates.dart';
 import '../model/markdown.dart';
 import '../model/note.dart';
+import '../model/shared_text.dart';
 import '../state/app_state.dart';
 import '../state/notes_controller.dart';
 import '../state/settings.dart';
+import '../state/share_inbox.dart';
 import 'app_tour.dart';
 import 'calendar_screen.dart';
 import 'chip_input.dart';
@@ -37,23 +39,28 @@ import 'workspace_name_form.dart';
 ///
 /// Con [startTour] sopra la home parte il tour guidato delle funzioni
 /// principali (vedi [AppTour]); si può rivedere dalle impostazioni.
+///
+/// Il testo condiviso da altre app ([shares]) finisce nella bozza
+/// dell'editor: con più workspace si sceglie prima in quale.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
     super.key,
     required this.state,
     required this.settings,
+    required this.shares,
     this.startTour = false,
   });
 
   final AppState state;
   final Settings settings;
+  final ShareInbox shares;
   final bool startTour;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   late final NotesController _notes = NotesController(
     widget.state.notesOf(widget.state.currentWorkspace!),
   );
@@ -80,6 +87,10 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    widget.shares.addListener(_onShare);
+    // Aperta da una condivisione, o arrivata mentre la home non c'era.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _onShare());
     // Arrivando dall'onboarding la tastiera del nome può essere ancora
     // aperta e nasconderebbe parte della home.
     if (_touring) FocusManager.instance.primaryFocus?.unfocus();
@@ -87,8 +98,139 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    widget.shares.removeListener(_onShare);
+    WidgetsBinding.instance.removeObserver(this);
     _notes.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState lifecycle) {
+    // Mentre l'app era in secondo piano le note possono essere cambiate da
+    // fuori (Obsidian, sincronizzazione, file manager).
+    if (lifecycle == AppLifecycleState.resumed) _notes.reloadIfChanged();
+  }
+
+  /// Una condivisione alla volta: la scelta del workspace aspetta l'utente.
+  bool _receivingShares = false;
+
+  void _onShare() {
+    if (mounted && !_receivingShares && widget.shares.hasPending) {
+      _receiveShares();
+    }
+  }
+
+  Future<void> _receiveShares() async {
+    _receivingShares = true;
+    try {
+      // Cambiando workspace questa home sparisce: le condivisioni rimaste le
+      // prende la nuova.
+      while (mounted) {
+        final share = widget.shares.take();
+        if (share == null) break;
+        await _receiveShare(share);
+      }
+    } finally {
+      _receivingShares = false;
+    }
+  }
+
+  /// Mette [share] nella bozza di un workspace e la mostra.
+  ///
+  /// Si torna alla home chiudendo quello che c'è sopra, ma non la modifica
+  /// di una nota già salvata: lì il testo va nella bozza senza perdere le
+  /// modifiche, e un avviso dice dove.
+  Future<void> _receiveShare(SharedText share) async {
+    final state = widget.state;
+    final l = context.l10n;
+    final messenger = ScaffoldMessenger.of(context);
+    var editing = false;
+    Navigator.of(context).popUntil((route) {
+      editing = route.settings.name == NoteEditor.editRouteName;
+      return route.isFirst || editing;
+    });
+    var target = state.currentWorkspace!;
+    if (state.workspaces.length > 1) {
+      final picked = await _pickWorkspace();
+      if (picked == null || !mounted) return;
+      target = picked;
+    }
+    void notify(String message) =>
+        messenger.showSnackBar(SnackBar(content: Text(message)));
+
+    if (target == state.currentWorkspace) {
+      if (_editorKey.currentState case final SharedTextReceiver editor) {
+        final appended = editor.receiveShared(share);
+        if (editing) {
+          notify(l.sharedSavedToDraft(target));
+        } else if (appended) {
+          notify(l.sharedAppended);
+        }
+        return;
+      }
+      // Lista espansa: l'editor non c'è. Si scrive la bozza e lo si riapre,
+      // così la rilegge.
+      final appended = _addToDraft(target, share);
+      setState(() => _listExpanded = false);
+      if (appended) notify(l.sharedAppended);
+      return;
+    }
+    final appended = _addToDraft(target, share);
+    if (editing) {
+      // Una nota di questo workspace è aperta in modifica: si resta qui.
+      notify(l.sharedSavedToDraft(target));
+      return;
+    }
+    await state.switchTo(target);
+    if (appended) notify(l.sharedAppended);
+  }
+
+  /// Aggiunge [share] alla bozza salvata del workspace [name]; true se la
+  /// bozza aveva già qualcosa.
+  bool _addToDraft(String name, SharedText share) {
+    final store = widget.state.draftOf(name);
+    final draft = store.read();
+    final merged = mergeShared(draft?.title ?? '', draft?.body ?? '', share);
+    store.write((
+      title: merged.title,
+      body: merged.body,
+      tags: draft?.tags ?? const [],
+      sources: draft?.sources ?? const [],
+      isTask: draft?.isTask ?? false,
+      knowledge: draft?.knowledge ?? false,
+      date: draft?.date,
+    ));
+    return merged.appended;
+  }
+
+  Future<String?> _pickWorkspace() {
+    final state = widget.state;
+    return showDialog<String>(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: Text(dialogContext.l10n.shareToWorkspace),
+        children: [
+          for (final name in state.workspaces)
+            SimpleDialogOption(
+              key: ValueKey('share-to-$name'),
+              onPressed: () => Navigator.pop(dialogContext, name),
+              child: Row(
+                children: [
+                  Icon(
+                    name == state.currentWorkspace
+                        ? Icons.folder
+                        : Icons.folder_outlined,
+                    size: LeviathanIconSize.md,
+                    color: dialogContext.palette.accent,
+                  ),
+                  const SizedBox(width: LeviathanSpacing.md),
+                  Flexible(child: Text(name, overflow: TextOverflow.ellipsis)),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
   /// Riapre il tour dalle impostazioni: senza benvenuto, con la lista

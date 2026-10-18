@@ -656,7 +656,10 @@ class _GroupScreenState extends State<GroupScreen> {
         // La ricerca resta dentro il gruppo, così vale anche per "Senza
         // tag" e "Senza fonte".
         final hits = query.terms.isEmpty
-            ? [for (final n in items) SearchHit(n, 0, plainText(n.body.trim()))]
+            ? [
+                for (final n in items)
+                  SearchHit(n, 0, () => plainText(n.body.trim())),
+              ]
             : searchNotes(items, query);
         hits.sort((a, b) => b.note.created.compareTo(a.note.created));
         final found = hits.map((h) => h.note);

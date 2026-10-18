@@ -70,14 +70,38 @@ class SearchQuery {
 }
 
 class SearchHit {
-  const SearchHit(this.note, this.score, this.snippet);
+  /// [snippet] si calcola solo quando serve: un elenco lungo mostra poche
+  /// righe alla volta.
+  SearchHit(this.note, this.score, String Function() snippet)
+    : _makeSnippet = snippet;
 
   final Note note;
   final int score;
+  final String Function() _makeSnippet;
 
   /// Un pezzo del corpo attorno alla prima parola trovata (o l'inizio).
-  final String snippet;
+  late final String snippet = _makeSnippet();
 }
+
+/// Titolo, corpo, etichette e fonti di una nota già passati da [foldText].
+typedef _FoldedNote = ({
+  String title,
+  String body,
+  String labels,
+  Set<String> sources,
+});
+
+/// Le forme normalizzate di ogni nota, calcolate alla prima ricerca. Una
+/// nota modificata è un oggetto nuovo, quindi non si legge mai una forma
+/// vecchia; le note che non esistono più spariscono con la loro voce.
+final _foldedCache = Expando<_FoldedNote>('foldedNote');
+
+_FoldedNote _folded(Note note) => _foldedCache[note] ??= (
+  title: foldText(note.title),
+  body: foldText(note.body),
+  labels: foldText([...note.tags, ...note.sources].join(' ')),
+  sources: note.sources.map(foldText).toSet(),
+);
 
 /// Cerca nelle note; risultati dai più pertinenti, poi dai più recenti.
 ///
@@ -91,12 +115,10 @@ List<SearchHit> searchNotes(List<Note> notes, SearchQuery query) {
   for (final note in notes) {
     if (query.task != null && !query.task!.matches(note)) continue;
     if (!query.tags.every(note.tags.contains)) continue;
-    final noteSources = note.sources.map(foldText).toSet();
-    if (!wantedSources.every(noteSources.contains)) continue;
+    final folded = _folded(note);
+    if (!wantedSources.every(folded.sources.contains)) continue;
 
-    final title = foldText(note.title);
-    final body = foldText(note.body);
-    final labels = foldText([...note.tags, ...note.sources].join(' '));
+    final (:title, :body, :labels, sources: _) = folded;
     var score = 0;
     var matchesAll = true;
     for (final term in terms) {
@@ -112,7 +134,7 @@ List<SearchHit> searchNotes(List<Note> notes, SearchQuery query) {
       }
     }
     if (!matchesAll) continue;
-    hits.add(SearchHit(note, score, _snippet(note.body, body, terms)));
+    hits.add(SearchHit(note, score, () => _snippet(note.body, body, terms)));
   }
   hits.sort((a, b) {
     final byScore = b.score.compareTo(a.score);

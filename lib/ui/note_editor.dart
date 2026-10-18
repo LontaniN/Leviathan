@@ -7,6 +7,7 @@ import '../l10n/l10n.dart';
 import '../model/dates.dart';
 import '../model/markdown.dart';
 import '../model/note.dart';
+import '../model/shared_text.dart';
 import 'chip_input.dart';
 import 'theme.dart';
 
@@ -25,6 +26,14 @@ typedef NoteDraft = ({
   /// nuova è di oggi, quella modificata tiene la sua data).
   DateTime? date,
 });
+
+/// Un editor che accetta testo condiviso da un'altra app (vedi
+/// [NoteEditor.editRouteName] e la home).
+abstract interface class SharedTextReceiver {
+  /// Aggiunge [share] a quello che si sta scrivendo; true se c'era già
+  /// qualcosa (il testo è finito in fondo).
+  bool receiveShared(SharedText share);
+}
 
 /// Editor di una nota: titolo e corpo in grande, sotto tag e fonti.
 ///
@@ -54,6 +63,10 @@ class NoteEditor extends StatefulWidget {
     this.tagsKey,
   });
 
+  /// Il nome della pagina che modifica una nota già salvata: arrivando una
+  /// condivisione la home non la chiude, per non perdere le modifiche.
+  static const editRouteName = 'edit-note';
+
   final Note? initial;
   final Map<String, int> tagCounts;
   final Map<String, int> sourceCounts;
@@ -68,7 +81,9 @@ class NoteEditor extends StatefulWidget {
   State<NoteEditor> createState() => _NoteEditorState();
 }
 
-class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
+class _NoteEditorState extends State<NoteEditor>
+    with WidgetsBindingObserver
+    implements SharedTextReceiver {
   late final _title = TextEditingController(text: widget.initial?.title);
   late final _body = TextEditingController(text: widget.initial?.body);
   final _titleFocus = FocusNode();
@@ -112,6 +127,16 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
     _isTask = draft.isTask;
     _knowledge = draft.knowledge;
     _date = draft.date;
+  }
+
+  @override
+  bool receiveShared(SharedText share) {
+    final merged = mergeShared(_title.text, _body.text, share);
+    _title.text = merged.title;
+    _body.text = merged.body;
+    _lastBody = _body.value;
+    if (widget.draft != null && widget.initial == null) _writeDraft();
+    return merged.appended;
   }
 
   /// La bozza si scrive poco dopo l'ultima modifica, non a ogni lettera.

@@ -935,4 +935,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String taskCompleted(String title) {
     return 'Done: $title';
   }
+
+  @override
+  String get shareToWorkspace => 'Save shared text to';
+
+  @override
+  String get sharedAppended => 'Shared text added to the end of your draft';
+
+  @override
+  String sharedSavedToDraft(String workspace) {
+    return 'Shared text added to the draft in “$workspace”';
+  }
 }

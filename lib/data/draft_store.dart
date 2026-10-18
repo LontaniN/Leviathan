@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'atomic_write.dart';
+
 /// La nota che si sta scrivendo nella home e non è ancora salvata.
 typedef Draft = ({
   String title,
@@ -47,8 +49,8 @@ class DraftStore {
       clear();
       return;
     }
-    file.parent.createSync(recursive: true);
-    file.writeAsStringSync(
+    writeFileAtomic(
+      file,
       jsonEncode({
         'title': draft.title,
         'body': draft.body,

@@ -1,14 +1,51 @@
 import 'dart:math' as math;
 import 'dart:ui' show Color;
 
+/// Le lettere latine accentate (minuscole) con la lettera semplice: non solo
+/// l'italiano, così anche "Müller", "François" o "España" si trovano
+/// scrivendo senza accenti. Ognuna diventa una sola lettera, quindi il testo
+/// non cambia lunghezza (serve per evidenziare le parole trovate).
 const _accents = {
-  'à': 'a', 'á': 'a', 'è': 'e', 'é': 'e', 'ì': 'i', 'í': 'i', //
-  'ò': 'o', 'ó': 'o', 'ù': 'u', 'ú': 'u',
+  'à': 'a', 'á': 'a', 'â': 'a', 'ã': 'a', 'ä': 'a', 'å': 'a', //
+  'ç': 'c', //
+  'è': 'e', 'é': 'e', 'ê': 'e', 'ë': 'e', //
+  'ì': 'i', 'í': 'i', 'î': 'i', 'ï': 'i', //
+  'ñ': 'n', //
+  'ò': 'o', 'ó': 'o', 'ô': 'o', 'õ': 'o', 'ö': 'o', 'ø': 'o', //
+  'ù': 'u', 'ú': 'u', 'û': 'u', 'ü': 'u', //
+  'ý': 'y', 'ÿ': 'y',
+};
+
+/// Le lettere di [_accents] per codice, per non creare una stringa per ogni
+/// carattere.
+final _accentCodes = {
+  for (final MapEntry(:key, :value) in _accents.entries)
+    key.codeUnitAt(0): value.codeUnitAt(0),
 };
 
 /// Minuscolo e senza accenti: la forma usata per confrontare.
-String foldText(String s) =>
-    s.toLowerCase().split('').map((c) => _accents[c] ?? c).join();
+///
+/// Gira a ogni tasto su tutte le note, quindi deve costare poco: un testo
+/// senza lettere accentate (il caso più comune) esce com'è dopo il
+/// minuscolo, gli altri si rifanno in una sola passata.
+String foldText(String s) {
+  final lower = s.toLowerCase();
+  final units = lower.codeUnits;
+  var i = 0;
+  while (i < units.length && !_isAccented(units[i])) {
+    i++;
+  }
+  if (i == units.length) return lower;
+  final folded = List<int>.of(units);
+  for (; i < folded.length; i++) {
+    if (_isAccented(folded[i])) folded[i] = _accentCodes[folded[i]]!;
+  }
+  return String.fromCharCodes(folded);
+}
+
+/// Le lettere accentate stanno tutte sopra l'ASCII: per il resto del testo
+/// basta un confronto, senza cercare nella mappa.
+bool _isAccented(int unit) => unit >= 0xC0 && _accentCodes.containsKey(unit);
 
 /// Suggerisce le voci di [counts] più vicine a [query].
 ///

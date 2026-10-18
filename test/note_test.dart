@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart' hide Tags;
 import 'package:leviathan/data/note_repository.dart';
 import 'package:leviathan/model/note.dart';
 import 'package:leviathan/model/tags.dart';
+import 'package:leviathan/model/task_order.dart';
 
 void main() {
   group('formato Markdown', () {
@@ -37,6 +38,49 @@ void main() {
       expect(note.tags, ['lavoro', 'idee']);
       expect(note.body, 'Testo');
       expect(note.created, date);
+    });
+
+    test('legge le liste YAML a trattini scritte da Obsidian', () {
+      const content =
+          '---\ntitle: Limiti\ntags:\n  - analisi\n  - "esame"\n'
+          'sources:\n- Prof. Rossi\ncreated: 2026-10-17T14:05\n---\nTesto';
+      final note = Note.fromMarkdown('o', content, DateTime(2000));
+      expect(note.tags, ['analisi', 'esame']);
+      expect(note.sources, ['Prof. Rossi']);
+      expect(note.created, DateTime(2026, 10, 17, 14, 5));
+      expect(note.body, 'Testo');
+    });
+
+    test('conserva le proprietà che non conosce', () {
+      const content =
+          '---\n# scritto in Obsidian\ntitle: "Idea"\naliases:\n  - pensiero\n'
+          'tags:\n  - lavoro\nrating: 4\ncssclasses: []\n---\nCorpo';
+      final note = Note.fromMarkdown('e', content, date);
+      expect(note.tags, ['lavoro']);
+      expect(
+        note.extraFrontmatter,
+        '# scritto in Obsidian\naliases:\n  - pensiero\nrating: 4\n'
+        'cssclasses: []',
+      );
+      // Modificata e risalvata, le righe sconosciute restano tutte; un
+      // secondo giro non cambia più nulla.
+      final saved = note.copyWith(title: 'Idea nuova').toMarkdown();
+      expect(saved, contains('aliases:\n  - pensiero\nrating: 4\n'));
+      final again = Note.fromMarkdown('e', saved, date);
+      expect(again.title, 'Idea nuova');
+      expect(again.tags, ['lavoro']);
+      expect(again.extraFrontmatter, note.extraFrontmatter);
+      expect(again.toMarkdown(), saved);
+      expect(again.body, 'Corpo');
+    });
+
+    test('le proprietà sconosciute restano anche spostando un task', () {
+      const content =
+          '---\ntitle: "T"\ntype: "task"\ndone: false\nproject: casa\n---\n';
+      final task = Note.fromMarkdown('t', content, date);
+      final placed = task.placed(TaskBand.now, 'm');
+      expect(placed.extraFrontmatter, 'project: casa');
+      expect(placed.copyWith(done: true).extraFrontmatter, 'project: casa');
     });
 
     test('legge la fonte singola delle prime versioni', () {
@@ -180,6 +224,7 @@ void main() {
     test('forma canonica', () {
       expect(Tags.normalize('  Machine Learning '), 'machine-learning');
       expect(Tags.normalize('#Città'), 'citta');
+      expect(Tags.normalize('Müller Façade'), 'muller-facade');
       expect(Tags.normalize('luce/Naturale'), 'luce/naturale');
       expect(Tags.normalize('a  --  b'), 'a-b');
       expect(Tags.normalize('!!!'), '');
@@ -264,6 +309,15 @@ void main() {
         now: DateTime(2026, 1, 2),
       );
       expect(second.id, '20260102-000000-seconda-nota');
+      final accented = repo.create(
+        title: 'Perché Müller è là',
+        body: '',
+        tags: [],
+        sources: [],
+        now: DateTime(2026, 1, 3),
+      );
+      expect(accented.id, '20260103-000000-perche-muller-e-la');
+      repo.delete(accented);
 
       expect(repo.loadAll().map((n) => n.title), ['Seconda nota!', 'Prima']);
 
@@ -307,6 +361,60 @@ void main() {
       );
       expect(a.id, isNot(b.id));
       expect(repo.loadAll(), hasLength(2));
+    });
+
+    group('modifiche da fuori', () {
+      late Note note;
+      late File file;
+
+      setUp(() {
+        note = repo.create(title: 'Nota', body: 'a', tags: [], sources: []);
+        file = File('${root.path}/ws/${note.id}.md');
+        repo.loadAll();
+      });
+
+      /// Come un altro programma: nuovo contenuto e un'altra data.
+      void editOutside(String content) {
+        final before = file.lastModifiedSync();
+        file.writeAsStringSync(content);
+        file.setLastModifiedSync(before.add(const Duration(seconds: 5)));
+      }
+
+      test('senza modifiche non c\'è niente da rileggere', () {
+        expect(repo.hasExternalChanges(), isFalse);
+        repo.save(note.copyWith(body: 'b'));
+        expect(repo.hasExternalChanges(), isFalse);
+      });
+
+      test('vede un file cambiato, aggiunto o tolto', () {
+        editOutside('---\ntitle: "Da Obsidian"\n---\n');
+        expect(repo.hasExternalChanges(), isTrue);
+        expect(repo.loadAll().single.title, 'Da Obsidian');
+        expect(repo.hasExternalChanges(), isFalse);
+
+        File('${root.path}/ws/nuova.md').writeAsStringSync('ciao');
+        expect(repo.hasExternalChanges(), isTrue);
+        repo.loadAll();
+
+        File('${root.path}/ws/nuova.md').deleteSync();
+        expect(repo.hasExternalChanges(), isTrue);
+      });
+
+      test('salvando sopra una modifica esterna la mette nel cestino', () {
+        editOutside('---\ntitle: "Da Obsidian"\n---\nTesto esterno');
+        repo.save(note.copyWith(body: 'mia versione'));
+        expect(file.readAsStringSync(), contains('mia versione'));
+        final trashed = Directory('${root.path}/trash').listSync().single;
+        expect((trashed as File).readAsStringSync(), contains('Testo esterno'));
+        // Un secondo salvataggio è di nuovo normale.
+        repo.save(note.copyWith(body: 'ancora mia'));
+        expect(Directory('${root.path}/trash').listSync(), hasLength(1));
+      });
+
+      test('un salvataggio normale non tocca il cestino', () {
+        repo.save(note.copyWith(body: 'b'));
+        expect(Directory('${root.path}/trash').existsSync(), isFalse);
+      });
     });
   });
 }

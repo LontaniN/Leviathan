@@ -40,6 +40,17 @@ class NotesController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Rilegge le note solo se qualche file è cambiato da fuori (es. tornando
+  /// nell'app dopo averle modificate con Obsidian o sincronizzate).
+  void reloadIfChanged() {
+    try {
+      if (!_repo.hasExternalChanges()) return;
+    } on FileSystemException {
+      // Cartella illeggibile: ci pensa reload a mostrare l'errore.
+    }
+    reload();
+  }
+
   Note create({
     required String title,
     required String body,

@@ -68,7 +68,7 @@ class PeriodNotesScreen extends StatelessWidget {
         final hits = search.isEmpty
             ? [
                 for (final n in inPeriod)
-                  SearchHit(n, 0, plainText(n.body.trim())),
+                  SearchHit(n, 0, () => plainText(n.body.trim())),
               ]
             : searchNotes(inPeriod, search);
         hits.sort((a, b) => a.note.created.compareTo(b.note.created));

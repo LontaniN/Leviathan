@@ -17,9 +17,10 @@ Ordine consigliato: 1 → 3 → 2 → 4/5.
    barrati, filtro `stato:aperto` / `stato:fatto` / `stato:task` nella
    ricerca, task fatti sbiaditi nel grafo. Schermata Task (icona accanto alle
    fonti) con i task raggruppati per tag o per fonte.
-2. **Ricevere dal tasto Condividi.** Testo condiviso da un'altra app → editor
-   precompilato, pronto per tag e fonte; scelta del workspace se ce n'è più
-   d'uno (`receive_sharing_intent`).
+2. **Ricevere dal tasto Condividi.** *(fatto)* Testo condiviso da un'altra
+   app → editor precompilato, pronto per tag e fonte; scelta del workspace se
+   ce n'è più d'uno. Senza pacchetti: intent filter e un canale in
+   `MainActivity`.
 3. **Markdown con anteprima.** *(fatto)* Corpo formattato nella lettura (titoli,
    grassetto, elenchi, citazioni, codice), barra di formattazione sopra la
    tastiera, checklist `- [ ]` spuntabili.

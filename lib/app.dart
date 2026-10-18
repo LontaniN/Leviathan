@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'l10n/l10n.dart';
 import 'state/app_state.dart';
 import 'state/settings.dart';
+import 'state/share_inbox.dart';
 import 'ui/home_screen.dart';
 import 'ui/language_screen.dart';
 import 'ui/onboarding_screen.dart';
@@ -10,11 +11,19 @@ import 'ui/permission_screen.dart';
 import 'ui/theme.dart';
 
 class LeviathanApp extends StatefulWidget {
-  LeviathanApp({super.key, required this.state, Settings? settings})
-    : settings = settings ?? Settings();
+  LeviathanApp({
+    super.key,
+    required this.state,
+    Settings? settings,
+    ShareInbox? shares,
+  }) : settings = settings ?? Settings(),
+       shares = shares ?? ShareInbox();
 
   final AppState state;
   final Settings settings;
+
+  /// Il testo condiviso da altre app, che la home mette nella bozza.
+  final ShareInbox shares;
 
   @override
   State<LeviathanApp> createState() => _LeviathanAppState();
@@ -79,6 +88,7 @@ class _LeviathanAppState extends State<LeviathanApp>
               key: ValueKey(state.currentWorkspace),
               state: state,
               settings: widget.settings,
+              shares: widget.shares,
               startTour:
                   state.firstWorkspaceCreated && !widget.settings.tourSeen,
             ),

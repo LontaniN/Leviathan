@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' show Offset;
 
+import 'atomic_write.dart';
+
 /// Ricorda dove stavano i nodi del grafo, così riaprendolo le costellazioni
 /// sono già al loro posto invece di rimescolarsi.
 ///
@@ -25,8 +27,8 @@ class GraphLayoutStore {
   }
 
   void write(Map<String, Offset> positions) {
-    file.parent.createSync(recursive: true);
-    file.writeAsStringSync(
+    writeFileAtomic(
+      file,
       jsonEncode({
         for (final MapEntry(:key, :value) in positions.entries)
           key: [

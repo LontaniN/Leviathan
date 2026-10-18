@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
+import 'atomic_write.dart';
+
 /// Perché un nome di workspace non va bene; il messaggio lo scrive la UI.
 enum WorkspaceNameError {
   empty,
@@ -198,7 +200,7 @@ class WorkspaceRepository {
   /// Il workspace usato per ultimo, se registrato.
   ///
   /// Le impostazioni sono un file minuscolo: lo si legge e scrive in modo
-  /// sincrono, così non resta mai una scrittura a metà.
+  /// sincrono, e la scrittura è atomica ([writeFileAtomic]).
   Future<String?> readLastWorkspace() async {
     try {
       final json = jsonDecode(_settingsFile.readAsStringSync());
@@ -209,8 +211,7 @@ class WorkspaceRepository {
   }
 
   Future<void> writeLastWorkspace(String name) async {
-    _settingsFile.parent.createSync(recursive: true);
-    _settingsFile.writeAsStringSync(jsonEncode({'lastWorkspace': name}));
+    writeFileAtomic(_settingsFile, jsonEncode({'lastWorkspace': name}));
   }
 
   /// Controlla un nome di workspace; restituisce l'errore o null.

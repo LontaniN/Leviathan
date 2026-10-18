@@ -37,6 +37,11 @@ available in English and Italian.
   toast.
 - **Automatic draft**: whatever you're writing is kept aside; if Android
   kills the app, the text is still there when you reopen it.
+- **Share from other apps**: pick Leviathan in Android's *Share* menu and the
+  text lands in the editor, ready for tags and a source. The subject (e.g. a
+  page title) becomes the title; if you were halfway through a note, the
+  shared text is added at the end instead. With more than one workspace
+  you choose where it goes.
 - Long-pressing a note in the list: pin it to the top, check off the task,
   move it to the trash.
 - The first time you open a workspace, a short **guided tour** walks you
@@ -175,6 +180,9 @@ the top of the recent list.
 
 If you get interrupted, the draft is still there when you come back.
 
+From another app (a browser, a chat, a PDF reader) use **Share →
+Leviathan**: the text opens in the editor and you only add tags.
+
 ### 2. Organize
 
 There are no folders and no links between notes: **everything goes through
@@ -229,7 +237,9 @@ Note body in **Markdown**…
 Tasks also have `type: "task"`, `done` and `done_at`, plus `priority`
 (`now`, `next` or `later`) and `rank` once placed in the task manager;
 knowledge notes have `knowledge: true` and pinned notes `pinned: true`. Files can be copied, synced or edited by hand: Leviathan
-also reads files written without a header.
+also reads files written without a header, understands the YAML lists
+Obsidian writes (`tags:` followed by `  - tag` lines) and keeps any property
+it doesn't use (`aliases`, custom fields) untouched when it saves a note.
 
 ---
 
@@ -270,5 +280,5 @@ Project layout:
 | `lib/ui`      | Screens and widgets; all visual values live in `theme.dart` |
 | `test`        | Unit and widget tests                                      |
 
-Planned features (receiving from the Android share sheet, backup and export,
-tag management, …) are listed in [ROADMAP.md](ROADMAP.md) (in Italian).
+Planned features (backup and export, tag management, …) are listed in
+[ROADMAP.md](ROADMAP.md) (in Italian).

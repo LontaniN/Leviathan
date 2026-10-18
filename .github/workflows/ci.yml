@@ -1,0 +1,27 @@
+# Controlli a ogni push e pull request: formattazione, analyzer e test.
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          # La stessa versione usata in sviluppo (Dart 3.13.5, vedi pubspec).
+          flutter-version: 3.47.7
+          cache: true
+      - run: flutter pub get
+      - run: dart format --output=none --set-exit-if-changed lib test
+      - run: flutter analyze
+      - run: flutter test

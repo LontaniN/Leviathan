@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:leviathan/model/note.dart';
 import 'package:leviathan/model/search.dart';
+import 'package:leviathan/model/tags.dart';
 
 Note _note(
   String id,
@@ -107,6 +108,26 @@ void main() {
   test('anteprima attorno alla parola trovata', () {
     final hit = searchNotes(notes, const SearchQuery(text: 'iso')).single;
     expect(hit.snippet, contains('ISO'));
+  });
+
+  test('una nota modificata si cerca col testo nuovo', () {
+    final before = _note('m', 'Vecchio titolo', body: 'corpo');
+    expect(searchNotes([before], const SearchQuery(text: 'vecchio')), [
+      isA<SearchHit>(),
+    ]);
+    final after = before.copyWith(title: 'Titolo nuovo', body: 'Città');
+    expect(searchNotes([after], const SearchQuery(text: 'vecchio')), isEmpty);
+    final hits = searchNotes([after], const SearchQuery(text: 'citta'));
+    expect(hits.single.snippet, 'Città');
+  });
+
+  test('foldText toglie accenti e maiuscole solo dove servono', () {
+    expect(foldText('Perché CITTÀ è così'), 'perche citta e cosi');
+    expect(foldText('nessun accento'), 'nessun accento');
+    expect(foldText('Müller, François, España'), 'muller, francois, espana');
+    expect(foldText(''), '');
+    // Lettere non latine e simboli restano come sono.
+    expect(foldText('Ω → ✓'), 'ω → ✓');
   });
 
   group('filtro stato', () {
