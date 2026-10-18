@@ -8,7 +8,6 @@ import 'package:flutter/material.dart';
 class LeviathanPalette extends ThemeExtension<LeviathanPalette> {
   const LeviathanPalette({
     required this.id,
-    required this.name,
     required this.brightness,
     required this.background,
     required this.surface,
@@ -19,9 +18,9 @@ class LeviathanPalette extends ThemeExtension<LeviathanPalette> {
     required this.muted,
   });
 
-  /// Chiave salvata nelle preferenze: non cambiarla.
+  /// Chiave salvata nelle preferenze: non cambiarla. Il nome mostrato è
+  /// nelle traduzioni (vedi `paletteName`).
   final String id;
-  final String name;
   final Brightness brightness;
 
   /// Fondo delle schermate.
@@ -45,7 +44,6 @@ class LeviathanPalette extends ThemeExtension<LeviathanPalette> {
 
   static const grafite = LeviathanPalette(
     id: 'grafite',
-    name: 'Grafite',
     brightness: Brightness.dark,
     background: Color(0xFF2B2C31),
     surface: Color(0xFF35363C),
@@ -58,7 +56,6 @@ class LeviathanPalette extends ThemeExtension<LeviathanPalette> {
 
   static const abisso = LeviathanPalette(
     id: 'abisso',
-    name: 'Abisso',
     brightness: Brightness.dark,
     background: Color(0xFF0F1A24),
     surface: Color(0xFF182736),
@@ -71,7 +68,6 @@ class LeviathanPalette extends ThemeExtension<LeviathanPalette> {
 
   static const brace = LeviathanPalette(
     id: 'brace',
-    name: 'Brace',
     brightness: Brightness.dark,
     background: Color(0xFF231C1A),
     surface: Color(0xFF302623),
@@ -84,7 +80,6 @@ class LeviathanPalette extends ThemeExtension<LeviathanPalette> {
 
   static const muschio = LeviathanPalette(
     id: 'muschio',
-    name: 'Muschio',
     brightness: Brightness.dark,
     background: Color(0xFF1E2420),
     surface: Color(0xFF29312B),
@@ -97,7 +92,6 @@ class LeviathanPalette extends ThemeExtension<LeviathanPalette> {
 
   static const ametista = LeviathanPalette(
     id: 'ametista',
-    name: 'Ametista',
     brightness: Brightness.dark,
     background: Color(0xFF221D2B),
     surface: Color(0xFF2E2739),
@@ -111,7 +105,6 @@ class LeviathanPalette extends ThemeExtension<LeviathanPalette> {
   /// Nero e bianco come l'icona dell'app; il nero pieno spegne i pixel OLED.
   static const inchiostro = LeviathanPalette(
     id: 'inchiostro',
-    name: 'Inchiostro',
     brightness: Brightness.dark,
     background: Color(0xFF000000),
     surface: Color(0xFF161616),
@@ -126,7 +119,6 @@ class LeviathanPalette extends ThemeExtension<LeviathanPalette> {
   /// scorrendo) e accento color carta vecchia.
   static const seppia = LeviathanPalette(
     id: 'seppia',
-    name: 'Seppia',
     brightness: Brightness.dark,
     background: Color(0xFF0B0907),
     surface: Color(0xFF1A1612),
@@ -141,7 +133,6 @@ class LeviathanPalette extends ThemeExtension<LeviathanPalette> {
   /// ghiaccio.
   static const lavagna = LeviathanPalette(
     id: 'lavagna',
-    name: 'Lavagna',
     brightness: Brightness.dark,
     background: Color(0xFF06080B),
     surface: Color(0xFF12161C),
@@ -154,7 +145,6 @@ class LeviathanPalette extends ThemeExtension<LeviathanPalette> {
 
   static const carta = LeviathanPalette(
     id: 'carta',
-    name: 'Carta',
     brightness: Brightness.light,
     background: Color(0xFFF1ECE2),
     surface: Color(0xFFFFFDF8),
@@ -203,7 +193,6 @@ class LeviathanPalette extends ThemeExtension<LeviathanPalette> {
     Color? muted,
   }) => LeviathanPalette(
     id: id,
-    name: name,
     brightness: brightness,
     background: background ?? this.background,
     surface: surface ?? this.surface,
@@ -220,7 +209,6 @@ class LeviathanPalette extends ThemeExtension<LeviathanPalette> {
     final target = t < 0.5 ? this : other;
     return LeviathanPalette(
       id: target.id,
-      name: target.name,
       brightness: target.brightness,
       background: Color.lerp(background, other.background, t)!,
       surface: Color.lerp(surface, other.surface, t)!,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../state/app_state.dart';
 import 'theme.dart';
 import 'workspace_name_form.dart';
@@ -13,6 +14,7 @@ class OnboardingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final l = context.l10n;
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -33,16 +35,14 @@ class OnboardingScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: LeviathanSpacing.xs),
                   Text(
-                    'Il tuo secondo cervello.',
+                    l.onboardingTagline,
                     style: LeviathanText.editorTitle.copyWith(
                       color: context.palette.text,
                     ),
                   ),
                   const SizedBox(height: LeviathanSpacing.lg),
                   Text(
-                    'Dai un nome al tuo primo workspace. '
-                    'Ogni workspace raccoglie le sue note: '
-                    'puoi crearne altri in qualsiasi momento.',
+                    l.onboardingBody,
                     style: text.bodyLarge?.copyWith(
                       color: context.palette.muted,
                     ),
@@ -51,7 +51,7 @@ class OnboardingScreen extends StatelessWidget {
                   WorkspaceNameForm(
                     validate: state.validateNewName,
                     onSubmit: state.createWorkspace,
-                    buttonLabel: 'Crea workspace',
+                    buttonLabel: l.createWorkspace,
                   ),
                 ],
               ),

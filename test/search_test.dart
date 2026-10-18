@@ -144,6 +144,12 @@ void main() {
       expect(TaskFilter.suggest(''), TaskFilter.values);
       expect(TaskFilter.suggest('f'), [TaskFilter.fatto]);
     });
+
+    test('nomi inglesi', () {
+      expect(TaskFilter.parse('open'), TaskFilter.aperto);
+      expect(TaskFilter.parse('DONE'), TaskFilter.fatto);
+      expect(TaskFilter.suggest('d'), [TaskFilter.fatto]);
+    });
   });
 
   test('intervalli da evidenziare', () {
@@ -190,6 +196,14 @@ void main() {
       expect(p.activeValue, 'ap');
     });
 
+    test('marcatori inglesi', () {
+      final source = SearchInput.parse('delivery from:Mario Ro');
+      expect(source.freeText, 'delivery');
+      expect(source.activeKind, FilterKind.source);
+      expect(source.activeValue, 'Mario Ro');
+      expect(SearchInput.parse('exam status:op').activeKind, FilterKind.status);
+    });
+
     test('# in mezzo a una parola non è un filtro', () {
       expect(SearchInput.parse('C#').activeKind, isNull);
     });
@@ -203,19 +217,19 @@ void main() {
         body: 'Siamo partiti presto e al lago abbiamo visto gli aironi.',
       );
       expect(
-        matchPreview(note, ['lago']),
+        matchPreview(note, ['lago'], 'Senza titolo'),
         '…e al lago abbiamo visto gli aironi.',
       );
     });
 
     test('se la parola è nel titolo basta il titolo', () {
       final note = _note('t', 'Lago di Como', body: 'Un giro in barca.');
-      expect(matchPreview(note, ['lago']), 'Lago di Como');
+      expect(matchPreview(note, ['lago'], 'Senza titolo'), 'Lago di Como');
     });
 
     test("dall'inizio se la parola è in testa", () {
       final note = _note('i', 'Gita', body: 'Lago ghiacciato.');
-      expect(matchPreview(note, ['lago']), 'Lago ghiacciato.');
+      expect(matchPreview(note, ['lago'], 'Senza titolo'), 'Lago ghiacciato.');
     });
   });
 }

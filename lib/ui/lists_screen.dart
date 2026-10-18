@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../model/markdown.dart';
 import '../model/note.dart';
 import '../model/note_groups.dart';
@@ -67,14 +68,11 @@ class _ListsScreenState extends State<ListsScreen> {
           tasks: _tasks,
           filter: _filter,
         );
+        final l = context.l10n;
         final hasTasks = all.any((n) => n.isTask);
-        final String summary;
-        if (_tasks) {
-          summary = _taskSummary(all.where((n) => n.isTask), _filter);
-        } else {
-          final count = all.where((n) => !n.isTask).length;
-          summary = count == 1 ? '1 nota' : '$count note';
-        }
+        final summary = _tasks
+            ? _taskSummary(l, all.where((n) => n.isTask), _filter)
+            : l.noteCount(all.where((n) => !n.isTask).length);
         return Scaffold(
           appBar: AppBar(
             backgroundColor: context.palette.background,
@@ -104,22 +102,22 @@ class _ListsScreenState extends State<ListsScreen> {
                 // caratteri grandi.
                 child: SegmentedButton<NoteGrouping>(
                   key: const Key('grouping-toggle'),
-                  segments: const [
+                  segments: [
                     ButtonSegment(
                       value: NoteGrouping.tag,
-                      icon: Icon(
+                      icon: const Icon(
                         Icons.sell_outlined,
                         size: LeviathanIconSize.sm,
                       ),
-                      label: Text('Per tag'),
+                      label: Text(l.byTag),
                     ),
                     ButtonSegment(
                       value: NoteGrouping.source,
-                      icon: Icon(
+                      icon: const Icon(
                         Icons.person_outline,
                         size: LeviathanIconSize.sm,
                       ),
-                      label: Text('Per fonte'),
+                      label: Text(l.bySource),
                     ),
                   ],
                   selected: {_grouping},
@@ -136,11 +134,10 @@ class _ListsScreenState extends State<ListsScreen> {
                 child: groups.isEmpty
                     ? _Empty(
                         !_tasks
-                            ? 'Nessuna nota ancora: scrivine una dalla home.'
+                            ? l.listsNoNotes
                             : hasTasks
-                            ? _emptyFiltered(_filter)
-                            : 'Nessun task ancora: scrivine uno scegliendo '
-                                  '"Task" nell\'editor.',
+                            ? _emptyFiltered(l, _filter)
+                            : l.listsNoTasks,
                       )
                     : _GroupGrid(
                         key: Key(_tasks ? 'task-grid' : 'note-grid'),
@@ -251,8 +248,8 @@ class _GroupMarker extends StatelessWidget {
   }
 }
 
-String _groupName(String? name, NoteGrouping grouping) =>
-    name ?? (grouping == NoteGrouping.tag ? 'Senza tag' : 'Senza fonte');
+String _groupName(AppLocalizations l, String? name, NoteGrouping grouping) =>
+    name ?? (grouping == NoteGrouping.tag ? l.noTag : l.noSource);
 
 /// Il riquadro di un tag (o fonte): nome, quanti elementi ha e i titoli più
 /// recenti, quanti ne stanno.
@@ -276,6 +273,7 @@ class _GroupTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
+    final l = context.l10n;
     final radius = BorderRadius.circular(LeviathanRadii.md);
     final open = group.openTasks;
     // Con tutti i task, prima quelli da fare e poi i fatti.
@@ -287,8 +285,8 @@ class _GroupTile extends StatelessWidget {
         : group.notes;
     final count = switch (filter) {
       _ when !tasks => '${group.notes.length}',
-      TaskFilter.fatto => '${group.notes.length} fatti',
-      _ => open == 0 ? 'fatti' : '$open da fare',
+      TaskFilter.fatto => l.doneCount(group.notes.length),
+      _ => open == 0 ? l.allDone : l.openCount(open),
     };
     return Padding(
       padding: const EdgeInsets.all(LeviathanSpacing.xxs),
@@ -337,7 +335,7 @@ class _GroupTile extends StatelessWidget {
                 ),
                 const SizedBox(height: LeviathanSpacing.xs),
                 Text(
-                  _groupName(group.name, grouping),
+                  _groupName(l, group.name, grouping),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: LeviathanText.meta.copyWith(
@@ -347,7 +345,9 @@ class _GroupTile extends StatelessWidget {
                 ),
                 const SizedBox(height: LeviathanSpacing.xxs),
                 Expanded(
-                  child: _Titles([for (final n in shown) n.displayTitle]),
+                  child: _Titles([
+                    for (final n in shown) n.displayTitle(l.untitled),
+                  ]),
                 ),
               ],
             ),
@@ -484,15 +484,13 @@ class _GroupScreenState extends State<GroupScreen> {
             : searchNotes(items, query);
         hits.sort((a, b) => b.note.created.compareTo(a.note.created));
         final found = hits.map((h) => h.note);
-        final String summary;
-        if (tasks) {
-          summary = _taskSummary(found, _filter);
-        } else {
-          summary = hits.length == 1 ? '1 nota' : '${hits.length} note';
-        }
+        final l = context.l10n;
+        final summary = tasks
+            ? _taskSummary(l, found, _filter)
+            : l.noteCount(hits.length);
         final where = grouping == NoteGrouping.tag
-            ? (name == null ? 'fra le note senza tag' : 'in questo tag')
-            : (name == null ? 'fra le note senza fonte' : 'in questa fonte');
+            ? (name == null ? l.whereUntagged : l.whereTag)
+            : (name == null ? l.whereUnsourced : l.whereSource);
         return Scaffold(
           appBar: AppBar(
             backgroundColor: context.palette.background,
@@ -504,7 +502,7 @@ class _GroupScreenState extends State<GroupScreen> {
                     autocorrect: false,
                     textInputAction: TextInputAction.search,
                     decoration: InputDecoration(
-                      hintText: 'Cerca $where',
+                      hintText: l.searchWhere(where),
                       border: InputBorder.none,
                       enabledBorder: InputBorder.none,
                       focusedBorder: InputBorder.none,
@@ -517,7 +515,7 @@ class _GroupScreenState extends State<GroupScreen> {
                       const SizedBox(width: LeviathanSpacing.sm),
                       Expanded(
                         child: Text(
-                          _groupName(name, grouping),
+                          _groupName(l, name, grouping),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -532,13 +530,13 @@ class _GroupScreenState extends State<GroupScreen> {
               _searching
                   ? IconButton(
                       key: const Key('group-search-close'),
-                      tooltip: 'Chiudi la ricerca',
+                      tooltip: l.closeSearch,
                       icon: const Icon(Icons.close),
                       onPressed: _closeSearch,
                     )
                   : IconButton(
                       key: const Key('group-search-button'),
-                      tooltip: 'Cerca $where',
+                      tooltip: l.searchWhere(where),
                       icon: const Icon(Icons.search),
                       onPressed: () => setState(() => _searching = true),
                     ),
@@ -563,12 +561,12 @@ class _GroupScreenState extends State<GroupScreen> {
                 child: hits.isEmpty
                     ? _Empty(
                         items.isNotEmpty
-                            ? 'Nessun risultato $where.'
+                            ? l.noResultsWhere(where)
                             : !tasks
-                            ? 'Nessuna nota qui.'
+                            ? l.noNotesHere
                             : _filter == TaskFilter.task
-                            ? 'Nessun task qui.'
-                            : _emptyFiltered(_filter),
+                            ? l.noTasksHere
+                            : _emptyFiltered(l, _filter),
                       )
                     : ListView.builder(
                         keyboardDismissBehavior:
@@ -599,21 +597,25 @@ class _GroupScreenState extends State<GroupScreen> {
 }
 
 /// Il riassunto in cima a un elenco di [tasks], secondo il filtro.
-String _taskSummary(Iterable<Note> tasks, TaskFilter filter) {
+String _taskSummary(
+  AppLocalizations l,
+  Iterable<Note> tasks,
+  TaskFilter filter,
+) {
   final open = tasks.where((n) => n.isOpenTask).length;
   return switch (filter) {
-    TaskFilter.task => '${tasks.length} task · $open da fare',
-    TaskFilter.aperto => open == 1 ? '1 task da fare' : '$open task da fare',
-    TaskFilter.fatto =>
-      tasks.length == 1 ? '1 task fatto' : '${tasks.length} task fatti',
+    TaskFilter.task => l.taskSummary(tasks.length, open),
+    TaskFilter.aperto => l.openTaskCount(open),
+    TaskFilter.fatto => l.doneTaskCount(tasks.length),
   };
 }
 
-String _emptyFiltered(TaskFilter filter) => switch (filter) {
-  TaskFilter.task => 'Nessun task.',
-  TaskFilter.aperto => 'Nessun task da fare.',
-  TaskFilter.fatto => 'Nessun task fatto.',
-};
+String _emptyFiltered(AppLocalizations l, TaskFilter filter) =>
+    switch (filter) {
+      TaskFilter.task => l.noTasks,
+      TaskFilter.aperto => l.noOpenTasks,
+      TaskFilter.fatto => l.noDoneTasks,
+    };
 
 /// La tendina in alto a destra che sceglie quali task mostrare.
 class _TaskFilterMenu extends StatelessWidget {
@@ -644,9 +646,9 @@ class _TaskFilterMenu extends StatelessWidget {
               DropdownMenuItem(
                 value: f,
                 child: Text(switch (f) {
-                  TaskFilter.task => 'Tutte',
-                  TaskFilter.aperto => 'Da fare',
-                  TaskFilter.fatto => 'Fatte',
+                  TaskFilter.task => context.l10n.filterAll,
+                  TaskFilter.aperto => context.l10n.filterOpen,
+                  TaskFilter.fatto => context.l10n.filterDone,
                 }),
               ),
           ],
@@ -670,16 +672,19 @@ class _ViewToggle extends StatelessWidget {
   Widget build(BuildContext context) {
     return SegmentedButton<ListsView>(
       key: const Key('view-toggle'),
-      segments: const [
+      segments: [
         ButtonSegment(
           value: ListsView.tasks,
-          icon: Icon(Icons.checklist, size: LeviathanIconSize.sm),
-          label: Text('Task'),
+          icon: const Icon(Icons.checklist, size: LeviathanIconSize.sm),
+          label: Text(context.l10n.viewTasks),
         ),
         ButtonSegment(
           value: ListsView.notes,
-          icon: Icon(Icons.description_outlined, size: LeviathanIconSize.sm),
-          label: Text('Note'),
+          icon: const Icon(
+            Icons.description_outlined,
+            size: LeviathanIconSize.sm,
+          ),
+          label: Text(context.l10n.viewNotes),
         ),
       ],
       selected: {view},

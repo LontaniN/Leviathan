@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../model/dates.dart';
 import '../model/markdown.dart';
 import '../model/note.dart';
@@ -211,10 +212,11 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final open = notes.where((n) => n.isOpenTask).length;
     final summary = [
-      notes.length == 1 ? '1 nota' : '${notes.length} note',
-      if (open > 0) '$open da fare',
+      l.noteCount(notes.length),
+      if (open > 0) l.openCount(open),
     ].join(' · ');
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -247,31 +249,31 @@ class _Header extends StatelessWidget {
           ),
           IconButton(
             key: const Key('pinned-button'),
-            tooltip: 'Fissate',
+            tooltip: l.pinned,
             icon: const Icon(Icons.push_pin_outlined),
             onPressed: onPinned,
           ),
           IconButton(
             key: const Key('graph-button'),
-            tooltip: 'Grafo',
+            tooltip: l.graph,
             icon: const Icon(Icons.hub_outlined),
             onPressed: onGraph,
           ),
           IconButton(
             key: const Key('lists-button'),
-            tooltip: 'Task e note',
+            tooltip: l.tasksAndNotes,
             icon: const Icon(Icons.checklist),
             onPressed: onLists,
           ),
           IconButton(
             key: const Key('calendar-button'),
-            tooltip: 'Calendario',
+            tooltip: l.calendar,
             icon: const Icon(Icons.calendar_month_outlined),
             onPressed: onCalendar,
           ),
           IconButton(
             key: const Key('settings-button'),
-            tooltip: 'Impostazioni',
+            tooltip: l.settings,
             icon: const Icon(Icons.settings_outlined),
             onPressed: onSettings,
           ),
@@ -339,7 +341,7 @@ class _SearchPill extends StatelessWidget {
                   const SizedBox(width: LeviathanSpacing.md),
                   Expanded(
                     child: Text(
-                      'Cerca nelle note',
+                      context.l10n.searchNotes,
                       overflow: TextOverflow.ellipsis,
                       style: LeviathanText.body.copyWith(color: palette.muted),
                     ),
@@ -378,12 +380,12 @@ class _LoadError extends StatelessWidget {
             ),
             const SizedBox(height: LeviathanSpacing.lg),
             Text(
-              'Impossibile leggere le note: $message',
+              context.l10n.loadError(message),
               textAlign: TextAlign.center,
               style: LeviathanText.body.copyWith(color: context.palette.muted),
             ),
             const SizedBox(height: LeviathanSpacing.lg),
-            FilledButton(onPressed: onRetry, child: const Text('Riprova')),
+            FilledButton(onPressed: onRetry, child: Text(context.l10n.retry)),
           ],
         ),
       ),
@@ -407,18 +409,18 @@ class _NoteEntry extends _Entry {
 }
 
 /// Le fissate in cima, poi le altre sotto il loro giorno o mese.
-List<_Entry> _entries(List<Note> notes, DateTime now) {
+List<_Entry> _entries(AppLocalizations l, List<Note> notes, DateTime now) {
   final pinned = notes.where((n) => n.pinned).toList();
   final entries = <_Entry>[
     if (pinned.isNotEmpty) ...[
-      _SectionEntry('Fissate'),
+      _SectionEntry(l.pinned),
       for (final n in pinned) _NoteEntry(n),
     ],
   ];
   String? section;
   for (final note in notes) {
     if (note.pinned) continue;
-    final label = dateSection(note.created, now);
+    final label = dateSection(l, note.created, now);
     if (label != section) {
       entries.add(_SectionEntry(label));
       section = label;
@@ -455,7 +457,8 @@ class _NoteList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final entries = _entries(notes, DateTime.now());
+    final l = context.l10n;
+    final entries = _entries(l, notes, DateTime.now());
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -473,7 +476,7 @@ class _NoteList extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    expanded ? 'Tutte le note (${notes.length})' : 'Recenti',
+                    expanded ? l.allNotes(notes.length) : l.recent,
                     overflow: TextOverflow.ellipsis,
                     style: LeviathanText.title.copyWith(color: palette.text),
                   ),
@@ -498,7 +501,7 @@ class _NoteList extends StatelessWidget {
               ? Padding(
                   padding: const EdgeInsets.all(LeviathanSpacing.md),
                   child: Text(
-                    'Nessuna nota. Quelle che salvi compaiono qui.',
+                    l.noNotesYet,
                     style: LeviathanText.body.copyWith(color: palette.muted),
                   ),
                 )
@@ -735,7 +738,7 @@ class _When extends StatelessWidget {
         // starci: la data si accorcia invece di sforare.
         Flexible(
           child: Text(
-            formatRelative(note.created, DateTime.now()),
+            formatRelative(context.l10n, note.created, DateTime.now()),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             softWrap: false,
@@ -786,7 +789,7 @@ class _CompactTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    note.displayTitle,
+                    note.displayTitle(context.l10n.untitled),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: taskTitleStyle(
@@ -854,7 +857,7 @@ class _ExpandedTile extends StatelessWidget {
                         ),
                       Expanded(
                         child: Text(
-                          note.displayTitle,
+                          note.displayTitle(context.l10n.untitled),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: taskTitleStyle(
@@ -967,7 +970,7 @@ Future<void> showWorkspaceSwitcher(BuildContext context, AppState state) {
                 LeviathanSpacing.sm,
               ),
               child: Text(
-                'WORKSPACE',
+                context.l10n.workspace.toUpperCase(),
                 style: LeviathanText.caption.copyWith(
                   color: context.palette.muted,
                 ),
@@ -1007,7 +1010,7 @@ Future<void> showWorkspaceSwitcher(BuildContext context, AppState state) {
               ListTile(
                 key: const Key('rename-workspace'),
                 leading: const Icon(Icons.edit_outlined),
-                title: const Text('Rinomina workspace'),
+                title: Text(context.l10n.renameWorkspace),
                 onTap: () {
                   Navigator.pop(sheetContext);
                   _showRenameWorkspaceDialog(context, state, current);
@@ -1016,7 +1019,7 @@ Future<void> showWorkspaceSwitcher(BuildContext context, AppState state) {
               ListTile(
                 key: const Key('delete-workspace'),
                 leading: const Icon(Icons.delete_outline),
-                title: const Text('Elimina workspace'),
+                title: Text(context.l10n.deleteWorkspace),
                 onTap: () {
                   Navigator.pop(sheetContext);
                   _confirmDeleteWorkspace(context, state, current);
@@ -1025,7 +1028,7 @@ Future<void> showWorkspaceSwitcher(BuildContext context, AppState state) {
             ],
             ListTile(
               leading: const Icon(Icons.add),
-              title: const Text('Nuovo workspace'),
+              title: Text(context.l10n.newWorkspace),
               onTap: () {
                 Navigator.pop(sheetContext);
                 _showNewWorkspaceDialog(context, state);
@@ -1066,7 +1069,7 @@ Future<void> _showWorkspaceActions(
           ),
           ListTile(
             leading: const Icon(Icons.edit_outlined),
-            title: const Text('Rinomina'),
+            title: Text(context.l10n.rename),
             onTap: () {
               Navigator.pop(sheetContext);
               _showRenameWorkspaceDialog(context, state, name);
@@ -1074,7 +1077,7 @@ Future<void> _showWorkspaceActions(
           ),
           ListTile(
             leading: const Icon(Icons.delete_outline),
-            title: const Text('Elimina'),
+            title: Text(context.l10n.delete),
             onTap: () {
               Navigator.pop(sheetContext);
               _confirmDeleteWorkspace(context, state, name);
@@ -1091,24 +1094,23 @@ Future<void> _confirmDeleteWorkspace(
   AppState state,
   String name,
 ) async {
+  final l = context.l10n;
   final last = state.workspaces.length == 1;
   final ok = await showDialog<bool>(
     context: context,
     builder: (dialogContext) => AlertDialog(
-      title: Text('Eliminare «$name»?'),
+      title: Text(l.deleteWorkspaceTitle(name)),
       content: Text(
-        'Il workspace, con le sue note e il suo cestino, viene spostato in '
-        '.leviathan/eliminati, non cancellato.'
-        '${last ? ' È l\'unico workspace: dovrai crearne uno nuovo.' : ''}',
+        [l.deleteWorkspaceBody, if (last) l.deleteWorkspaceLast].join(' '),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(dialogContext, false),
-          child: const Text('Annulla'),
+          child: Text(l.cancel),
         ),
         FilledButton(
           onPressed: () => Navigator.pop(dialogContext, true),
-          child: const Text('Elimina'),
+          child: Text(l.delete),
         ),
       ],
     ),
@@ -1119,13 +1121,9 @@ Future<void> _confirmDeleteWorkspace(
   final messenger = ScaffoldMessenger.of(context);
   try {
     await state.deleteWorkspace(name);
-    messenger.showSnackBar(
-      SnackBar(content: Text('«$name» spostato in .leviathan/eliminati')),
-    );
+    messenger.showSnackBar(SnackBar(content: Text(l.workspaceDeleted(name))));
   } on FileSystemException catch (e) {
-    messenger.showSnackBar(
-      SnackBar(content: Text('Impossibile eliminare: ${e.message}')),
-    );
+    messenger.showSnackBar(SnackBar(content: Text(l.cannotDelete(e.message))));
   }
 }
 
@@ -1133,7 +1131,7 @@ Future<void> _showNewWorkspaceDialog(BuildContext context, AppState state) {
   return showDialog<void>(
     context: context,
     builder: (dialogContext) => AlertDialog(
-      title: const Text('Nuovo workspace'),
+      title: Text(context.l10n.newWorkspace),
       content: SizedBox(
         width: LeviathanSizes.dialogWidth,
         child: WorkspaceNameForm(
@@ -1153,21 +1151,22 @@ Future<void> _showRenameWorkspaceDialog(
   AppState state,
   String oldName,
 ) {
+  final l = context.l10n;
   return showDialog<void>(
     context: context,
     builder: (dialogContext) => AlertDialog(
-      title: const Text('Rinomina workspace'),
+      title: Text(l.renameWorkspace),
       content: SizedBox(
         width: LeviathanSizes.dialogWidth,
         child: WorkspaceNameForm(
           initialName: oldName,
-          buttonLabel: 'Rinomina',
+          buttonLabel: l.rename,
           validate: (name) => state.validateRename(oldName, name),
           onSubmit: (name) async {
             try {
               await state.renameWorkspace(oldName, name);
             } on FileSystemException catch (e) {
-              throw ArgumentError('Impossibile rinominare: ${e.message}');
+              throw ArgumentError(l.cannotRename(e.message));
             }
             if (dialogContext.mounted) Navigator.pop(dialogContext);
           },

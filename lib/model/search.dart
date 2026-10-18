@@ -2,16 +2,18 @@ import 'markdown.dart';
 import 'note.dart';
 import 'tags.dart';
 
-/// Filtro sullo stato dei task; il nome è la parola dopo `stato:`.
+/// Filtro sullo stato dei task: la parola dopo `stato:` (o `status:`).
+///
+/// Ogni filtro ha un nome per lingua; la ricerca li riconosce tutti,
+/// qualunque sia la lingua dell'interfaccia.
 enum TaskFilter {
-  task('task', 'tutti i task'),
-  aperto('aperto', 'task da fare'),
-  fatto('fatto', 'task eseguiti');
+  task(['task']),
+  aperto(['aperto', 'open']),
+  fatto(['fatto', 'done']);
 
-  const TaskFilter(this.label, this.description);
+  const TaskFilter(this.keywords);
 
-  final String label;
-  final String description;
+  final List<String> keywords;
 
   bool matches(Note note) => switch (this) {
     TaskFilter.task => note.isTask,
@@ -19,22 +21,24 @@ enum TaskFilter {
     TaskFilter.fatto => note.isTask && note.done,
   };
 
+  bool _startsWith(String folded) => keywords.any((k) => k.startsWith(folded));
+
   /// Il filtro con questo nome (anche abbreviato: "ap" → aperto).
   static TaskFilter? parse(String value) {
     final v = foldText(value.trim());
     if (v.isEmpty) return null;
     for (final f in values) {
-      if (f.label.startsWith(v)) return f;
+      if (f._startsWith(v)) return f;
     }
     return null;
   }
 
-  /// I filtri il cui nome comincia con [value], nell'ordine dell'enum.
+  /// I filtri con un nome che comincia con [value], nell'ordine dell'enum.
   static List<TaskFilter> suggest(String value) {
     final v = foldText(value.trim());
     return [
       for (final f in values)
-        if (f.label.startsWith(v)) f,
+        if (f._startsWith(v)) f,
     ];
   }
 }
@@ -174,9 +178,10 @@ enum FilterKind { tag, source, status }
 
 /// Cosa c'è nella barra: testo libero e, in fondo, un filtro in scrittura.
 ///
-/// Come su Discord: `tag:` (o `#`), `da:` (o `@`) e `stato:` aprono un
-/// filtro. Tag e stato finiscono allo spazio; una fonte può contenere spazi
-/// ("da:Mario Rossi") e resta aperta finché non la si conferma.
+/// Come su Discord: `tag:` (o `#`), `da:` / `from:` (o `@`) e `stato:` /
+/// `status:` aprono un filtro, in qualunque lingua. Tag e stato finiscono
+/// allo spazio; una fonte può contenere spazi ("da:Mario Rossi") e resta
+/// aperta finché non la si conferma.
 class SearchInput {
   const SearchInput(this.freeText, this.activeKind, this.activeValue);
 
@@ -185,7 +190,7 @@ class SearchInput {
   final String activeValue;
 
   static final _marker = RegExp(
-    r'(?<=^|\s)(tag:|#|da:|@|stato:)',
+    r'(?<=^|\s)(tag:|#|da:|from:|@|stato:|status:)',
     caseSensitive: false,
   );
 
@@ -197,7 +202,7 @@ class SearchInput {
       final value = raw.substring(match.end);
       final kind = switch (marker) {
         'tag:' || '#' => FilterKind.tag,
-        'stato:' => FilterKind.status,
+        'stato:' || 'status:' => FilterKind.status,
         _ => FilterKind.source,
       };
       // Tag e stato non contengono spazi: dopo uno spazio si torna al testo
@@ -212,11 +217,12 @@ class SearchInput {
 
 /// Un'anteprima corta di [note] che comincia vicino alla prima delle [terms]
 /// trovata, per le caselle piccole del calendario: se la parola è nel
-/// titolo basta il titolo, altrimenti il pezzo di testo che la contiene.
-String matchPreview(Note note, List<String> terms) {
+/// titolo basta il titolo (o [untitled]), altrimenti il pezzo di testo che
+/// la contiene.
+String matchPreview(Note note, List<String> terms, String untitled) {
   const before = 12;
   const length = 120;
-  final title = note.displayTitle;
+  final title = note.displayTitle(untitled);
   final foldedTitle = foldText(title);
   if (terms.any(foldedTitle.contains)) return title;
 

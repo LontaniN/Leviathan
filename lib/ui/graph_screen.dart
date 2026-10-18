@@ -4,6 +4,7 @@ import 'package:flutter/scheduler.dart';
 import '../data/graph_layout_store.dart';
 import '../graph/force_layout.dart';
 import '../graph/graph_view.dart';
+import '../l10n/l10n.dart';
 import '../model/graph.dart';
 import '../model/search.dart';
 import '../model/tags.dart';
@@ -265,18 +266,18 @@ class _GraphScreenState extends State<GraphScreen>
   Widget build(BuildContext context) {
     final noteCount = _graph.nodes.length;
     final hasFilter = _matching != null;
+    final l = context.l10n;
     return Scaffold(
       appBar: AppBar(
         backgroundColor: context.palette.background,
         title: Text(
-          '${noteCount == 1 ? '1 nota' : '$noteCount note'} · '
-          '${_graph.edges.length == 1 ? '1 collegamento' : '${_graph.edges.length} collegamenti'}',
+          '${l.noteCount(noteCount)} · ${l.linkCount(_graph.edges.length)}',
           key: const Key('graph-stats'),
           style: LeviathanText.body.copyWith(color: context.palette.muted),
         ),
         actions: [
           IconButton(
-            tooltip: 'Filtra',
+            tooltip: l.filter,
             onPressed: _editFilters,
             icon: Badge(
               isLabelVisible: hasFilter,
@@ -286,7 +287,7 @@ class _GraphScreenState extends State<GraphScreen>
             ),
           ),
           IconButton(
-            tooltip: 'Centra',
+            tooltip: l.center,
             onPressed: _fit,
             icon: const Icon(Icons.center_focus_strong_outlined),
           ),
@@ -312,7 +313,7 @@ class _GraphScreenState extends State<GraphScreen>
             child: noteCount == 0
                 ? Center(
                     child: Text(
-                      'Scrivi qualche nota per vedere il grafo',
+                      l.graphEmpty,
                       style: TextStyle(color: context.palette.muted),
                     ),
                   )
@@ -342,6 +343,7 @@ class _GraphScreenState extends State<GraphScreen>
                                   selected: _selected,
                                   matching: _matching,
                                   palette: context.palette,
+                                  untitled: l.untitled,
                                 ),
                               ),
                             ),
@@ -375,6 +377,7 @@ class _GraphPainter extends CustomPainter {
     required this.selected,
     required this.matching,
     required this.palette,
+    required this.untitled,
   }) : super(repaint: layout);
 
   final NoteGraph graph;
@@ -383,6 +386,9 @@ class _GraphPainter extends CustomPainter {
   final int selected;
   final Set<String>? matching;
   final LeviathanPalette palette;
+
+  /// Etichetta delle note senza titolo, nella lingua dell'interfaccia.
+  final String untitled;
 
   static const _labelZoom = 1.3;
   static final Map<String, TextPainter> _labels = {};
@@ -477,11 +483,12 @@ class _GraphPainter extends CustomPainter {
           p.dy > size.height + 20) {
         continue;
       }
+      final title = node.note.displayTitle(untitled);
       final label = _labels.putIfAbsent(
-        '${node.note.id}|${node.note.displayTitle}|${palette.id}',
+        '${node.note.id}|$title|${palette.id}',
         () => TextPainter(
           text: TextSpan(
-            text: node.note.displayTitle,
+            text: title,
             style: LeviathanText.tiny.copyWith(
               color: palette.text.withValues(
                 alpha: LeviathanOpacity.graphLabel,
@@ -504,6 +511,7 @@ class _GraphPainter extends CustomPainter {
       old.selected != selected ||
       old.matching != matching ||
       old.palette != palette ||
+      old.untitled != untitled ||
       old.graph != graph ||
       old.layout != layout;
 }
@@ -539,16 +547,14 @@ class _SelectedCard extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      note.displayTitle,
+                      note.displayTitle(context.l10n.untitled),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: LeviathanText.title,
                     ),
                     const SizedBox(height: LeviathanSpacing.xxs),
                     Text(
-                      node.degree == 1
-                          ? '1 nota collegata'
-                          : '${node.degree} note collegate',
+                      context.l10n.linkedNotes(node.degree),
                       style: LeviathanText.meta.copyWith(
                         color: context.palette.muted,
                       ),
@@ -656,6 +662,7 @@ class _FilterSheetState extends State<_FilterSheet> {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final l = context.l10n;
     return SafeArea(
       child: ConstrainedBox(
         constraints: BoxConstraints(
@@ -672,11 +679,11 @@ class _FilterSheetState extends State<_FilterSheet> {
                   horizontal: LeviathanSpacing.lg,
                 ),
                 children: [
-                  Text('Tag', style: text.titleSmall),
+                  Text(l.tags, style: text.titleSmall),
                   const SizedBox(height: LeviathanSpacing.sm),
                   if (widget.tagCounts.isEmpty)
                     Text(
-                      'Nessun tag',
+                      l.noTags,
                       style: TextStyle(color: context.palette.muted),
                     ),
                   Wrap(
@@ -699,11 +706,11 @@ class _FilterSheetState extends State<_FilterSheet> {
                     ],
                   ),
                   const SizedBox(height: LeviathanSpacing.xl),
-                  Text('Fonti', style: text.titleSmall),
+                  Text(l.sources, style: text.titleSmall),
                   const SizedBox(height: LeviathanSpacing.sm),
                   if (widget.sourceCounts.isEmpty)
                     Text(
-                      'Nessuna fonte',
+                      l.noSources,
                       style: TextStyle(color: context.palette.muted),
                     ),
                   Wrap(
@@ -743,7 +750,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                       const <String>[],
                       const <String>[],
                     )),
-                    child: const Text('Togli filtri'),
+                    child: Text(l.clearFilters),
                   ),
                   const Spacer(),
                   FilledButton(
@@ -751,7 +758,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                       _tags.toList(),
                       _sources.toList(),
                     )),
-                    child: const Text('Applica'),
+                    child: Text(l.apply),
                   ),
                 ],
               ),

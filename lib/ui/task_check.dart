@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../model/note.dart';
 import 'theme.dart';
 
@@ -25,7 +26,7 @@ class TaskCheck extends StatelessWidget {
     return Semantics(
       button: true,
       checked: done,
-      label: done ? 'Segna da fare' : 'Segna come fatto',
+      label: done ? context.l10n.markUndone : context.l10n.markDone,
       child: InkResponse(
         key: Key('task-check-${note.id}'),
         onTap: () => onChanged!(!done),

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../data/draft_store.dart';
+import '../l10n/l10n.dart';
 import '../model/markdown.dart';
 import '../model/note.dart';
 import 'chip_input.dart';
@@ -26,7 +27,7 @@ typedef NoteDraft = ({
 ///
 /// Con [draft] quello che si scrive viene tenuto da parte poco dopo ogni
 /// modifica (e subito se l'app va in secondo piano): riaprendo l'app la nota
-/// non salvata è ancora lì.
+/// non salvata è ancora lì. Senza [saveLabel] il pulsante dice "Salva nota".
 class NoteEditor extends StatefulWidget {
   const NoteEditor({
     super.key,
@@ -34,7 +35,7 @@ class NoteEditor extends StatefulWidget {
     required this.tagCounts,
     required this.sourceCounts,
     required this.onSave,
-    this.saveLabel = 'Salva nota',
+    this.saveLabel,
     this.draft,
   });
 
@@ -42,7 +43,7 @@ class NoteEditor extends StatefulWidget {
   final Map<String, int> tagCounts;
   final Map<String, int> sourceCounts;
   final void Function(NoteDraft draft) onSave;
-  final String saveLabel;
+  final String? saveLabel;
   final DraftStore? draft;
 
   @override
@@ -196,9 +197,8 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
     final title = _title.text.trim();
     final body = _body.text.trimRight();
     if (title.isEmpty && body.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Scrivi almeno un titolo o un testo')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(context.l10n.writeSomething)));
       return;
     }
     widget.onSave((
@@ -283,7 +283,9 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
               textCapitalization: TextCapitalization.sentences,
               style: text.titleLarge,
               decoration: InputDecoration(
-                hintText: _isTask ? 'Cosa c\'è da fare?' : 'Titolo',
+                hintText: _isTask
+                    ? context.l10n.taskTitleHint
+                    : context.l10n.titleHint,
                 filled: false,
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(
@@ -305,11 +307,11 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
                 keyboardType: TextInputType.multiline,
                 textCapitalization: TextCapitalization.sentences,
                 style: LeviathanText.reading.copyWith(color: palette.text),
-                decoration: const InputDecoration(
-                  hintText: 'Scrivi la nota…',
+                decoration: InputDecoration(
+                  hintText: context.l10n.bodyHint,
                   filled: false,
                   border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(
+                  contentPadding: const EdgeInsets.symmetric(
                     vertical: LeviathanSpacing.md,
                   ),
                 ),
@@ -322,6 +324,7 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
   }
 
   Widget _fields(TextTheme text) {
+    final l = context.l10n;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -329,19 +332,19 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
           alignment: Alignment.centerLeft,
           child: SegmentedButton<bool>(
             key: const Key('kind-toggle'),
-            segments: const [
+            segments: [
               ButtonSegment(
                 value: false,
-                icon: Icon(Icons.notes, size: LeviathanIconSize.sm),
-                label: Text('Nota'),
+                icon: const Icon(Icons.notes, size: LeviathanIconSize.sm),
+                label: Text(l.kindNote),
               ),
               ButtonSegment(
                 value: true,
-                icon: Icon(
+                icon: const Icon(
                   Icons.check_box_outlined,
                   size: LeviathanIconSize.sm,
                 ),
-                label: Text('Task'),
+                label: Text(l.kindTask),
               ),
             ],
             selected: {_isTask},
@@ -407,8 +410,8 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
                     icon: const Icon(Icons.check),
                     label: Text(
                       widget.initial == null && _isTask
-                          ? 'Salva task'
-                          : widget.saveLabel,
+                          ? l.saveTask
+                          : widget.saveLabel ?? l.saveNote,
                     ),
                   ),
                 ],
@@ -429,6 +432,7 @@ class _FormatBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     Widget button(
       String tooltip,
       IconData icon,
@@ -450,41 +454,41 @@ class _FormatBar extends StatelessWidget {
         child: Row(
           children: [
             button(
-              'Grassetto',
+              l.formatBold,
               Icons.format_bold,
               (v) => wrapSelection(v, '**'),
             ),
             button(
-              'Corsivo',
+              l.formatItalic,
               Icons.format_italic,
               (v) => wrapSelection(v, '_'),
             ),
             button(
-              'Titolo',
+              l.formatHeading,
               Icons.title,
               (v) => toggleLinePrefix(v, LinePrefix.heading),
             ),
             button(
-              'Elenco puntato',
+              l.formatBullets,
               Icons.format_list_bulleted,
               (v) => toggleLinePrefix(v, LinePrefix.bullet),
             ),
             button(
-              'Elenco numerato',
+              l.formatNumbered,
               Icons.format_list_numbered,
               (v) => toggleLinePrefix(v, LinePrefix.numbered),
             ),
             button(
-              'Checklist',
+              l.formatChecklist,
               Icons.check_box_outlined,
               (v) => toggleLinePrefix(v, LinePrefix.checkbox),
             ),
             button(
-              'Citazione',
+              l.formatQuote,
               Icons.format_quote,
               (v) => toggleLinePrefix(v, LinePrefix.quote),
             ),
-            button('Codice', Icons.code, (v) => wrapSelection(v, '`')),
+            button(l.formatCode, Icons.code, (v) => wrapSelection(v, '`')),
           ],
         ),
       ),

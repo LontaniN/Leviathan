@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../model/markdown.dart';
 import '../model/note.dart';
 import '../model/search.dart';
@@ -27,14 +28,15 @@ class PinnedScreen extends StatelessWidget {
   }
 
   void _unpin(BuildContext context, Note note) {
+    final l = context.l10n;
     notes.setPinned(note, false);
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          content: Text('«${note.displayTitle}» staccata dalla cima'),
+          content: Text(l.unpinned(note.displayTitle(l.untitled))),
           action: SnackBarAction(
-            label: 'Annulla',
+            label: l.undo,
             // La nota va ripresa aggiornata: nel frattempo può essere
             // cambiata (es. spuntata).
             onPressed: () {
@@ -53,7 +55,7 @@ class PinnedScreen extends StatelessWidget {
       builder: (context, _) {
         final pinned = notes.notes.where((n) => n.pinned).toList();
         return Scaffold(
-          appBar: AppBar(title: const Text('Fissate')),
+          appBar: AppBar(title: Text(context.l10n.pinned)),
           body: pinned.isEmpty
               ? const _Empty()
               : ListView.builder(
@@ -62,9 +64,7 @@ class PinnedScreen extends StatelessWidget {
                   itemBuilder: (context, i) {
                     if (i == 0) {
                       return SectionTitle(
-                        pinned.length == 1
-                            ? '1 nota fissata'
-                            : '${pinned.length} note fissate',
+                        context.l10n.pinnedCount(pinned.length),
                       );
                     }
                     final note = pinned[i - 1];
@@ -104,9 +104,7 @@ class _Empty extends StatelessWidget {
             ),
             const SizedBox(height: LeviathanSpacing.lg),
             Text(
-              'Nessuna nota fissata.\nTieni premuta una nota nelle recenti, '
-              'oppure tocca la puntina in una nota o negli elenchi di Task e '
-              'note.',
+              context.l10n.pinnedEmpty,
               textAlign: TextAlign.center,
               style: LeviathanText.body.copyWith(color: muted),
             ),

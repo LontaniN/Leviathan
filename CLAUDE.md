@@ -3,6 +3,22 @@
 App Flutter (second brain) per Android, testata su un Pixel 9a. Codice e
 commenti in italiano.
 
+## Lingue
+
+- Tutto ciò che si pubblica è in inglese: messaggi di commit, titoli e
+  descrizioni delle PR, note delle release, README.
+- L'interfaccia è in inglese e in italiano. Nessun testo visibile scritto nei
+  widget: ogni stringa va in `lib/l10n/app_en.arb` (il modello, con i
+  segnaposto descritti) e in `lib/l10n/app_it.arb`, e si legge con
+  `context.l10n.<chiave>`. Le classi in `lib/l10n/app_localizations*.dart`
+  sono generate da `flutter gen-l10n`: non modificarle a mano.
+- Plurali con la sintassi ICU (`{count, plural, =1{…} other{…}}`).
+- Il modello non conosce la lingua: date e titoli ricevono gli
+  `AppLocalizations` o il testo già tradotto (es. `displayTitle(l.untitled)`).
+- I widget test girano in italiano (`_app` in `test/widget_test.dart`); per
+  tornare indietro usare `find.byType(BackButton)`, non `pageBack()`, che
+  cerca il tooltip inglese.
+
 ## Stile della UI
 
 Tutti i valori visivi stanno in `lib/ui/theme.dart`; non introdurre colori,

@@ -3,6 +3,16 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
+/// Perché un nome di workspace non va bene; il messaggio lo scrive la UI.
+enum WorkspaceNameError {
+  empty,
+  tooLong,
+  leadingDot,
+  trailingDot,
+  invalidChars,
+  taken,
+}
+
 /// Gestisce i workspace su disco.
 ///
 /// Ogni workspace è una sottocartella di [root]. Le cartelle che iniziano con
@@ -14,7 +24,27 @@ class WorkspaceRepository {
 
   static const _settingsDirName = '.leviathan';
   static const _settingsFileName = 'settings.json';
-  static const _invalidChars = r'<>:"/\|?*';
+
+  /// Dove finiscono i workspace eliminati, e dentro ognuno le sue parti.
+  static const deletedDirName = 'deleted';
+  static const _deletedNotes = 'notes';
+  static const _deletedTrash = 'trash';
+  static const _deletedGraph = 'graph.json';
+  static const _deletedDraft = 'draft.json';
+
+  /// I nomi italiani delle prime versioni, con quelli che li sostituiscono.
+  static const _legacyDeletedDirName = 'eliminati';
+  static const _legacyDeletedParts = {
+    'note': _deletedNotes,
+    'cestino': _deletedTrash,
+    'grafo.json': _deletedGraph,
+    'bozza.json': _deletedDraft,
+  };
+
+  /// Caratteri che i file system non accettano nei nomi di cartella.
+  static const invalidChars = r'<>:"/\|?*';
+
+  static const maxNameLength = 60;
 
   File get _settingsFile =>
       File(p.join(root.path, _settingsDirName, _settingsFileName));
@@ -35,7 +65,8 @@ class WorkspaceRepository {
 
   /// Crea un nuovo workspace e ne restituisce il nome normalizzato.
   ///
-  /// Lancia [ArgumentError] se il nome non è valido o è già in uso.
+  /// Lancia [ArgumentError] con il [WorkspaceNameError] se il nome non è
+  /// valido o è già in uso.
   Future<String> createWorkspace(String rawName) async {
     final name = rawName.trim();
     final error = validateName(name, await listWorkspaces());
@@ -47,7 +78,8 @@ class WorkspaceRepository {
   /// Rinomina il workspace [oldName] e ne restituisce il nuovo nome
   /// normalizzato. Sposta anche cestino, disposizione del grafo e bozza.
   ///
-  /// Lancia [ArgumentError] se il nome non è valido o è già in uso.
+  /// Lancia [ArgumentError] con il [WorkspaceNameError] se il nome non è
+  /// valido o è già in uso.
   Future<String> renameWorkspace(String oldName, String rawName) async {
     final name = rawName.trim();
     if (name == oldName) return name;
@@ -72,25 +104,69 @@ class WorkspaceRepository {
 
   /// Elimina il workspace [name] senza cancellare nulla: note, cestino,
   /// disposizione del grafo e bozza finiscono in
-  /// `.leviathan/eliminati/<nome> <data>`.
+  /// `.leviathan/deleted/<nome> <data>`.
   /// Restituisce la cartella in cui sono stati spostati.
   Future<Directory> deleteWorkspace(String name) async {
     final stamp = DateTime.now().toIso8601String().replaceAll(':', '-');
     final target = Directory(
-      p.join(root.path, _settingsDirName, 'eliminati', '$name $stamp'),
+      p.join(root.path, _settingsDirName, deletedDirName, '$name $stamp'),
     );
     await target.create(recursive: true);
-    await _move(workspaceDir(name), Directory(p.join(target.path, 'note')));
-    await _move(trashDir(name), Directory(p.join(target.path, 'cestino')));
+    await _move(
+      workspaceDir(name),
+      Directory(p.join(target.path, _deletedNotes)),
+    );
+    await _move(trashDir(name), Directory(p.join(target.path, _deletedTrash)));
     final layout = graphLayoutFile(name);
     if (layout.existsSync()) {
-      await layout.rename(p.join(target.path, 'grafo.json'));
+      await layout.rename(p.join(target.path, _deletedGraph));
     }
     final draft = draftFile(name);
     if (draft.existsSync()) {
-      await draft.rename(p.join(target.path, 'bozza.json'));
+      await draft.rename(p.join(target.path, _deletedDraft));
     }
     return target;
+  }
+
+  /// Porta ai nomi inglesi i workspace eliminati con le prime versioni:
+  /// `.leviathan/eliminati/<…>/{note,cestino,grafo.json,bozza.json}` diventa
+  /// `.leviathan/deleted/<…>/{notes,trash,graph.json,draft.json}`.
+  ///
+  /// Non sovrascrive nulla: se un nome nuovo è già occupato la voce resta
+  /// dov'è, e così anche la vecchia cartella.
+  Future<void> migrateLegacyNames() async {
+    final legacy = Directory(
+      p.join(root.path, _settingsDirName, _legacyDeletedDirName),
+    );
+    if (!legacy.existsSync()) return;
+    final deleted = Directory(
+      p.join(root.path, _settingsDirName, deletedDirName),
+    );
+    deleted.createSync(recursive: true);
+    for (final entry in legacy.listSync(followLinks: false)) {
+      if (entry is Directory) {
+        for (final MapEntry(key: old, value: renamed)
+            in _legacyDeletedParts.entries) {
+          final from = p.join(entry.path, old);
+          final to = p.join(entry.path, renamed);
+          if (FileSystemEntity.typeSync(to) != FileSystemEntityType.notFound) {
+            continue;
+          }
+          switch (FileSystemEntity.typeSync(from)) {
+            case FileSystemEntityType.directory:
+              await Directory(from).rename(to);
+            case FileSystemEntityType.file:
+              await File(from).rename(to);
+            default:
+          }
+        }
+      }
+      final target = p.join(deleted.path, p.basename(entry.path));
+      if (FileSystemEntity.typeSync(target) == FileSystemEntityType.notFound) {
+        await entry.rename(target);
+      }
+    }
+    if (legacy.listSync().isEmpty) await legacy.delete();
   }
 
   /// Sposta una cartella, se esiste. Se cambia solo maiuscole/minuscole passa
@@ -100,7 +176,7 @@ class WorkspaceRepository {
     if (!from.existsSync()) return;
     to.parent.createSync(recursive: true);
     if (from.path.toLowerCase() == to.path.toLowerCase()) {
-      from = await from.rename('${to.path}.rinomina');
+      from = await from.rename('${to.path}.renaming');
     }
     await from.rename(to.path);
   }
@@ -137,21 +213,22 @@ class WorkspaceRepository {
     _settingsFile.writeAsStringSync(jsonEncode({'lastWorkspace': name}));
   }
 
-  /// Controlla un nome di workspace; restituisce il messaggio d'errore o null.
-  static String? validateName(String rawName, List<String> existing) {
+  /// Controlla un nome di workspace; restituisce l'errore o null.
+  static WorkspaceNameError? validateName(
+    String rawName,
+    List<String> existing,
+  ) {
     final name = rawName.trim();
-    if (name.isEmpty) return 'Inserisci un nome';
-    if (name.length > 60) return 'Nome troppo lungo (max 60 caratteri)';
-    if (name.startsWith('.')) return 'Il nome non può iniziare con un punto';
-    if (name.endsWith('.')) return 'Il nome non può finire con un punto';
-    for (final char in _invalidChars.split('')) {
-      if (name.contains(char)) {
-        return 'Caratteri non ammessi: $_invalidChars';
-      }
+    if (name.isEmpty) return WorkspaceNameError.empty;
+    if (name.length > maxNameLength) return WorkspaceNameError.tooLong;
+    if (name.startsWith('.')) return WorkspaceNameError.leadingDot;
+    if (name.endsWith('.')) return WorkspaceNameError.trailingDot;
+    if (invalidChars.split('').any(name.contains)) {
+      return WorkspaceNameError.invalidChars;
     }
     final lower = name.toLowerCase();
     if (existing.any((e) => e.toLowerCase() == lower)) {
-      return 'Esiste già un workspace con questo nome';
+      return WorkspaceNameError.taken;
     }
     return null;
   }

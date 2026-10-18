@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 
 import '../data/draft_store.dart';
@@ -30,6 +32,11 @@ class AppState extends ChangeNotifier {
       }
       _repo ??= WorkspaceRepository(await _storage.root());
       await _repo!.root.create(recursive: true);
+      try {
+        await _repo!.migrateLegacyNames();
+      } on FileSystemException {
+        // Restano i vecchi nomi: le note si aprono lo stesso.
+      }
       workspaces = await _repo!.listWorkspaces();
       if (workspaces.isEmpty) {
         currentWorkspace = null;
@@ -94,12 +101,12 @@ class AppState extends ChangeNotifier {
     _set(AppStatus.ready);
   }
 
-  String? validateNewName(String name) =>
+  WorkspaceNameError? validateNewName(String name) =>
       WorkspaceRepository.validateName(name, workspaces);
 
   /// Come [validateNewName], ma il workspace [oldName] può tenere il suo nome
   /// (o cambiarne solo maiuscole e minuscole).
-  String? validateRename(String oldName, String name) =>
+  WorkspaceNameError? validateRename(String oldName, String name) =>
       WorkspaceRepository.validateName(name, [
         for (final w in workspaces)
           if (w != oldName) w,

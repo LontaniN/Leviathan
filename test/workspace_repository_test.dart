@@ -47,7 +47,10 @@ void main() {
 
     expect(await repo.renameWorkspace('Lavoro', ' Ufficio '), 'Ufficio');
     expect(await repo.listWorkspaces(), ['Ufficio']);
-    expect(File('${repo.workspaceDir('Ufficio').path}/a.md').existsSync(), true);
+    expect(
+      File('${repo.workspaceDir('Ufficio').path}/a.md').existsSync(),
+      true,
+    );
     expect(repo.trashDir('Ufficio').existsSync(), true);
     expect(repo.trashDir('Lavoro').existsSync(), false);
     expect(repo.graphLayoutFile('Ufficio').existsSync(), true);
@@ -77,11 +80,32 @@ void main() {
 
     final moved = await repo.deleteWorkspace('Lavoro');
     expect(await repo.listWorkspaces(), ['Studio']);
-    expect(File('${moved.path}/note/a.md').existsSync(), true);
-    expect(Directory('${moved.path}/cestino').existsSync(), true);
-    expect(File('${moved.path}/grafo.json').existsSync(), true);
+    expect(moved.parent.path, endsWith('deleted'));
+    expect(File('${moved.path}/notes/a.md').existsSync(), true);
+    expect(Directory('${moved.path}/trash').existsSync(), true);
+    expect(File('${moved.path}/graph.json').existsSync(), true);
     expect(repo.trashDir('Lavoro').existsSync(), false);
     expect(layout.existsSync(), false);
+  });
+
+  test('porta ai nomi inglesi gli eliminati delle prime versioni', () async {
+    final old = '${root.path}/.leviathan/eliminati/Vecchio 2026-10-01';
+    await File('$old/note/a.md').create(recursive: true);
+    await Directory('$old/cestino').create();
+    await File('$old/grafo.json').writeAsString('{}');
+    await File('$old/bozza.json').writeAsString('{}');
+
+    await repo.migrateLegacyNames();
+
+    final moved = '${root.path}/.leviathan/deleted/Vecchio 2026-10-01';
+    expect(File('$moved/notes/a.md').existsSync(), true);
+    expect(Directory('$moved/trash').existsSync(), true);
+    expect(File('$moved/graph.json').existsSync(), true);
+    expect(File('$moved/draft.json').existsSync(), true);
+    expect(Directory('${root.path}/.leviathan/eliminati').existsSync(), false);
+    // Una seconda volta non c'è più niente da fare.
+    await repo.migrateLegacyNames();
+    expect(File('$moved/notes/a.md').existsSync(), true);
   });
 
   test('ricorda l\'ultimo workspace usato', () async {
@@ -91,13 +115,16 @@ void main() {
   });
 
   test('validazione dei nomi', () {
-    String? v(String name) => WorkspaceRepository.validateName(name, []);
+    WorkspaceNameError? v(String name) =>
+        WorkspaceRepository.validateName(name, ['Studio']);
     expect(v('Lavoro'), isNull);
     expect(v('Hobby e progetti 2026'), isNull);
-    expect(v('   '), isNotNull);
-    expect(v('.nascosto'), isNotNull);
-    expect(v('a/b'), isNotNull);
-    expect(v('a:b'), isNotNull);
-    expect(v('x' * 61), isNotNull);
+    expect(v('   '), WorkspaceNameError.empty);
+    expect(v('.nascosto'), WorkspaceNameError.leadingDot);
+    expect(v('fine.'), WorkspaceNameError.trailingDot);
+    expect(v('a/b'), WorkspaceNameError.invalidChars);
+    expect(v('a:b'), WorkspaceNameError.invalidChars);
+    expect(v('x' * 61), WorkspaceNameError.tooLong);
+    expect(v('studio'), WorkspaceNameError.taken);
   });
 }

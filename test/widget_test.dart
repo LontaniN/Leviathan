@@ -26,6 +26,13 @@ class _FakeStorage implements StorageAccess {
   Future<Directory> root() async => dir;
 }
 
+/// L'app in italiano, come se la lingua fosse già stata scelta: la maggior
+/// parte dei test controlla i testi italiani.
+LeviathanApp _app(AppState state) => LeviathanApp(
+  state: state,
+  settings: Settings(language: 'it'),
+);
+
 void main() {
   late Directory root;
 
@@ -47,7 +54,7 @@ void main() {
   }
 
   testWidgets('primo avvio: crea il workspace e lo apre', (tester) async {
-    await tester.pumpWidget(LeviathanApp(state: AppState(_FakeStorage(root))));
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
     await settle(tester);
 
     expect(find.text('Crea workspace'), findsOneWidget);
@@ -67,7 +74,7 @@ void main() {
       await repo.writeLastWorkspace('Lavoro');
     });
 
-    await tester.pumpWidget(LeviathanApp(state: AppState(_FakeStorage(root))));
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
     await settle(tester);
 
     expect(find.text('Lavoro'), findsOneWidget);
@@ -82,7 +89,7 @@ void main() {
       await repo.writeLastWorkspace('Lavoro');
     });
 
-    await tester.pumpWidget(LeviathanApp(state: AppState(_FakeStorage(root))));
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
     await settle(tester);
 
     await tester.tap(find.byKey(const Key('workspace-button')));
@@ -97,7 +104,7 @@ void main() {
 
   testWidgets('senza permesso mostra la richiesta di accesso', (tester) async {
     final storage = _FakeStorage(root, granted: false);
-    await tester.pumpWidget(LeviathanApp(state: AppState(storage)));
+    await tester.pumpWidget(_app(AppState(storage)));
     await settle(tester);
 
     expect(find.text('Concedi accesso'), findsOneWidget);
@@ -123,7 +130,7 @@ void main() {
       );
     });
 
-    await tester.pumpWidget(LeviathanApp(state: AppState(_FakeStorage(root))));
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
     await settle(tester);
     expect(find.text('Vecchia'), findsOneWidget);
 
@@ -196,7 +203,7 @@ void main() {
 
     final repo = WorkspaceRepository(root);
     await tester.runAsync(() => repo.createWorkspace('Studio'));
-    await tester.pumpWidget(LeviathanApp(state: AppState(_FakeStorage(root))));
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
     await settle(tester);
 
     await tester.tap(find.text('Task'));
@@ -249,7 +256,7 @@ void main() {
 
     final repo = WorkspaceRepository(root);
     await tester.runAsync(() => repo.createWorkspace('Studio'));
-    await tester.pumpWidget(LeviathanApp(state: AppState(_FakeStorage(root))));
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
     await settle(tester);
 
     // La barra compare scrivendo il corpo; un invio continua la checklist.
@@ -300,7 +307,7 @@ void main() {
         'sources: ["Anna"]\ntype: "task"\ndone: false\n---\n',
       );
     });
-    await tester.pumpWidget(LeviathanApp(state: AppState(_FakeStorage(root))));
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
     await settle(tester);
 
     await tester.tap(find.byKey(const Key('lists-button')));
@@ -326,7 +333,7 @@ void main() {
     await settle(tester);
     expect(find.text('1 TASK · 1 DA FARE'), findsOneWidget);
     expect(find.text('Esame'), findsOneWidget);
-    await tester.pageBack();
+    await tester.tap(find.byType(BackButton));
     await settle(tester);
 
     await tester.tap(find.text('Per fonte'));
@@ -353,7 +360,7 @@ void main() {
       write('3', 'Riunione luce', '["lavoro"]', '["Mario Rossi"]');
     });
 
-    await tester.pumpWidget(LeviathanApp(state: AppState(_FakeStorage(root))));
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
     await settle(tester);
     await tester.tap(find.byKey(const Key('search-button')));
     await settle(tester);
@@ -406,7 +413,7 @@ void main() {
       write('3', 'Risotto', '[]');
     });
 
-    await tester.pumpWidget(LeviathanApp(state: AppState(_FakeStorage(root))));
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
     await settle(tester);
     await tester.tap(find.byKey(const Key('graph-button')));
     await settle(tester);
@@ -424,7 +431,7 @@ void main() {
     expect(find.text('Risotto'), findsWidgets);
 
     // Chiudendo il grafo le posizioni vengono salvate.
-    await tester.pageBack();
+    await tester.tap(find.byType(BackButton));
     await settle(tester);
     expect(
       File('${root.path}/.leviathan/graph/Lavoro.json').existsSync(),
@@ -459,7 +466,7 @@ void main() {
       write('4', 'Chiamare Giulia', '["meteo"]', '["Giulia"]', task: true);
     });
 
-    await tester.pumpWidget(LeviathanApp(state: AppState(_FakeStorage(root))));
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
     await settle(tester);
     await tester.tap(find.byKey(const Key('lists-button')));
     await settle(tester);
@@ -488,7 +495,7 @@ void main() {
       find.text('Nessun risultato fra le note senza tag.'),
       findsOneWidget,
     );
-    await tester.pageBack();
+    await tester.tap(find.byType(BackButton));
     await settle(tester);
 
     // Per fonte: una nota con due fonti compare in entrambi i gruppi.
@@ -526,7 +533,7 @@ void main() {
     expect(find.text('Libro'), findsOneWidget);
     expect(find.text('Ricetta'), findsNothing);
     for (var i = 0; i < 3; i++) {
-      await tester.pageBack();
+      await tester.tap(find.byType(BackButton));
       await settle(tester);
     }
 
@@ -558,7 +565,7 @@ void main() {
       );
     });
 
-    await tester.pumpWidget(LeviathanApp(state: AppState(_FakeStorage(root))));
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
     await settle(tester);
     await tester.tap(find.byKey(const Key('calendar-button')));
     await settle(tester);
@@ -601,7 +608,7 @@ void main() {
         '---\ntitle: "Nuova"\ncreated: "2026-02-01T00:00:00.000"\n---\n',
       );
     });
-    await tester.pumpWidget(LeviathanApp(state: AppState(_FakeStorage(root))));
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
     await settle(tester);
     expect(find.text('FISSATE'), findsNothing);
     expect(
@@ -639,14 +646,14 @@ void main() {
         'created: "2025-01-01T00:00:00.000"\n---\n',
       );
     });
-    await tester.pumpWidget(LeviathanApp(state: AppState(_FakeStorage(root))));
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
     await settle(tester);
 
     // Senza fissate la schermata lo spiega.
     await tester.tap(find.byKey(const Key('pinned-button')));
     await settle(tester);
     expect(find.textContaining('Nessuna nota fissata'), findsOneWidget);
-    await tester.pageBack();
+    await tester.tap(find.byType(BackButton));
     await settle(tester);
 
     // Dal riquadro del tag, la puntina accanto alla nota la fissa.
@@ -661,7 +668,7 @@ void main() {
     await settle(tester);
     expect(tester.widget<IconButton>(pin).isSelected, isTrue);
     for (var i = 0; i < 2; i++) {
-      await tester.pageBack();
+      await tester.tap(find.byType(BackButton));
       await settle(tester);
     }
 
@@ -696,7 +703,7 @@ void main() {
         'Una frase di cinque parole.',
       );
     });
-    await tester.pumpWidget(LeviathanApp(state: AppState(_FakeStorage(root))));
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
     await settle(tester);
 
     await tester.tap(find.text('Idea'));
@@ -725,7 +732,7 @@ void main() {
     await tester.runAsync(
       () => WorkspaceRepository(root).createWorkspace('Lavoro'),
     );
-    await tester.pumpWidget(LeviathanApp(state: AppState(_FakeStorage(root))));
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
     await settle(tester);
 
     await tester.enterText(find.byKey(const Key('title-field')), 'A metà');
@@ -735,7 +742,7 @@ void main() {
 
     // L'app riparte da zero: il titolo è ancora nel campo.
     await tester.pumpWidget(const SizedBox());
-    await tester.pumpWidget(LeviathanApp(state: AppState(_FakeStorage(root))));
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
     await settle(tester);
     final title = tester.widget<TextField>(
       find.byKey(const Key('title-field')),
@@ -757,7 +764,7 @@ void main() {
       await repo.createWorkspace('Lavoro');
     });
     final file = File('${root.path}/preferences.json');
-    final settings = Settings(file: file);
+    final settings = Settings(file: file, language: 'it');
 
     await tester.pumpWidget(
       LeviathanApp(state: AppState(_FakeStorage(root)), settings: settings),
@@ -777,5 +784,77 @@ void main() {
     final context = tester.element(find.text('Impostazioni'));
     expect(Theme.of(context).brightness, Brightness.light);
     expect(file.readAsStringSync(), contains('"carta"'));
+  });
+
+  testWidgets('primo avvio: si sceglie la lingua dal menu a tendina', (
+    tester,
+  ) async {
+    final file = File('${root.path}/preferences.json');
+    final settings = Settings(file: file);
+    await tester.pumpWidget(
+      LeviathanApp(state: AppState(_FakeStorage(root)), settings: settings),
+    );
+    await settle(tester);
+
+    // Nei test la lingua del "telefono" è l'inglese.
+    expect(find.text('Choose your language'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('language-menu')));
+    await settle(tester);
+    await tester.tap(find.text('Italiano').last);
+    await settle(tester);
+    // La schermata si riscrive subito nella lingua scelta.
+    expect(find.text('Scegli la lingua'), findsOneWidget);
+    expect(settings.language, isNull);
+
+    await tester.tap(find.byKey(const Key('language-continue')));
+    await settle(tester);
+    expect(settings.language, 'it');
+    expect(file.readAsStringSync(), contains('"language":"it"'));
+    expect(find.text('Crea workspace'), findsOneWidget);
+  });
+
+  testWidgets('in inglese tutta la UI è in inglese', (tester) async {
+    final repo = WorkspaceRepository(root);
+    await tester.runAsync(() async {
+      await repo.createWorkspace('Work');
+    });
+    await tester.pumpWidget(
+      LeviathanApp(
+        state: AppState(_FakeStorage(root)),
+        settings: Settings(language: 'en'),
+      ),
+    );
+    await settle(tester);
+
+    expect(find.text('Recent'), findsOneWidget);
+    expect(find.text('Search notes'), findsOneWidget);
+    expect(find.text('Save note'), findsOneWidget);
+    expect(find.byKey(const Key('home-summary')), findsOneWidget);
+    expect(find.text('0 notes'), findsOneWidget);
+  });
+
+  testWidgets('cambia lingua dalle impostazioni', (tester) async {
+    final repo = WorkspaceRepository(root);
+    await tester.runAsync(() async {
+      await repo.createWorkspace('Lavoro');
+    });
+    final settings = Settings(language: 'en');
+    await tester.pumpWidget(
+      LeviathanApp(state: AppState(_FakeStorage(root)), settings: settings),
+    );
+    await settle(tester);
+
+    await tester.tap(find.byKey(const Key('settings-button')));
+    await settle(tester);
+    expect(find.text('Settings'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('settings-language')));
+    await settle(tester);
+    await tester.tap(find.text('Italiano').last);
+    await settle(tester);
+
+    expect(settings.language, 'it');
+    expect(find.text('Impostazioni'), findsOneWidget);
+    expect(find.text('Inchiostro'), findsOneWidget);
   });
 }

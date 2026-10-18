@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../l10n/l10n.dart';
 import '../model/dates.dart';
 import '../model/markdown.dart';
 import '../model/note.dart';
@@ -58,7 +59,7 @@ class NoteScreen extends StatelessWidget {
     // Il messenger è quello dell'app: l'avviso resta anche chiusa la nota.
     final messenger = ScaffoldMessenger.of(context);
     Navigator.pop(context);
-    deleteWithUndo(messenger, notes, note);
+    deleteWithUndo(messenger, context.l10n, notes, note);
   }
 
   Future<void> _copy(BuildContext context, Note note) async {
@@ -70,7 +71,7 @@ class NoteScreen extends StatelessWidget {
     );
     if (!context.mounted) return;
     ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Testo copiato')));
+        .showSnackBar(SnackBar(content: Text(context.l10n.textCopied)));
   }
 
   @override
@@ -82,12 +83,12 @@ class NoteScreen extends StatelessWidget {
         if (note == null) return const Scaffold();
         final readOnly = preview != null;
         final palette = context.palette;
-        final words = wordCount(note.body);
+        final l = context.l10n;
         final meta = [
-          formatDate(note.created),
+          formatDate(l, note.created),
           if (note.updated.isAfter(note.created))
-            'modificata ${formatDate(note.updated)}',
-          words == 1 ? '1 parola' : '$words parole',
+            l.editedOn(formatDate(l, note.updated)),
+          l.wordCount(wordCount(note.body)),
         ].join(' · ');
         return Scaffold(
           appBar: AppBar(
@@ -95,14 +96,14 @@ class NoteScreen extends StatelessWidget {
               if (!readOnly) ...[
                 IconButton(
                   key: const Key('pin-button'),
-                  tooltip: note.pinned ? 'Stacca dalla cima' : 'Fissa in cima',
+                  tooltip: note.pinned ? l.unpinFromTop : l.pinToTop,
                   isSelected: note.pinned,
                   icon: const Icon(Icons.push_pin_outlined),
                   selectedIcon: Icon(Icons.push_pin, color: palette.accent),
                   onPressed: () => notes.setPinned(note, !note.pinned),
                 ),
                 IconButton(
-                  tooltip: 'Modifica',
+                  tooltip: l.edit,
                   icon: const Icon(Icons.edit_outlined),
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
@@ -112,22 +113,22 @@ class NoteScreen extends StatelessWidget {
                 ),
                 PopupMenuButton<VoidCallback>(
                   key: const Key('note-menu'),
-                  tooltip: 'Altro',
+                  tooltip: l.more,
                   onSelected: (action) => action(),
                   itemBuilder: (_) => [
                     PopupMenuItem(
                       value: () => _copy(context, note),
-                      child: const ListTile(
-                        leading: Icon(Icons.copy_outlined),
-                        title: Text('Copia il testo'),
+                      child: ListTile(
+                        leading: const Icon(Icons.copy_outlined),
+                        title: Text(l.copyText),
                       ),
                     ),
                     PopupMenuItem(
                       key: const Key('delete-note'),
                       value: () => _delete(context, note),
-                      child: const ListTile(
-                        leading: Icon(Icons.delete_outline),
-                        title: Text('Sposta nel cestino'),
+                      child: ListTile(
+                        leading: const Icon(Icons.delete_outline),
+                        title: Text(l.moveToTrash),
                       ),
                     ),
                   ],
@@ -155,7 +156,7 @@ class NoteScreen extends StatelessWidget {
                     ),
                   ),
                 Text(
-                  note.displayTitle,
+                  note.displayTitle(l.untitled),
                   style: taskTitleStyle(context, note, LeviathanText.heading),
                 ),
                 const SizedBox(height: LeviathanSpacing.sm),
@@ -208,7 +209,7 @@ class NoteScreen extends StatelessWidget {
                 const Divider(height: LeviathanSpacing.xxxl),
                 if (note.body.trim().isEmpty)
                   Text(
-                    'Nessun testo.',
+                    l.noText,
                     style: LeviathanText.reading.copyWith(color: palette.muted),
                   )
                 else
@@ -238,12 +239,13 @@ class _TaskStatus extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final doneAt = note.doneAt;
     final label = !note.done
-        ? 'Da fare'
+        ? l.taskToDo
         : doneAt == null
-        ? 'Fatto'
-        : 'Fatto il ${formatDate(doneAt)}';
+        ? l.taskDone
+        : l.taskDoneOn(formatDate(l, doneAt));
     return Align(
       alignment: Alignment.centerLeft,
       child: InkWell(
@@ -285,12 +287,12 @@ class _EditNotePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Modifica nota')),
+      appBar: AppBar(title: Text(context.l10n.editNote)),
       body: NoteEditor(
         initial: note,
         tagCounts: notes.tagCounts,
         sourceCounts: notes.sourceCounts,
-        saveLabel: 'Salva modifiche',
+        saveLabel: context.l10n.saveChanges,
         onSave: (draft) {
           notes.update(
             note.copyWith(

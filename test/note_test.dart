@@ -133,7 +133,9 @@ void main() {
     test('file senza intestazione: tutto è corpo', () {
       final note = Note.fromMarkdown('z', 'Solo testo\nsu due righe', date);
       expect(note.body, 'Solo testo\nsu due righe');
-      expect(note.displayTitle, 'Solo testo');
+      expect(note.displayTitle('Senza titolo'), 'Solo testo');
+      final empty = Note.fromMarkdown('v', '', date);
+      expect(empty.displayTitle('Untitled'), 'Untitled');
     });
   });
 

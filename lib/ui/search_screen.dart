@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../model/dates.dart';
 import '../model/note.dart';
 import '../model/search.dart';
@@ -11,8 +12,8 @@ import 'task_check.dart';
 import 'theme.dart';
 
 /// Ricerca in stile Discord: si scrive il testo da cercare e si aggiungono
-/// filtri con `tag:` / `#`, `da:` / `@` e `stato:`. Testo e filtri sono
-/// facoltativi e si combinano liberamente.
+/// filtri con `tag:` / `#`, `da:` / `@` e `stato:` (in inglese `from:` e
+/// `status:`). Testo e filtri sono facoltativi e si combinano liberamente.
 class SearchScreen extends StatefulWidget {
   const SearchScreen({
     super.key,
@@ -125,7 +126,8 @@ class _SearchScreenState extends State<SearchScreen> {
       limit: 8,
     ),
     FilterKind.status => [
-      for (final f in TaskFilter.suggest(parsed.activeValue)) f.label,
+      for (final f in TaskFilter.suggest(parsed.activeValue))
+        taskFilterName(context.l10n, f),
     ],
     null => const [],
   };
@@ -133,7 +135,9 @@ class _SearchScreenState extends State<SearchScreen> {
   /// Quante note corrispondono a ogni filtro di stato.
   Map<String, int> get _statusCounts => {
     for (final f in TaskFilter.values)
-      f.label: widget.notes.notes.where(f.matches).length,
+      taskFilterName(context.l10n, f): widget.notes.notes
+          .where(f.matches)
+          .length,
   };
 
   void _submit(SearchInput parsed) {
@@ -328,11 +332,11 @@ class _SearchBar extends StatelessWidget {
                             focusNode: focus,
                             autocorrect: false,
                             textInputAction: TextInputAction.search,
-                            decoration: const InputDecoration(
-                              hintText: 'Cerca, oppure tag: / da:',
+                            decoration: InputDecoration(
+                              hintText: context.l10n.searchFieldHint,
                               filled: false,
                               border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(
+                              contentPadding: const EdgeInsets.symmetric(
                                 horizontal: LeviathanSpacing.sm,
                                 vertical: LeviathanSpacing.md,
                               ),
@@ -342,7 +346,7 @@ class _SearchBar extends StatelessWidget {
                         ),
                         if (onClear != null)
                           IconButton(
-                            tooltip: 'Svuota',
+                            tooltip: context.l10n.clear,
                             icon: const Icon(
                               Icons.close,
                               size: LeviathanIconSize.md,
@@ -384,6 +388,7 @@ class _FilterOptions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final tags = Tags.suggest('', tagCounts, limit: _frequent);
     final sources = Sources.suggest('', sourceCounts, limit: _frequent);
     Widget chips(List<Widget> children) => Padding(
@@ -403,7 +408,7 @@ class _FilterOptions extends StatelessWidget {
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       children: [
         if (tags.isNotEmpty) ...[
-          const SectionTitle('Tag frequenti'),
+          SectionTitle(l.frequentTags),
           chips([
             for (final t in tags)
               ActionChip(
@@ -419,7 +424,7 @@ class _FilterOptions extends StatelessWidget {
           ]),
         ],
         if (sources.isNotEmpty) ...[
-          const SectionTitle('Fonti frequenti'),
+          SectionTitle(l.frequentSources),
           chips([
             for (final s in sources)
               ActionChip(
@@ -434,7 +439,7 @@ class _FilterOptions extends StatelessWidget {
               ),
           ]),
         ],
-        const SectionTitle('Filtri di ricerca'),
+        SectionTitle(l.searchFilters),
         ListTile(
           leading: const Icon(Icons.sell_outlined),
           title: Text.rich(
@@ -445,13 +450,13 @@ class _FilterOptions extends StatelessWidget {
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 TextSpan(
-                  text: 'note con un tag',
+                  text: l.filterTagHelp,
                   style: TextStyle(color: context.palette.muted),
                 ),
               ],
             ),
           ),
-          subtitle: const Text('scorciatoia: #'),
+          subtitle: Text(l.shortcut('#')),
           onTap: () => onPick('tag:'),
         ),
         ListTile(
@@ -460,18 +465,18 @@ class _FilterOptions extends StatelessWidget {
             TextSpan(
               children: [
                 TextSpan(
-                  text: 'da: ',
+                  text: '${l.sourceMarker} ',
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 TextSpan(
-                  text: 'note da una fonte (persona)',
+                  text: l.filterSourceHelp,
                   style: TextStyle(color: context.palette.muted),
                 ),
               ],
             ),
           ),
-          subtitle: const Text('scorciatoia: @'),
-          onTap: () => onPick('da:'),
+          subtitle: Text(l.shortcut('@')),
+          onTap: () => onPick(l.sourceMarker),
         ),
         ListTile(
           leading: const Icon(Icons.check_box_outlined),
@@ -479,18 +484,27 @@ class _FilterOptions extends StatelessWidget {
             TextSpan(
               children: [
                 TextSpan(
-                  text: 'stato: ',
+                  text: '${l.statusMarker} ',
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 TextSpan(
-                  text: 'task da fare o fatti',
+                  text: l.filterStatusHelp,
                   style: TextStyle(color: context.palette.muted),
                 ),
               ],
             ),
           ),
-          subtitle: const Text('aperto · fatto · task'),
-          onTap: () => onPick('stato:'),
+          subtitle: Text(
+            [
+              for (final f in [
+                TaskFilter.aperto,
+                TaskFilter.fatto,
+                TaskFilter.task,
+              ])
+                taskFilterName(l, f),
+            ].join(' · '),
+          ),
+          onTap: () => onPick(l.statusMarker),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(
@@ -500,9 +514,7 @@ class _FilterOptions extends StatelessWidget {
             0,
           ),
           child: Text(
-            'Testo e filtri si combinano: per esempio '
-            '"esposizione tag:fotografia da:Mario Rossi" oppure '
-            '"stato:aperto tag:università".',
+            l.searchExample,
             style: LeviathanText.body.copyWith(color: context.palette.muted),
           ),
         ),
@@ -540,20 +552,21 @@ class _FilterSuggestions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     return ListView(
       children: [
         SectionTitle(switch (kind) {
-          FilterKind.tag => 'Tag',
-          FilterKind.source => 'Fonti',
-          FilterKind.status => 'Stato dei task',
+          FilterKind.tag => l.tags,
+          FilterKind.source => l.sources,
+          FilterKind.status => l.taskStatus,
         }),
         if (values.isEmpty)
           Padding(
             padding: const EdgeInsets.all(LeviathanSpacing.lg),
             child: Text(switch (kind) {
-              FilterKind.tag => 'Nessun tag corrispondente',
-              FilterKind.source => 'Nessuna fonte corrispondente',
-              FilterKind.status => 'Scrivi aperto, fatto o task',
+              FilterKind.tag => l.noMatchingTag,
+              FilterKind.source => l.noMatchingSource,
+              FilterKind.status => l.statusTypeHelp,
             }, style: TextStyle(color: context.palette.muted)),
           ),
         for (final value in values)
@@ -574,7 +587,11 @@ class _FilterSuggestions extends StatelessWidget {
             },
             title: Text(value),
             subtitle: kind == FilterKind.status
-                ? Text(TaskFilter.parse(value)!.description)
+                ? Text(switch (TaskFilter.parse(value)!) {
+                    TaskFilter.task => l.statusTaskHelp,
+                    TaskFilter.aperto => l.statusOpenHelp,
+                    TaskFilter.fatto => l.statusDoneHelp,
+                  })
                 : null,
             trailing: Text(
               '${counts[value] ?? 0}',
@@ -614,7 +631,7 @@ class _Results extends StatelessWidget {
             ),
             const SizedBox(height: LeviathanSpacing.md),
             Text(
-              'Nessuna nota trovata',
+              context.l10n.noNotesFound,
               style: TextStyle(color: context.palette.muted),
             ),
           ],
@@ -627,9 +644,7 @@ class _Results extends StatelessWidget {
       itemCount: hits.length + 1,
       itemBuilder: (context, i) {
         if (i == 0) {
-          return SectionTitle(
-            hits.length == 1 ? '1 risultato' : '${hits.length} risultati',
-          );
+          return SectionTitle(context.l10n.resultCount(hits.length));
         }
         final hit = hits[i - 1];
         return NoteResultTile(
@@ -675,6 +690,7 @@ class NoteResultTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final note = hit.note;
     final palette = context.palette;
+    final l = context.l10n;
     final tile = InkWell(
       onTap: () => onTap(note),
       child: Padding(
@@ -699,7 +715,7 @@ class NoteResultTile extends StatelessWidget {
                   ),
                 Expanded(
                   child: HighlightText(
-                    note.displayTitle,
+                    note.displayTitle(l.untitled),
                     terms: terms,
                     maxLines: 1,
                     style: taskTitleStyle(context, note, LeviathanText.title),
@@ -707,15 +723,13 @@ class NoteResultTile extends StatelessWidget {
                 ),
                 const SizedBox(width: LeviathanSpacing.sm),
                 Text(
-                  dateLabel ?? formatDate(note.created),
+                  dateLabel ?? formatDate(l, note.created),
                   style: LeviathanText.meta.copyWith(color: palette.muted),
                 ),
                 if (onTogglePin != null)
                   IconButton(
                     key: Key('pin-${note.id}'),
-                    tooltip: note.pinned
-                        ? 'Stacca dalla cima'
-                        : 'Fissa in cima',
+                    tooltip: note.pinned ? l.unpinFromTop : l.pinToTop,
                     visualDensity: VisualDensity.compact,
                     iconSize: LeviathanIconSize.md,
                     isSelected: note.pinned,

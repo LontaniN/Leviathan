@@ -1,17 +1,244 @@
-# leviathan
+# Leviathan
 
-Second brain personale: note, tag e grafo
+A personal "second brain" for Android: notes, tasks and study notes
+organized with tags, stored as plain Markdown files on the phone.
 
-## Getting Started
+Leviathan is meant to be simple and predictable: no AI, no cloud, no
+accounts. Notes are `.md` files in a folder on the phone, readable by any
+editor (Obsidian included).
 
-This project is a starting point for a Flutter application.
+Built with Flutter, developed and tested on a Pixel 9a. The interface is
+available in English and Italian.
 
-A few resources to get you started if this is your first Flutter project:
+---
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+## Features
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### Workspaces
+
+- Each **workspace** is a separate collection of notes (e.g. "University",
+  "Personal"). On first launch you name the first one.
+- The app reopens the last workspace you used.
+- Tapping the workspace name at the top lets you switch to another one,
+  create a new one, rename or delete it.
+- Deleting a workspace never erases anything: notes, trash and drafts are
+  moved to `.leviathan/deleted/`.
+
+### Home: writing and finding recent notes
+
+- **Recent notes on the left**, newest first, grouped by day or month. Each
+  note has a small bar in the color of its first tag.
+- The **arrow** at the top of the column expands it to full width, showing
+  a preview, tags and date for each note.
+- **The editor on the right** for a new note: large title and body, with
+  tags and sources below. While typing with the keyboard open, the secondary
+  fields slide away to leave room for the text.
+- The note you just saved briefly glows in the list instead of showing a
+  toast.
+- **Automatic draft**: whatever you're writing is kept aside; if Android
+  kills the app, the text is still there when you reopen it.
+- Long-pressing a note in the list: pin it to the top, check off the task,
+  move it to the trash.
+
+### Tags and sources
+
+- **Tags** are the main way to organize notes. Unlimited per note, with
+  **autocomplete** on tags already in use (tolerant of case, accents and
+  small typos). They are normalized: `Machine Learning` → `machine-learning`.
+- Each tag has a **stable color**; a note takes the color of its first tag,
+  everywhere in the app and in the graph.
+- **Sources** are a second way to categorize, usually people ("who told me
+  this"). They keep capitalization and spaces (`Mario Rossi`) and have no
+  color.
+- Tags and sources sit in a horizontally scrolling row: the chosen ones
+  first, then suggestions (the most used, or the closest to what you type).
+
+### Notes and tasks
+
+- A toggle in the editor turns a note into a **task** to check off; tags and
+  sources stay.
+- Completed tasks are shown struck through and dimmed, with the date they
+  were done.
+- **Full-screen reading**: tapping a note opens it with its first tag as a
+  kicker above the title; from there you can edit, pin, copy the text or
+  move it to the trash. Tapping a tag or source opens its own screen.
+
+### Markdown
+
+- The body is Markdown: headings, bold, italic, lists, quotes, code.
+- A **formatting bar** above the keyboard inserts the syntax; pressing enter
+  in a list continues it.
+- **Checklists** `- [ ]` can be checked directly while reading.
+
+### Search
+
+- Discord-style search: free text plus filters, combined with AND.
+  - `tag:` or `#` → filter by tag
+  - `from:` or `@` → filter by source (may contain spaces:
+    `from:Mario Rossi`)
+  - `status:open` / `status:done` / `status:task` → open tasks / done tasks /
+    all tasks
+  - The Italian keywords (`da:`, `stato:aperto`, `stato:fatto`) work too,
+    whatever the interface language.
+- Searches title, body, tags and sources, ignoring case and accents. Title
+  matches rank higher; ties go to the most recent note.
+- Matching words are highlighted in the snippet.
+- With an empty query it shows the most used tags and sources, which become
+  filters with a tap.
+
+### Tasks and notes by tag or source
+
+- One screen with all **tasks** or all **notes**, grouped **by tag** or **by
+  source**: one tile per group, with a count and the most recent titles.
+- For tasks you can show all of them, only open ones or only completed ones.
+- Tapping a tile opens the list for that tag or source, with a search scoped
+  to it.
+
+### Calendar
+
+- One cell per day (or per month) showing the **most used tags** in that
+  period and how many notes use them.
+- Scrolls toward the past and the future; tapping a cell shows all its tags
+  and the notes written in that period.
+- The magnifier searches the calendar: only days with matching notes remain,
+  each with a preview of the matching text.
+
+### Graph
+
+- Each **note is a node**, colored by its first tag; notes sharing tags are
+  linked and cluster together (the more tags in common, the stronger the
+  pull). Tags are not nodes and sources don't create links.
+- Pinch to zoom, drag to pan or move a node. One tap selects a note, a
+  second tap opens it.
+- Filters by tag and source; completed tasks are faded.
+- Node positions are saved. The simulation (d3-force style, with
+  Barnes-Hut) stops on its own once the graph settles, to save battery.
+
+### Pinned notes
+
+- Frequently used notes can be pinned to the top of the recent list.
+- A dedicated screen collects them all, with "Undo" if you unpin one by
+  mistake.
+
+### Trash
+
+- Deleted notes are never erased: they go to
+  `.leviathan/trash/<workspace>/`, and the snackbar lets you undo.
+
+### Language and appearance
+
+- **English or Italian**: chosen from a drop-down menu on first launch
+  (pre-selected from the phone's language) and changeable any time in the
+  settings.
+- Several **palettes** to choose from in the settings, each with a preview
+  of the home screen: Ink (the default, pure black for OLED screens), Sepia,
+  Slate, Graphite, Abyss, Ember, Moss, Amethyst and the light Paper.
+
+---
+
+## Workflow
+
+### 1. Capture
+
+On first launch, pick the language and name your first workspace. Then open
+the app and write straight into the home editor: a title (or just the
+body), then **tags** and, if useful, a **source**. If it's something to do,
+pick **Task** at the top of the editor. Hit *Save* and the note appears at
+the top of the recent list.
+
+If you get interrupted, the draft is still there when you come back.
+
+### 2. Organize
+
+There are no folders and no links between notes: **everything goes through
+tags**. Reusing the tags suggested by autocomplete keeps similar notes in the
+same group, with the same color and close together in the graph. Sources
+help you remember who or where a piece of information came from.
+
+Notes you come back to often can be **pinned** to the top.
+
+### 3. Find
+
+The main way in is **search**: a few words, optionally with `#tag`,
+`@source` or `status:open` to narrow it down. Alternatively:
+
+- **Tasks and notes** to browse a whole tag, or everything from one person;
+- the **calendar** to find a note by remembering *when* you wrote it;
+- the **graph** to see how topics cluster.
+
+### 4. Complete tasks
+
+Tasks can be checked off from the list, the reading view or search results.
+The Tasks screen shows how many are still open for each tag; `status:done`
+finds what you've already done.
+
+### 5. Your data
+
+Each workspace is a folder and each note a Markdown file with a frontmatter
+header:
+
+```
+Documents/LeviathanNotes/
+├── University/
+│   ├── 20261017-140512-limiti-notevoli.md
+│   └── …
+├── Personal/
+└── .leviathan/          ← trash, drafts, graph layout, settings
+```
+
+```markdown
+---
+title: "Limiti notevoli"
+tags: ["analisi", "esame"]
+sources: ["Prof. Rossi"]
+created: "2026-10-17T14:05:12.000"
+updated: "2026-10-17T14:05:12.000"
+---
+Note body in **Markdown**…
+```
+
+Tasks also have `type: "task"`, `done` and `done_at`; pinned notes have
+`pinned: true`. Files can be copied, synced or edited by hand: Leviathan
+also reads files written without a header.
+
+---
+
+## Building and development
+
+Requires [Flutter](https://docs.flutter.dev/get-started/install) (Dart SDK
+`^3.13`).
+
+```bash
+flutter pub get
+flutter run
+```
+
+On Android the app asks for the **"All files access"** permission: it's
+needed to store notes in `Documents/LeviathanNotes`, where they survive
+uninstalling the app. On Windows notes live in `Documents/LeviathanNotes`
+and no permission is needed.
+
+```bash
+flutter test
+```
+
+Code comments are in Italian. Interface text lives in ARB files, one per
+language (`lib/l10n/app_en.arb` is the template); the Dart classes are
+generated by `flutter gen-l10n`, which also runs on `flutter pub get`. To add
+a language, add `app_<code>.arb` with the same keys and list it in
+`appLanguages` in `lib/l10n/l10n.dart`.
+
+Project layout:
+
+| Folder        | Contents                                                   |
+|---------------|------------------------------------------------------------|
+| `lib/l10n`    | Interface text: `app_en.arb`, `app_it.arb` (gen-l10n)       |
+| `lib/model`   | Notes, tags, search, Markdown, calendar, graph (pure logic) |
+| `lib/data`    | Reading and writing notes, workspaces, drafts, graph layout |
+| `lib/state`   | App state and preferences                                  |
+| `lib/graph`   | Physics simulation and graph rendering                     |
+| `lib/ui`      | Screens and widgets; all visual values live in `theme.dart` |
+| `test`        | Unit and widget tests                                      |
+
+Planned features (receiving from the Android share sheet, backup and export,
+tag management, …) are listed in [ROADMAP.md](ROADMAP.md) (in Italian).

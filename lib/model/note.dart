@@ -95,11 +95,12 @@ class Note {
     );
   }
 
-  /// Il titolo, oppure l'inizio del corpo se il titolo è vuoto.
-  String get displayTitle {
+  /// Il titolo, oppure l'inizio del corpo se il titolo è vuoto; [untitled]
+  /// se non c'è nemmeno quello.
+  String displayTitle(String untitled) {
     if (title.trim().isNotEmpty) return title.trim();
     final firstLine = plainText(body.trim().split('\n').first).trim();
-    if (firstLine.isEmpty) return 'Senza titolo';
+    if (firstLine.isEmpty) return untitled;
     return firstLine.length > 60 ? '${firstLine.substring(0, 60)}…' : firstLine;
   }
 

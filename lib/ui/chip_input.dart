@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../model/search.dart';
 import '../model/tags.dart';
 import 'theme.dart';
@@ -57,6 +58,14 @@ class SourceChip extends StatelessWidget {
   }
 }
 
+/// Il nome di un filtro sullo stato dei task, nella lingua dell'interfaccia.
+String taskFilterName(AppLocalizations l, TaskFilter filter) =>
+    switch (filter) {
+      TaskFilter.task => l.statusTask,
+      TaskFilter.aperto => l.statusOpen,
+      TaskFilter.fatto => l.statusDone,
+    };
+
 /// Casella + stato: il filtro `stato:` della ricerca.
 class StatusChip extends StatelessWidget {
   const StatusChip(this.filter, {super.key, this.onDeleted});
@@ -68,7 +77,7 @@ class StatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = context.palette.accent;
     return _BaseChip(
-      label: filter.label,
+      label: taskFilterName(context.l10n, filter),
       avatar: Icon(
         Icons.check_box_outlined,
         size: LeviathanIconSize.sm,
@@ -134,7 +143,7 @@ class ChipKind {
     required this.suggestionAvatar,
   });
 
-  final String hint;
+  final String Function(AppLocalizations l) hint;
   final IconData icon;
 
   /// Trasforma il testo scritto nella voce da salvare ('' = scarta).
@@ -162,7 +171,7 @@ class ChipKind {
   }
 
   static final tags = ChipKind(
-    hint: 'Aggiungi tag',
+    hint: (l) => l.addTags,
     icon: Icons.sell_outlined,
     canonical: (raw, _) => Tags.normalize(raw),
     suggest: (input, counts, exclude, limit) =>
@@ -175,7 +184,7 @@ class ChipKind {
   );
 
   static final sources = ChipKind(
-    hint: 'Aggiungi fonti (es. persone)',
+    hint: (l) => l.addSources,
     icon: Icons.person_outline,
     canonical: Sources.canonical,
     suggest: (input, counts, exclude, limit) =>
@@ -312,10 +321,10 @@ class _ChipInputState extends State<ChipInput> {
           autocorrect: false,
           enableSuggestions: false,
           decoration: InputDecoration(
-            hintText: kind.hint,
+            hintText: kind.hint(context.l10n),
             prefixIcon: Icon(kind.icon, size: LeviathanIconSize.md),
             helperText: typed.isNotEmpty && typed != text.trim()
-                ? 'Verrà salvato come: $typed'
+                ? context.l10n.savedAs(typed)
                 : null,
           ),
           onSubmitted: (value) {

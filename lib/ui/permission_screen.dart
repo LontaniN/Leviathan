@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../state/app_state.dart';
 import 'theme.dart';
 
@@ -12,6 +13,7 @@ class PermissionScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final l = context.l10n;
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -27,23 +29,20 @@ class PermissionScreen extends StatelessWidget {
               ),
               const SizedBox(height: LeviathanSpacing.xl),
               Text(
-                'Accesso ai file',
+                l.permissionTitle,
                 style: text.headlineSmall,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: LeviathanSpacing.md),
               Text(
-                'Le note vengono salvate come file nella cartella '
-                'Documents/LeviathanNotes del telefono, così restano tue '
-                'anche se disinstalli l\'app. Per scriverci, Android chiede '
-                'il permesso "Accesso a tutti i file".',
+                l.permissionBody,
                 style: text.bodyLarge?.copyWith(color: context.palette.muted),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: LeviathanSpacing.xxl),
               FilledButton(
                 onPressed: state.requestPermission,
-                child: const Text('Concedi accesso'),
+                child: Text(l.permissionGrant),
               ),
             ],
           ),

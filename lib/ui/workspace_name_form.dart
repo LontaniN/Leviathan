@@ -1,23 +1,27 @@
 import 'package:flutter/material.dart';
 
+import '../data/workspace_repository.dart';
+import '../l10n/l10n.dart';
 import 'theme.dart';
 
 /// Campo + pulsante per dare un nome a un workspace, nuovo o da rinominare.
 ///
-/// [validate] restituisce un messaggio d'errore o null; [onSubmit] riceve il
-/// nome già controllato. [initialName] precompila il campo, tutto selezionato.
+/// [validate] restituisce l'errore o null; [onSubmit] riceve il nome già
+/// controllato e può lanciare [ArgumentError] con un [WorkspaceNameError] o
+/// un messaggio. [initialName] precompila il campo, tutto selezionato. Senza
+/// [buttonLabel] il pulsante dice "Crea".
 class WorkspaceNameForm extends StatefulWidget {
   const WorkspaceNameForm({
     super.key,
     required this.validate,
     required this.onSubmit,
-    this.buttonLabel = 'Crea',
+    this.buttonLabel,
     this.initialName = '',
   });
 
-  final String? Function(String name) validate;
+  final WorkspaceNameError? Function(String name) validate;
   final Future<void> Function(String name) onSubmit;
-  final String buttonLabel;
+  final String? buttonLabel;
   final String initialName;
 
   @override
@@ -42,16 +46,38 @@ class _WorkspaceNameFormState extends State<WorkspaceNameForm> {
   Future<void> _submit() async {
     final name = _controller.text.trim();
     final error = widget.validate(name);
-    setState(() => _error = error);
+    setState(() => _error = error == null ? null : _message(error));
     if (error != null || _busy) return;
     setState(() => _busy = true);
     try {
       await widget.onSubmit(name);
     } on ArgumentError catch (e) {
-      if (mounted) setState(() => _error = '${e.message}');
+      if (!mounted) return;
+      final message = e.message;
+      setState(
+        () => _error = message is WorkspaceNameError
+            ? _message(message)
+            : '$message',
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  String _message(WorkspaceNameError error) {
+    final l = context.l10n;
+    return switch (error) {
+      WorkspaceNameError.empty => l.workspaceNameEmpty,
+      WorkspaceNameError.tooLong => l.workspaceNameTooLong(
+        WorkspaceRepository.maxNameLength,
+      ),
+      WorkspaceNameError.leadingDot => l.workspaceNameLeadingDot,
+      WorkspaceNameError.trailingDot => l.workspaceNameTrailingDot,
+      WorkspaceNameError.invalidChars => l.workspaceNameInvalidChars(
+        WorkspaceRepository.invalidChars,
+      ),
+      WorkspaceNameError.taken => l.workspaceNameTaken,
+    };
   }
 
   @override
@@ -66,7 +92,7 @@ class _WorkspaceNameFormState extends State<WorkspaceNameForm> {
           textCapitalization: TextCapitalization.sentences,
           textInputAction: TextInputAction.done,
           decoration: InputDecoration(
-            hintText: 'es. Lavoro, Fotografia, Studio…',
+            hintText: context.l10n.workspaceNameHint,
             errorText: _error,
           ),
           onChanged: (_) {
@@ -77,7 +103,7 @@ class _WorkspaceNameFormState extends State<WorkspaceNameForm> {
         const SizedBox(height: LeviathanSpacing.lg),
         FilledButton(
           onPressed: _busy ? null : _submit,
-          child: Text(widget.buttonLabel),
+          child: Text(widget.buttonLabel ?? context.l10n.create),
         ),
       ],
     );

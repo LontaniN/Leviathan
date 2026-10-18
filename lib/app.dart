@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import 'l10n/l10n.dart';
 import 'state/app_state.dart';
 import 'state/settings.dart';
 import 'ui/home_screen.dart';
+import 'ui/language_screen.dart';
 import 'ui/onboarding_screen.dart';
 import 'ui/permission_screen.dart';
 import 'ui/theme.dart';
@@ -45,12 +47,21 @@ class _LeviathanAppState extends State<LeviathanApp>
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: widget.settings,
-      builder: (context, home) => MaterialApp(
-        title: 'Leviathan',
-        debugShowCheckedModeBanner: false,
-        theme: buildTheme(widget.settings.palette),
-        home: home,
-      ),
+      builder: (context, home) {
+        final language = widget.settings.language;
+        return MaterialApp(
+          title: 'Leviathan',
+          debugShowCheckedModeBanner: false,
+          theme: buildTheme(widget.settings.palette),
+          locale: Locale(language ?? deviceLanguage()),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          // Al primo avvio, prima di tutto, si sceglie la lingua.
+          home: language == null
+              ? LanguageScreen(settings: widget.settings)
+              : home,
+        );
+      },
       child: ListenableBuilder(
         listenable: widget.state,
         builder: (context, _) {
@@ -71,7 +82,9 @@ class _LeviathanAppState extends State<LeviathanApp>
               body: Center(
                 child: Padding(
                   padding: const EdgeInsets.all(LeviathanSpacing.xxl),
-                  child: Text('Errore: ${state.errorMessage}'),
+                  child: Text(
+                    context.l10n.errorMessage('${state.errorMessage}'),
+                  ),
                 ),
               ),
             ),

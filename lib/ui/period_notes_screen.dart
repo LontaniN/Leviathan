@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
+import '../model/dates.dart';
 import '../model/markdown.dart';
 import '../model/note.dart';
 import '../model/search.dart';
@@ -55,6 +57,7 @@ class PeriodNotesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final demo = demoNotes;
     final singleDay = to.difference(from).inHours <= 25;
+    final l = context.l10n;
     return ListenableBuilder(
       listenable: notes,
       builder: (context, _) {
@@ -79,10 +82,7 @@ class PeriodNotesScreen extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.all(LeviathanSpacing.xxl),
                     child: Text(
-                      search.isEmpty
-                          ? 'Nessuna nota in questo periodo.'
-                          : 'Nessuna nota di questo periodo contiene '
-                                '"$query".',
+                      search.isEmpty ? l.periodEmpty : l.periodNoMatch(query),
                       textAlign: TextAlign.center,
                       style: TextStyle(color: context.palette.muted),
                     ),
@@ -93,10 +93,11 @@ class PeriodNotesScreen extends StatelessWidget {
                   itemCount: hits.length + 1,
                   itemBuilder: (context, i) {
                     if (i == 0) {
-                      final n = hits.length;
                       return SectionTitle(
-                        '${n == 1 ? '1 nota' : '$n note'}'
-                        '${demo != null ? ' · dati di prova' : ''}',
+                        [
+                          l.noteCount(hits.length),
+                          if (demo != null) l.sampleDataShort,
+                        ].join(' · '),
                       );
                     }
                     final hit = hits[i - 1];
@@ -108,7 +109,7 @@ class PeriodNotesScreen extends StatelessWidget {
                       onToggleDone: demo != null ? null : notes.setDone,
                       // In un giorno solo la data è sempre la stessa: meglio
                       // l'ora.
-                      dateLabel: singleDay ? _formatTime(note.created) : null,
+                      dateLabel: singleDay ? formatTime(note.created) : null,
                       divider: i < hits.length,
                     );
                   },
@@ -118,6 +119,3 @@ class PeriodNotesScreen extends StatelessWidget {
     );
   }
 }
-
-String _formatTime(DateTime t) =>
-    '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';

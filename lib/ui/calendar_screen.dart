@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
+import '../model/dates.dart';
 import '../model/demo_notes.dart';
 import '../model/note.dart';
 import '../model/search.dart';
@@ -13,15 +15,6 @@ import 'theme.dart';
 
 /// Come mostrare il calendario: una casella per giorno o per mese.
 enum CalendarMode { days, months }
-
-const _monthNames = [
-  'gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', //
-  'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre',
-];
-
-const _weekdayInitials = ['L', 'M', 'M', 'G', 'V', 'S', 'D'];
-
-String _capitalized(String s) => '${s[0].toUpperCase()}${s.substring(1)}';
 
 /// Calendario a caselle: in ogni giorno (o mese) i tag più usati, con
 /// accanto quante note li usano. Si scorre in su verso il passato e in giù
@@ -109,6 +102,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       listenable: widget.notes,
       builder: (context, _) {
         final notes = _demo ? _demoNotes : widget.notes.notes;
+        final l = context.l10n;
         final query = SearchQuery(text: _query.text);
         final searching = query.terms.isNotEmpty;
         return Scaffold(
@@ -121,33 +115,33 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     autofocus: true,
                     autocorrect: false,
                     textInputAction: TextInputAction.search,
-                    decoration: const InputDecoration(
-                      hintText: 'Cerca nel calendario',
+                    decoration: InputDecoration(
+                      hintText: l.searchCalendar,
                       border: InputBorder.none,
                       enabledBorder: InputBorder.none,
                       focusedBorder: InputBorder.none,
                       filled: false,
                     ),
                   )
-                : const Text('Calendario'),
+                : Text(l.calendar),
             actions: [
               _searching
                   ? IconButton(
                       key: const Key('calendar-search-close'),
-                      tooltip: 'Chiudi la ricerca',
+                      tooltip: l.closeSearch,
                       icon: const Icon(Icons.close),
                       onPressed: _closeSearch,
                     )
                   : IconButton(
                       key: const Key('calendar-search-button'),
-                      tooltip: 'Cerca',
+                      tooltip: l.search,
                       icon: const Icon(Icons.search),
                       onPressed: () => setState(() => _searching = true),
                     ),
               if (kDebugMode)
                 IconButton(
                   key: const Key('demo-toggle'),
-                  tooltip: _demo ? 'Mostra le note vere' : 'Dati di prova',
+                  tooltip: _demo ? l.showRealNotes : l.sampleData,
                   isSelected: _demo,
                   icon: const Icon(Icons.science_outlined),
                   selectedIcon: Icon(
@@ -170,22 +164,22 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 ),
                 child: SegmentedButton<CalendarMode>(
                   key: const Key('calendar-mode'),
-                  segments: const [
+                  segments: [
                     ButtonSegment(
                       value: CalendarMode.days,
-                      icon: Icon(
+                      icon: const Icon(
                         Icons.calendar_view_month,
                         size: LeviathanIconSize.sm,
                       ),
-                      label: Text('Giornaliero'),
+                      label: Text(l.daily),
                     ),
                     ButtonSegment(
                       value: CalendarMode.months,
-                      icon: Icon(
+                      icon: const Icon(
                         Icons.calendar_today_outlined,
                         size: LeviathanIconSize.sm,
                       ),
-                      label: Text('Mensile'),
+                      label: Text(l.monthly),
                     ),
                   ],
                   selected: {_mode},
@@ -201,7 +195,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 Padding(
                   padding: const EdgeInsets.only(bottom: LeviathanSpacing.xs),
                   child: Text(
-                    'Dati di prova: non sono le tue note',
+                    l.sampleDataBanner,
                     textAlign: TextAlign.center,
                     style: LeviathanText.meta.copyWith(
                       color: context.palette.accent,
@@ -210,10 +204,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 ),
               Expanded(
                 child: notes.isEmpty
-                    ? const _Empty(
-                        'Nessuna nota ancora: il calendario si riempie man '
-                        'mano che scrivi.',
-                      )
+                    ? _Empty(l.calendarEmpty)
                     : searching
                     ? _SearchView(
                         key: ValueKey('search-$_mode-$_demo'),
@@ -341,7 +332,7 @@ class _MonthSection extends StatelessWidget {
     final leading = month.weekday - DateTime.monday;
     final days = DateTime(month.year, month.month + 1, 0).day;
     final weeks = ((leading + days) / 7).ceil();
-    final name = '${_capitalized(_monthNames[month.month - 1])} ${month.year}';
+    final name = '${monthName(context.l10n, month.month)} ${month.year}';
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         LeviathanSpacing.sm,
@@ -361,7 +352,7 @@ class _MonthSection extends StatelessWidget {
           ),
           Row(
             children: [
-              for (final initial in _weekdayInitials)
+              for (final initial in weekdayInitials(context.l10n))
                 Expanded(
                   child: Text(
                     initial,
@@ -407,7 +398,7 @@ class _MonthSection extends StatelessWidget {
       onTap: tally == null
           ? null
           : () => onTap(
-              '$day ${_monthNames[month.month - 1]} ${month.year}',
+              formatLongDate(context.l10n, date),
               tally,
               date,
               DateTime(date.year, date.month, date.day + 1),
@@ -473,7 +464,7 @@ class _MonthsView extends StatelessWidget {
               children: [
                 Expanded(child: Text('$year', style: LeviathanText.title)),
                 Text(
-                  total == 1 ? '1 nota' : '$total note',
+                  context.l10n.noteCount(total),
                   style: LeviathanText.meta.copyWith(
                     color: context.palette.muted,
                   ),
@@ -506,7 +497,7 @@ class _MonthsView extends StatelessWidget {
     final tally = tallies[month];
     final isCurrent = month.year == now.year && month.month == now.month;
     final palette = context.palette;
-    final name = _capitalized(_monthNames[month.month - 1]);
+    final name = monthName(context.l10n, month.month);
     return _Cell(
       highlighted: isCurrent,
       filled: tally != null,
@@ -660,6 +651,7 @@ class _TallySheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
+    final l = context.l10n;
     final ranked = tally.ranked();
     return SafeArea(
       child: ConstrainedBox(
@@ -678,7 +670,7 @@ class _TallySheet extends StatelessWidget {
                 children: [
                   Expanded(child: Text(title, style: LeviathanText.title)),
                   Text(
-                    tally.notes == 1 ? '1 nota' : '${tally.notes} note',
+                    l.noteCount(tally.notes),
                     style: LeviathanText.meta.copyWith(color: palette.muted),
                   ),
                 ],
@@ -687,7 +679,7 @@ class _TallySheet extends StatelessWidget {
             const SizedBox(height: LeviathanSpacing.sm),
             Flexible(
               child: ranked.isEmpty
-                  ? const _Empty('Le note di questo periodo non hanno tag.')
+                  ? _Empty(l.periodNoTags)
                   : ListView(
                       shrinkWrap: true,
                       padding: const EdgeInsets.only(
@@ -716,9 +708,7 @@ class _TallySheet extends StatelessWidget {
                                   ),
                                 ),
                                 Text(
-                                  entry.value == 1
-                                      ? '1 volta'
-                                      : '${entry.value} volte',
+                                  l.timesCount(entry.value),
                                   style: LeviathanText.meta.copyWith(
                                     color: palette.muted,
                                   ),
@@ -740,11 +730,7 @@ class _TallySheet extends StatelessWidget {
                 key: const Key('show-period-notes'),
                 onPressed: onShowNotes,
                 icon: const Icon(Icons.notes),
-                label: Text(
-                  tally.notes == 1
-                      ? 'Vedi la nota'
-                      : 'Vedi le ${tally.notes} note',
-                ),
+                label: Text(l.showNotes(tally.notes)),
               ),
             ),
           ],
@@ -777,9 +763,8 @@ class _SearchView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (hits.isEmpty) {
-      return const _Empty('Nessuna nota contiene queste parole.');
-    }
+    final l = context.l10n;
+    if (hits.isEmpty) return _Empty(l.calendarNoMatch);
     final days = mode == CalendarMode.days;
     // Ogni casella con le sue note, dalla prima scritta.
     final cells = <DateTime, List<Note>>{};
@@ -798,17 +783,14 @@ class _SearchView extends StatelessWidget {
       for (final k in cells.keys)
         days ? DateTime(k.year, k.month) : DateTime(k.year),
     }.toList()..sort((a, b) => b.compareTo(a));
-    final count = hits.length;
-    final where = cells.length == 1
-        ? (days ? '1 giorno' : '1 mese')
-        : '${cells.length} ${days ? 'giorni' : 'mesi'}';
+    final where = days ? l.dayCount(cells.length) : l.monthCount(cells.length);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: LeviathanSpacing.lg),
           child: Text(
-            '${count == 1 ? '1 nota' : '$count note'} in $where',
+            l.notesIn(l.noteCount(hits.length), where),
             style: LeviathanText.meta.copyWith(color: context.palette.muted),
           ),
         ),
@@ -849,7 +831,7 @@ class _SearchView extends StatelessWidget {
               children: [
                 Expanded(child: Text(title, style: LeviathanText.title)),
                 Text(
-                  notes == 1 ? '1 nota' : '$notes note',
+                  context.l10n.noteCount(notes),
                   style: LeviathanText.meta.copyWith(
                     color: context.palette.muted,
                   ),
@@ -874,10 +856,11 @@ class _SearchView extends StatelessWidget {
     final days = DateTime(month.year, month.month + 1, 0).day;
     final weeks = ((leading + days) / 7).ceil();
     var total = 0;
+    final l = context.l10n;
     final rows = <Widget>[
       Row(
         children: [
-          for (final initial in _weekdayInitials)
+          for (final initial in weekdayInitials(l))
             Expanded(
               child: Text(
                 initial,
@@ -923,7 +906,7 @@ class _SearchView extends StatelessWidget {
                               dates[i],
                             );
                             onTap(
-                              '${dates[i]} ${_monthNames[month.month - 1]} ${month.year}',
+                              formatLongDate(l, from),
                               from,
                               DateTime(from.year, from.month, from.day + 1),
                             );
@@ -936,7 +919,7 @@ class _SearchView extends StatelessWidget {
       );
       total += found.fold(0, (a, f) => a + (f?.length ?? 0));
     }
-    final name = '${_capitalized(_monthNames[month.month - 1])} ${month.year}';
+    final name = '${monthName(l, month.month)} ${month.year}';
     return _section(context, name, total, rows);
   }
 
@@ -946,6 +929,7 @@ class _SearchView extends StatelessWidget {
     int year,
     Map<DateTime, List<Note>> cells,
   ) {
+    final l = context.l10n;
     var total = 0;
     final rows = <Widget>[];
     for (var row = 0; row < 12 ~/ _monthColumns; row++) {
@@ -966,10 +950,10 @@ class _SearchView extends StatelessWidget {
                       ? const SizedBox.shrink()
                       : _cell(
                           context,
-                          label: _capitalized(_monthNames[months[i].month - 1]),
+                          label: monthName(l, months[i].month),
                           notes: found[i]!,
                           onTap: () => onTap(
-                            '${_capitalized(_monthNames[months[i].month - 1])} $year',
+                            '${monthName(l, months[i].month)} $year',
                             months[i],
                             DateTime(year, months[i].month + 1),
                           ),
@@ -1021,7 +1005,8 @@ class _SearchView extends StatelessWidget {
           const SizedBox(height: LeviathanSpacing.xxs),
           Expanded(
             child: _Previews([
-              for (final n in notes) matchPreview(n, terms),
+              for (final n in notes)
+                matchPreview(n, terms, context.l10n.untitled),
             ], terms: terms),
           ),
         ],

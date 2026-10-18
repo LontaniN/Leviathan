@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../model/tags.dart';
 import '../state/settings.dart';
+import 'language_screen.dart';
 import 'search_screen.dart';
 import 'theme.dart';
 
-/// Impostazioni dell'app. Per ora solo la scelta della palette.
+/// Impostazioni dell'app: la lingua dell'interfaccia e la palette.
 ///
 /// Le palette sono schede a due colonne, ognuna con una miniatura della home
 /// nei suoi colori. La griglia non è pigra: sono poche e così si costruiscono
@@ -22,13 +24,27 @@ class SettingsScreen extends StatelessWidget {
     return ListenableBuilder(
       listenable: settings,
       builder: (context, _) => Scaffold(
-        appBar: AppBar(title: const Text('Impostazioni')),
+        appBar: AppBar(title: Text(context.l10n.settings)),
         body: SingleChildScrollView(
           padding: const EdgeInsets.only(bottom: LeviathanSpacing.xl),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SectionTitle('Palette'),
+              SectionTitle(context.l10n.language),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  LeviathanSpacing.md,
+                  LeviathanSpacing.xs,
+                  LeviathanSpacing.md,
+                  LeviathanSpacing.lg,
+                ),
+                child: LanguageMenu(
+                  key: const Key('settings-language'),
+                  value: settings.language ?? deviceLanguage(),
+                  onChanged: settings.setLanguage,
+                ),
+              ),
+              SectionTitle(context.l10n.palette),
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: LeviathanSpacing.md,
@@ -57,6 +73,20 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 }
+
+/// Il nome di una palette nella lingua dell'interfaccia.
+String paletteName(AppLocalizations l, LeviathanPalette palette) =>
+    switch (palette.id) {
+      'seppia' => l.paletteSeppia,
+      'lavagna' => l.paletteLavagna,
+      'grafite' => l.paletteGrafite,
+      'abisso' => l.paletteAbisso,
+      'brace' => l.paletteBrace,
+      'muschio' => l.paletteMuschio,
+      'ametista' => l.paletteAmetista,
+      'carta' => l.paletteCarta,
+      _ => l.paletteInchiostro,
+    };
 
 /// Una palette: la miniatura e sotto nome e tipo.
 class _PaletteTile extends StatelessWidget {
@@ -109,15 +139,15 @@ class _PaletteTile extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            palette.name,
+                            paletteName(context.l10n, palette),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: LeviathanText.title,
                           ),
                           Text(
                             palette.brightness == Brightness.dark
-                                ? 'Scura'
-                                : 'Chiara',
+                                ? context.l10n.dark
+                                : context.l10n.light,
                             style: LeviathanText.meta.copyWith(
                               color: current.muted,
                             ),
