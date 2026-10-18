@@ -81,6 +81,8 @@
 
   "textCopied": "Testo copiato",
   "copyText": "Copia il testo",
+  "convertToTask": "Converti in task",
+  "convertToNote": "Converti in nota",
   "editedOn": "modificata {date}",
   "wordCount": "{count, plural, =1{1 parola} other{{count} parole}}",
   "noText": "Nessun testo.",

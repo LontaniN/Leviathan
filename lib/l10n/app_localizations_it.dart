@@ -267,6 +267,12 @@ class AppLocalizationsIt extends AppLocalizations {
   String get copyText => 'Copia il testo';
 
   @override
+  String get convertToTask => 'Converti in task';
+
+  @override
+  String get convertToNote => 'Converti in nota';
+
+  @override
   String editedOn(String date) {
     return 'modificata $date';
   }

@@ -102,6 +102,16 @@ class NoteScreen extends StatelessWidget {
                   selectedIcon: Icon(Icons.push_pin, color: palette.accent),
                   onPressed: () => notes.setPinned(note, !note.pinned),
                 ),
+                // Acceso sui task: lo si ritocca per tornare a nota.
+                IconButton(
+                  key: const Key('task-toggle'),
+                  tooltip: note.isTask ? l.convertToNote : l.convertToTask,
+                  isSelected: note.isTask,
+                  icon: const Icon(Icons.add_task),
+                  selectedIcon: Icon(Icons.task_alt, color: palette.accent),
+                  onPressed: () =>
+                      notes.update(note.copyWith(isTask: !note.isTask)),
+                ),
                 IconButton(
                   tooltip: l.edit,
                   icon: const Icon(Icons.edit_outlined),

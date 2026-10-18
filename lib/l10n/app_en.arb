@@ -96,6 +96,8 @@
 
   "textCopied": "Text copied",
   "copyText": "Copy text",
+  "convertToTask": "Convert to task",
+  "convertToNote": "Convert to note",
   "editedOn": "edited {date}",
   "@editedOn": {"placeholders": {"date": {"type": "String"}}},
   "wordCount": "{count, plural, =1{1 word} other{{count} words}}",

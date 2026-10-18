@@ -518,6 +518,18 @@ abstract class AppLocalizations {
   /// **'Copy text'**
   String get copyText;
 
+  /// No description provided for @convertToTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Convert to task'**
+  String get convertToTask;
+
+  /// No description provided for @convertToNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Convert to note'**
+  String get convertToNote;
+
   /// No description provided for @editedOn.
   ///
   /// In en, this message translates to:
