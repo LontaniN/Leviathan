@@ -39,6 +39,9 @@ available in English and Italian.
   kills the app, the text is still there when you reopen it.
 - Long-pressing a note in the list: pin it to the top, check off the task,
   move it to the trash.
+- The first time you open a workspace, a short **guided tour** walks you
+  through the editor, tags, the note list, search, the task manager and the
+  other views. You can skip it at any time and replay it from the settings.
 
 ### Tags and sources
 
@@ -56,7 +59,13 @@ available in English and Italian.
 ### Notes and tasks
 
 - A toggle in the editor turns a note into a **task** to check off; tags and
-  sources stay.
+  sources stay. In the reading view a single button turns a note into a task
+  and back.
+- The **light bulb** next to the Note/Task switch marks a note as
+  **knowledge**: what you know, not what happened. Knowledge notes have their
+  own view in Tasks and notes.
+- The **calendar button** next to *Save note* dates a note to any day, handy
+  for notes copied from elsewhere; editing a note can move it to another day.
 - Completed tasks are shown struck through and dimmed, with the date they
   were done.
 - **Full-screen reading**: tapping a note opens it with its first tag as a
@@ -78,6 +87,8 @@ available in English and Italian.
     `from:Mario Rossi`)
   - `status:open` / `status:done` / `status:task` → open tasks / done tasks /
     all tasks
+  - Typing `tag:` or `from:` lists every matching tag or source, most used
+    first.
   - The Italian keywords (`da:`, `stato:aperto`, `stato:fatto`) work too,
     whatever the interface language.
 - Searches title, body, tags and sources, ignoring case and accents. Title
@@ -88,11 +99,27 @@ available in English and Italian.
 
 ### Tasks and notes by tag or source
 
-- One screen with all **tasks** or all **notes**, grouped **by tag** or **by
-  source**: one tile per group, with a count and the most recent titles.
-- For tasks you can show all of them, only open ones or only completed ones.
-- Tapping a tile opens the list for that tag or source, with a search scoped
-  to it.
+- One screen with all **tasks**, all **notes** or all **knowledge notes**,
+  grouped **by tag** or **by source**: one tile per group, with a count and
+  the most recent titles.
+- For tasks you can show all of them, only open ones or only completed ones;
+  the view opens on "To do".
+- Tapping a tile opens the list for that tag or source. Its search bar
+  searches only the open list, respecting the current filter.
+
+### Task manager
+
+- Opened from the button to the right of the calendar on the home screen, it
+  orders all open tasks **by priority**, regardless of tags and sources.
+- Three bands, **Now**, **Next** and **Later**, ordered with drag and drop:
+  priority is the position, not a label. Now suggests a limit of 3.
+- New tasks land in **To sort**: answer a few "Which comes first?" questions
+  and they slot into the right place.
+- Completed tasks have their own tab, newest first. Each row shows the color
+  of its first tag.
+- The app bar filters by tag or source, showing how many open tasks each one
+  has. The filtered view keeps the same bands and order but is read-only; a
+  banner shows the active filter and lets you clear it.
 
 ### Calendar
 
@@ -166,11 +193,13 @@ The main way in is **search**: a few words, optionally with `#tag`,
 - the **calendar** to find a note by remembering *when* you wrote it;
 - the **graph** to see how topics cluster.
 
-### 4. Complete tasks
+### 4. Prioritize and complete tasks
 
-Tasks can be checked off from the list, the reading view or search results.
-The Tasks screen shows how many are still open for each tag; `status:done`
-finds what you've already done.
+The **task manager** is where you decide what comes next: sort new tasks
+with a few quick comparisons, then drag them between Now, Next and Later.
+Tasks can be checked off from there, the list, the reading view or search
+results. The Tasks screen shows how many are still open for each tag;
+`status:done` finds what you've already done.
 
 ### 5. Your data
 
@@ -197,8 +226,9 @@ updated: "2026-10-17T14:05:12.000"
 Note body in **Markdown**…
 ```
 
-Tasks also have `type: "task"`, `done` and `done_at`; pinned notes have
-`pinned: true`. Files can be copied, synced or edited by hand: Leviathan
+Tasks also have `type: "task"`, `done` and `done_at`, plus `priority`
+(`now`, `next` or `later`) and `rank` once placed in the task manager;
+knowledge notes have `knowledge: true` and pinned notes `pinned: true`. Files can be copied, synced or edited by hand: Leviathan
 also reads files written without a header.
 
 ---
@@ -233,7 +263,7 @@ Project layout:
 | Folder        | Contents                                                   |
 |---------------|------------------------------------------------------------|
 | `lib/l10n`    | Interface text: `app_en.arb`, `app_it.arb` (gen-l10n)       |
-| `lib/model`   | Notes, tags, search, Markdown, calendar, graph (pure logic) |
+| `lib/model`   | Notes, tags, search, Markdown, calendar, graph, task order (pure logic) |
 | `lib/data`    | Reading and writing notes, workspaces, drafts, graph layout |
 | `lib/state`   | App state and preferences                                  |
 | `lib/graph`   | Physics simulation and graph rendering                     |
