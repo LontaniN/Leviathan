@@ -879,6 +879,27 @@ class AppLocalizationsEn extends AppLocalizations {
       'No completed tasks yet.\nTick a task and it shows up here.';
 
   @override
+  String get taskFilterTooltip => 'Filter by tags or sources';
+
+  @override
+  String get taskFilterReadOnly => 'Read only: clear the filter to move tasks.';
+
+  @override
+  String get taskFilterClear => 'Clear filter';
+
+  @override
+  String get taskFilterNoGroups => 'No tags or sources on your tasks yet.';
+
+  @override
+  String get taskManagerFilteredEmpty => 'No tasks to do here.';
+
+  @override
+  String get taskManagerFilteredDoneEmpty => 'No completed tasks here.';
+
+  @override
+  String get bandEmptyFiltered => 'None here';
+
+  @override
   String get dragToReorder => 'Drag to move';
 
   @override

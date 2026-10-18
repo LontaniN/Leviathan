@@ -867,6 +867,28 @@ class AppLocalizationsIt extends AppLocalizations {
       'Nessun task completato.\nSpunta un task e lo ritrovi qui.';
 
   @override
+  String get taskFilterTooltip => 'Filtra per tag o fonti';
+
+  @override
+  String get taskFilterReadOnly =>
+      'Sola lettura: togli il filtro per spostare i task.';
+
+  @override
+  String get taskFilterClear => 'Togli il filtro';
+
+  @override
+  String get taskFilterNoGroups => 'I tuoi task non hanno ancora tag né fonti.';
+
+  @override
+  String get taskManagerFilteredEmpty => 'Nessun task da fare qui.';
+
+  @override
+  String get taskManagerFilteredDoneEmpty => 'Nessun task completato qui.';
+
+  @override
+  String get bandEmptyFiltered => 'Nessuno qui';
+
+  @override
   String get dragToReorder => 'Trascina per spostare';
 
   @override

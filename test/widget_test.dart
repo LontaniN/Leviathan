@@ -1264,4 +1264,78 @@ void main() {
     final file = File('${root.path}/Lavoro/Tre.md').readAsStringSync();
     expect(file, contains('priority: "now"'));
   });
+
+  testWidgets('task manager: filtro per uno o più tag in sola lettura', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    await tester.runAsync(() async {
+      await WorkspaceRepository(root).createWorkspace('Lavoro');
+      final dir = '${root.path}/Lavoro';
+      void task(String id, String tags, String extra) => File('$dir/$id.md')
+          .writeAsStringSync(
+            '---\ntitle: "$id"\ntags: [$tags]\n'
+            'created: "2026-10-01T00:00:00.000"\n'
+            'type: "task"\ndone: false\n$extra---\n',
+          );
+      task('Uno', '"casa"', 'priority: "now"\nrank: "c"\n');
+      task('Due', '"studio"', 'priority: "now"\nrank: "g"\n');
+      task('Tre', '"casa"', 'priority: "now"\nrank: "m"\n');
+      task('Quattro', '"casa"', '');
+      task('Cinque', '"lavoro"', 'priority: "next"\nrank: "c"\n');
+    });
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('task-manager-button')));
+    await settle(tester);
+
+    await tester.tap(find.byKey(const Key('task-manager-filter')));
+    await settle(tester);
+    expect(find.byKey(const Key('task-filter-tag-studio')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('task-filter-tag-casa')));
+    await tester.tap(find.byKey(const Key('task-filter-apply')));
+    await settle(tester);
+
+    // Solo i task di "casa", nello stesso ordine, senza maniglie né confronti.
+    expect(find.byKey(const Key('task-filter-banner')), findsOneWidget);
+    expect(find.text('Due'), findsNothing);
+    double y(String t) => tester.getCenter(find.text(t)).dy;
+    expect(y('Uno'), lessThan(y('Tre')));
+    expect(find.byKey(const Key('drag-Uno')), findsNothing);
+    expect(find.byKey(const Key('compare-Quattro')), findsNothing);
+    expect(find.byKey(const Key('sort-all')), findsNothing);
+    expect(find.byKey(const Key('now-load')), findsNothing);
+    expect(find.text('Nessuno qui'), findsNWidgets(2));
+
+    // Tenere premuto non sposta nulla.
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.text('Tre')),
+    );
+    await tester.pump(const Duration(seconds: 1));
+    await gesture.moveBy(Offset(0, y('Uno') - y('Tre') - 10));
+    await tester.pump(const Duration(milliseconds: 100));
+    await gesture.up();
+    await settle(tester);
+    expect(y('Uno'), lessThan(y('Tre')));
+
+    // Con anche "studio" si vedono i task dell'uno o dell'altro, sempre
+    // nell'ordine di tutti.
+    await tester.tap(find.byKey(const Key('task-manager-filter')));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('task-filter-tag-studio')));
+    await tester.tap(find.byKey(const Key('task-filter-apply')));
+    await settle(tester);
+    expect(y('Uno'), lessThan(y('Due')));
+    expect(y('Due'), lessThan(y('Tre')));
+    expect(find.text('Cinque'), findsNothing);
+
+    // Tolto il filtro torna tutto, riordinabile.
+    await tester.tap(find.byKey(const Key('task-filter-clear')));
+    await settle(tester);
+    expect(find.text('Due'), findsOneWidget);
+    expect(find.byKey(const Key('drag-Uno')), findsOneWidget);
+  });
 }

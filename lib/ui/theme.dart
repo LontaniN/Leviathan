@@ -248,6 +248,9 @@ class LeviathanSizes {
   /// Larghezza massima dei moduli a schermo intero (primo avvio).
   static const formWidth = 420.0;
 
+  /// Altezza massima dei fogli dal basso, in frazione dello schermo.
+  static const sheetHeight = 0.7;
+
   /// Spessore dei bordi sottili (es. il giorno di oggi nel calendario).
   static const outline = 1.5;
 

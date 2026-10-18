@@ -1484,6 +1484,48 @@ abstract class AppLocalizations {
   /// **'No completed tasks yet.\nTick a task and it shows up here.'**
   String get taskManagerDoneEmpty;
 
+  /// No description provided for @taskFilterTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter by tags or sources'**
+  String get taskFilterTooltip;
+
+  /// No description provided for @taskFilterReadOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Read only: clear the filter to move tasks.'**
+  String get taskFilterReadOnly;
+
+  /// No description provided for @taskFilterClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear filter'**
+  String get taskFilterClear;
+
+  /// No description provided for @taskFilterNoGroups.
+  ///
+  /// In en, this message translates to:
+  /// **'No tags or sources on your tasks yet.'**
+  String get taskFilterNoGroups;
+
+  /// No description provided for @taskManagerFilteredEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No tasks to do here.'**
+  String get taskManagerFilteredEmpty;
+
+  /// No description provided for @taskManagerFilteredDoneEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No completed tasks here.'**
+  String get taskManagerFilteredDoneEmpty;
+
+  /// No description provided for @bandEmptyFiltered.
+  ///
+  /// In en, this message translates to:
+  /// **'None here'**
+  String get bandEmptyFiltered;
+
   /// No description provided for @dragToReorder.
   ///
   /// In en, this message translates to:

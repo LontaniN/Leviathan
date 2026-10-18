@@ -131,4 +131,29 @@ void main() {
       expect(ids(groups[0].notes), ['k']);
     });
   });
+
+  test('GroupFilter tiene un tag o una fonte, inAnyGroup almeno uno', () {
+    const studio = GroupFilter(NoteGrouping.tag, 'studio');
+    expect(ids(notes.where(studio.matches).toList()), [
+      'a',
+      'b',
+      'n',
+      'm',
+      'k',
+    ]);
+    const anna = GroupFilter(NoteGrouping.source, 'Anna');
+    expect(ids(notes.where(anna.matches).toList()), ['a', 'c', 'n']);
+    expect(studio, const GroupFilter(NoteGrouping.tag, 'studio'));
+    expect(studio, isNot(const GroupFilter(NoteGrouping.source, 'studio')));
+    // Con più filtri basta passarne uno; senza filtri passa tutto.
+    const viaggi = GroupFilter(NoteGrouping.tag, 'viaggi');
+    expect(ids(notes.where((n) => inAnyGroup(n, {anna, viaggi})).toList()), [
+      'a',
+      'c',
+      'n',
+      'm',
+      'o',
+    ]);
+    expect(notes.where((n) => inAnyGroup(n, {})).length, notes.length);
+  });
 }

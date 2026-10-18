@@ -19,6 +19,28 @@ class NoteGroup {
   int get openTasks => notes.where((n) => n.isOpenTask).length;
 }
 
+/// Un solo tag o una sola fonte: il filtro del task manager.
+class GroupFilter {
+  const GroupFilter(this.by, this.name);
+
+  final NoteGrouping by;
+  final String name;
+
+  bool matches(Note note) => groupsOf(note, by).contains(name);
+
+  @override
+  bool operator ==(Object other) =>
+      other is GroupFilter && other.by == by && other.name == name;
+
+  @override
+  int get hashCode => Object.hash(by, name);
+}
+
+/// Vero se [note] sta in almeno uno dei gruppi di [filters]; senza filtri
+/// passa tutto.
+bool inAnyGroup(Note note, Set<GroupFilter> filters) =>
+    filters.isEmpty || filters.any((f) => f.matches(note));
+
 /// I gruppi in cui va [note]: i suoi tag o le sue fonti, oppure null se non
 /// ne ha.
 List<String?> groupsOf(Note note, NoteGrouping by) {

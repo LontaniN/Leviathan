@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../l10n/l10n.dart';
 import '../model/dates.dart';
 import '../model/note.dart';
+import '../model/note_groups.dart';
+import '../model/tags.dart';
 import '../model/task_order.dart';
 import '../state/notes_controller.dart';
 import 'note_screen.dart';
@@ -22,21 +24,60 @@ import 'theme.dart';
 /// [TaskCompareScreen]).
 ///
 /// La scheda "Completati" mostra i task fatti, dal più recente.
-class TaskManagerScreen extends StatelessWidget {
+///
+/// Il filtro in alto restringe entrambe le schede ai task di uno o più tag e
+/// fonti (basta averne uno), con le stesse fasce e lo stesso ordine: serve a
+/// vedere le priorità di una o più liste. Filtrata, la vista è in sola lettura: l'ordine vale per
+/// tutti i task, e spostarne uno fra pochi lo metterebbe a caso fra gli altri.
+class TaskManagerScreen extends StatefulWidget {
   const TaskManagerScreen({super.key, required this.notes});
 
   final NotesController notes;
 
   @override
+  State<TaskManagerScreen> createState() => _TaskManagerScreenState();
+}
+
+class _TaskManagerScreenState extends State<TaskManagerScreen> {
+  /// Vuoto: tutti i task.
+  Set<GroupFilter> _filter = const {};
+
+  NotesController get notes => widget.notes;
+
+  Future<void> _pickFilter() async {
+    final picked = await showModalBottomSheet<Set<GroupFilter>>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      backgroundColor: context.palette.surface,
+      builder: (_) => _FilterSheet(notes: notes.notes, selected: _filter),
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _filter = picked);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l = context.l10n;
     final palette = context.palette;
+    final filter = _filter;
     return DefaultTabController(
       length: 2,
       child: Scaffold(
         appBar: AppBar(
           backgroundColor: palette.background,
           title: Text(l.taskManager),
+          actions: [
+            IconButton(
+              key: const Key('task-manager-filter'),
+              tooltip: l.taskFilterTooltip,
+              icon: Icon(
+                filter.isEmpty ? Icons.filter_list : Icons.filter_list_alt,
+              ),
+              color: filter.isEmpty ? palette.text : palette.accent,
+              onPressed: _pickFilter,
+            ),
+          ],
           bottom: TabBar(
             labelColor: palette.text,
             unselectedLabelColor: palette.muted,
@@ -54,10 +95,22 @@ class TaskManagerScreen extends StatelessWidget {
             if (notes.error != null) {
               return _Message(icon: Icons.error_outline, text: notes.error!);
             }
-            return TabBarView(
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _OpenTab(notes: notes),
-                _DoneTab(notes: notes),
+                if (filter.isNotEmpty)
+                  _FilterBanner(
+                    filter: filter,
+                    onClear: () => setState(() => _filter = const {}),
+                  ),
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      _OpenTab(notes: notes, filter: filter),
+                      _DoneTab(notes: notes, filter: filter),
+                    ],
+                  ),
+                ),
               ],
             );
           },
@@ -99,9 +152,12 @@ class _Placeholder extends _Entry {
 }
 
 class _OpenTab extends StatelessWidget {
-  const _OpenTab({required this.notes});
+  const _OpenTab({required this.notes, required this.filter});
 
   final NotesController notes;
+
+  /// Con un filtro la lista non si riordina.
+  final Set<GroupFilter> filter;
 
   List<_Entry> _entries(TaskBoard board) => [
     if (board.unsorted.isNotEmpty) ...[
@@ -186,14 +242,17 @@ class _OpenTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final board = TaskBoard.of(notes.notes);
+    final board = TaskBoard.of(notes.notes.where((n) => inAnyGroup(n, filter)));
     if (board.isEmpty) {
       return _Message(
         icon: Icons.low_priority,
-        text: context.l10n.taskManagerEmpty,
+        text: filter.isEmpty
+            ? context.l10n.taskManagerEmpty
+            : context.l10n.taskManagerFilteredEmpty,
       );
     }
     final entries = _entries(board);
+    if (filter.isNotEmpty) return _readOnly(context, board, entries);
     return ReorderableListView.builder(
       key: const Key('task-manager-list'),
       buildDefaultDragHandles: false,
@@ -254,6 +313,37 @@ class _OpenTab extends StatelessWidget {
       },
     );
   }
+
+  /// La stessa lista senza trascinamenti né confronti: con il filtro
+  /// l'ordine si guarda soltanto.
+  Widget _readOnly(
+    BuildContext context,
+    TaskBoard board,
+    List<_Entry> entries,
+  ) => ListView.builder(
+    key: const Key('task-manager-list-filtered'),
+    padding: const EdgeInsets.only(bottom: LeviathanSpacing.xxxl),
+    itemCount: entries.length,
+    itemBuilder: (context, i) => switch (entries[i]) {
+      _Header(:final band) => _BandHeader(
+        key: ValueKey('band-${band?.key ?? 'unsorted'}'),
+        band: band,
+        count: band == null ? board.unsorted.length : board.bands[band]!.length,
+        // Il limite di "Ora" vale per tutti i task, non per una parte.
+        showLimit: false,
+      ),
+      _Placeholder(:final band) => _BandPlaceholder(
+        key: ValueKey('band-empty-${band.key}'),
+        text: context.l10n.bandEmptyFiltered,
+      ),
+      _Task(:final note) => _TaskRow(
+        key: ValueKey(note.id),
+        note: note,
+        onTap: () => _openNote(context, notes, note),
+        onDone: () => _complete(context, note),
+      ),
+    },
+  );
 }
 
 String bandLabel(AppLocalizations l, TaskBand? band) => switch (band) {
@@ -269,18 +359,23 @@ class _BandHeader extends StatelessWidget {
     required this.band,
     required this.count,
     this.onSortAll,
+    this.showLimit = true,
   });
 
   final TaskBand? band;
   final int count;
   final VoidCallback? onSortAll;
 
+  /// Se mostrare il carico di "Ora" rispetto al limite consigliato.
+  final bool showLimit;
+
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
     final palette = context.palette;
-    final over = band == TaskBand.now && count > nowLimit;
-    final load = band == TaskBand.now
+    final limited = showLimit && band == TaskBand.now;
+    final over = limited && count > nowLimit;
+    final load = limited
         ? l.bandLoad(count, nowLimit)
         : count > 0
         ? '$count'
@@ -306,7 +401,7 @@ class _BandHeader extends StatelessWidget {
               const SizedBox(width: LeviathanSpacing.sm),
               Text(
                 load,
-                key: band == TaskBand.now ? const Key('now-load') : null,
+                key: limited ? const Key('now-load') : null,
                 style: LeviathanText.caption.copyWith(
                   color: over ? palette.accent : palette.muted,
                 ),
@@ -340,7 +435,10 @@ class _BandHeader extends StatelessWidget {
 }
 
 class _BandPlaceholder extends StatelessWidget {
-  const _BandPlaceholder({super.key});
+  const _BandPlaceholder({super.key, this.text});
+
+  /// Di solito l'invito a trascinarci un task.
+  final String? text;
 
   @override
   Widget build(BuildContext context) {
@@ -359,7 +457,7 @@ class _BandPlaceholder extends StatelessWidget {
           ),
         ),
         child: Text(
-          context.l10n.bandEmpty,
+          text ?? context.l10n.bandEmpty,
           textAlign: TextAlign.center,
           style: LeviathanText.meta.copyWith(color: muted),
         ),
@@ -442,19 +540,27 @@ class _TaskRow extends StatelessWidget {
 }
 
 class _DoneTab extends StatelessWidget {
-  const _DoneTab({required this.notes});
+  const _DoneTab({required this.notes, required this.filter});
 
   final NotesController notes;
+  final Set<GroupFilter> filter;
 
   static DateTime _when(Note note) => note.doneAt ?? note.updated;
 
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
-    final done = notes.notes.where((n) => n.isTask && n.done).toList()
-      ..sort((a, b) => _when(b).compareTo(_when(a)));
+    final done = [
+      for (final n in notes.notes)
+        if (n.isTask && n.done && inAnyGroup(n, filter)) n,
+    ]..sort((a, b) => _when(b).compareTo(_when(a)));
     if (done.isEmpty) {
-      return _Message(icon: Icons.task_alt, text: l.taskManagerDoneEmpty);
+      return _Message(
+        icon: Icons.task_alt,
+        text: filter.isEmpty
+            ? l.taskManagerDoneEmpty
+            : l.taskManagerFilteredDoneEmpty,
+      );
     }
     final now = DateTime.now();
     final items = <Object>[];
@@ -516,6 +622,260 @@ class _Message extends StatelessWidget {
               text,
               textAlign: TextAlign.center,
               style: LeviathanText.body.copyWith(color: muted),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Il segno di un filtro: il pallino del tag o l'omino della fonte.
+class _FilterMarker extends StatelessWidget {
+  const _FilterMarker(this.filter);
+
+  final GroupFilter filter;
+
+  @override
+  Widget build(BuildContext context) => switch (filter.by) {
+    NoteGrouping.tag => CircleAvatar(
+      backgroundColor: Tags.colorOf(filter.name),
+      radius: LeviathanSpacing.xs,
+    ),
+    NoteGrouping.source => Icon(
+      Icons.person_outline,
+      size: LeviathanIconSize.sm,
+      color: context.palette.muted,
+    ),
+  };
+}
+
+/// La striscia sopra le liste quando c'è un filtro: cosa si sta guardando,
+/// che l'ordine è in sola lettura e come tornare a tutti i task.
+class _FilterBanner extends StatelessWidget {
+  const _FilterBanner({required this.filter, required this.onClear});
+
+  final Set<GroupFilter> filter;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    final palette = context.palette;
+    return Container(
+      key: const Key('task-filter-banner'),
+      color: palette.surface,
+      padding: const EdgeInsets.fromLTRB(
+        LeviathanSpacing.lg,
+        LeviathanSpacing.xs,
+        LeviathanSpacing.xs,
+        LeviathanSpacing.xs,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Wrap(
+                  spacing: LeviathanSpacing.md,
+                  runSpacing: LeviathanSpacing.xxs,
+                  children: [
+                    for (final f in _sorted(filter))
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _FilterMarker(f),
+                          const SizedBox(width: LeviathanSpacing.xs),
+                          Text(
+                            f.name,
+                            style: LeviathanText.meta.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: palette.text,
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+                const SizedBox(height: LeviathanSpacing.xxs),
+                Text(
+                  l.taskFilterReadOnly,
+                  style: LeviathanText.tiny.copyWith(color: palette.muted),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            key: const Key('task-filter-clear'),
+            tooltip: l.taskFilterClear,
+            icon: const Icon(Icons.close, size: LeviathanIconSize.md),
+            color: palette.muted,
+            onPressed: onClear,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Prima i tag e poi le fonti, ognuno in ordine alfabetico.
+List<GroupFilter> _sorted(Set<GroupFilter> filter) => [...filter]
+  ..sort((a, b) {
+    final byKind = a.by.index.compareTo(b.by.index);
+    if (byKind != 0) return byKind;
+    return foldText(a.name).compareTo(foldText(b.name));
+  });
+
+/// Il foglio che sceglie il filtro: i tag e le fonti dei task, con quanti ce
+/// ne sono da fare (in cima chi ne ha di più). Se ne possono spuntare quanti
+/// si vuole; restituisce la scelta con "Applica", un insieme vuoto con
+/// "Togli il filtro", null se lo si chiude senza scegliere.
+class _FilterSheet extends StatefulWidget {
+  const _FilterSheet({required this.notes, required this.selected});
+
+  final List<Note> notes;
+  final Set<GroupFilter> selected;
+
+  @override
+  State<_FilterSheet> createState() => _FilterSheetState();
+}
+
+class _FilterSheetState extends State<_FilterSheet> {
+  late final Set<GroupFilter> _chosen = {...widget.selected};
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    final palette = context.palette;
+    List<NoteGroup> named(NoteGrouping by) => [
+      for (final g in groupNotes(widget.notes, by, kind: NoteKind.task))
+        if (g.name != null) g,
+    ];
+    final tags = named(NoteGrouping.tag);
+    final sources = named(NoteGrouping.source);
+
+    Widget title(String text) => Padding(
+      padding: const EdgeInsets.fromLTRB(
+        LeviathanSpacing.lg,
+        LeviathanSpacing.lg,
+        LeviathanSpacing.lg,
+        LeviathanSpacing.xs,
+      ),
+      child: Text(
+        text.toUpperCase(),
+        style: LeviathanText.caption.copyWith(color: palette.muted),
+      ),
+    );
+
+    Widget option(NoteGroup g, NoteGrouping by) {
+      final filter = GroupFilter(by, g.name!);
+      final chosen = _chosen.contains(filter);
+      final open = g.openTasks;
+      return ListTile(
+        key: Key('task-filter-${by.name}-${g.name}'),
+        leading: SizedBox(
+          width: LeviathanIconSize.md,
+          child: Center(child: _FilterMarker(filter)),
+        ),
+        title: Text(
+          g.name!,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: LeviathanText.body.copyWith(
+            color: palette.text,
+            fontWeight: chosen ? FontWeight.w600 : null,
+          ),
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              open == 0 ? l.allDone : l.openCount(open),
+              style: LeviathanText.meta.copyWith(
+                color: open > 0 ? palette.accent : palette.muted,
+              ),
+            ),
+            const SizedBox(width: LeviathanSpacing.sm),
+            Icon(
+              chosen ? Icons.check_box : Icons.check_box_outline_blank,
+              size: LeviathanIconSize.md,
+              color: chosen ? palette.accent : palette.muted,
+            ),
+          ],
+        ),
+        onTap: () => setState(
+          () => chosen ? _chosen.remove(filter) : _chosen.add(filter),
+        ),
+      );
+    }
+
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight:
+              MediaQuery.sizeOf(context).height * LeviathanSizes.sheetHeight,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  if (tags.isEmpty && sources.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.all(LeviathanSpacing.lg),
+                      child: Text(
+                        l.taskFilterNoGroups,
+                        style: LeviathanText.meta.copyWith(
+                          color: palette.muted,
+                        ),
+                      ),
+                    ),
+                  if (tags.isNotEmpty) ...[
+                    title(l.byTag),
+                    for (final g in tags) option(g, NoteGrouping.tag),
+                  ],
+                  if (sources.isNotEmpty) ...[
+                    title(l.bySource),
+                    for (final g in sources) option(g, NoteGrouping.source),
+                  ],
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                LeviathanSpacing.lg,
+                LeviathanSpacing.sm,
+                LeviathanSpacing.lg,
+                LeviathanSpacing.md,
+              ),
+              child: Row(
+                children: [
+                  // Con caratteri grandi si accorcia invece di sforare.
+                  Flexible(
+                    child: TextButton(
+                      key: const Key('task-filter-none'),
+                      onPressed: () =>
+                          Navigator.pop(context, const <GroupFilter>{}),
+                      child: Text(
+                        l.taskFilterClear,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: LeviathanSpacing.sm),
+                  const Spacer(),
+                  FilledButton(
+                    key: const Key('task-filter-apply'),
+                    onPressed: () => Navigator.pop(context, {..._chosen}),
+                    child: Text(l.apply),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
