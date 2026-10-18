@@ -946,4 +946,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String sharedSavedToDraft(String workspace) {
     return 'Shared text added to the draft in “$workspace”';
   }
+
+  @override
+  String tagColorTitle(String tag) {
+    return 'Color of $tag';
+  }
+
+  @override
+  String get tagColorAuto => 'Automatic color';
 }

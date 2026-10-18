@@ -12,6 +12,7 @@ import 'lists_screen.dart';
 import 'note_actions.dart';
 import 'note_body.dart';
 import 'note_editor.dart';
+import 'tag_color_sheet.dart';
 import 'task_check.dart';
 import 'chip_input.dart';
 import 'theme.dart';
@@ -202,7 +203,12 @@ class NoteScreen extends StatelessWidget {
                                   NoteGrouping.tag,
                                   tag,
                                 ),
-                          child: TagChip(tag),
+                          child: TagChip(
+                            tag,
+                            onLongPress: readOnly
+                                ? null
+                                : () => showTagColorSheet(context, notes, tag),
+                          ),
                         ),
                       for (final source in note.sources)
                         GestureDetector(
@@ -301,27 +307,32 @@ class _EditNotePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(context.l10n.editNote)),
-      body: NoteEditor(
-        initial: note,
-        tagCounts: notes.tagCounts,
-        sourceCounts: notes.sourceCounts,
-        saveLabel: context.l10n.saveChanges,
-        onSave: (draft) {
-          notes.update(
-            note.copyWith(
-              title: draft.title,
-              body: draft.body,
-              tags: draft.tags,
-              sources: draft.sources,
-              isTask: draft.isTask,
-              knowledge: draft.knowledge,
-              created: draft.date == null
-                  ? null
-                  : onDay(draft.date!, note.created),
-            ),
-          );
-          Navigator.pop(context);
-        },
+      // Cambiando il colore di un tag i chip si ridisegnano.
+      body: ListenableBuilder(
+        listenable: notes,
+        builder: (context, _) => NoteEditor(
+          initial: note,
+          tagCounts: notes.tagCounts,
+          sourceCounts: notes.sourceCounts,
+          saveLabel: context.l10n.saveChanges,
+          onTagLongPress: (tag) => showTagColorSheet(context, notes, tag),
+          onSave: (draft) {
+            notes.update(
+              note.copyWith(
+                title: draft.title,
+                body: draft.body,
+                tags: draft.tags,
+                sources: draft.sources,
+                isTask: draft.isTask,
+                knowledge: draft.knowledge,
+                created: draft.date == null
+                    ? null
+                    : onDay(draft.date!, note.created),
+              ),
+            );
+            Navigator.pop(context);
+          },
+        ),
       ),
     );
   }

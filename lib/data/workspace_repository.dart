@@ -33,6 +33,7 @@ class WorkspaceRepository {
   static const _deletedTrash = 'trash';
   static const _deletedGraph = 'graph.json';
   static const _deletedDraft = 'draft.json';
+  static const _deletedTagColors = 'tag-colors.json';
 
   /// I nomi italiani delle prime versioni, con quelli che li sostituiscono.
   static const _legacyDeletedDirName = 'eliminati';
@@ -78,7 +79,8 @@ class WorkspaceRepository {
   }
 
   /// Rinomina il workspace [oldName] e ne restituisce il nuovo nome
-  /// normalizzato. Sposta anche cestino, disposizione del grafo e bozza.
+  /// normalizzato. Sposta anche cestino, disposizione del grafo, bozza e
+  /// colori dei tag.
   ///
   /// Lancia [ArgumentError] con il [WorkspaceNameError] se il nome non è
   /// valido o è già in uso.
@@ -100,12 +102,17 @@ class WorkspaceRepository {
     }
     final draft = draftFile(oldName);
     if (draft.existsSync()) await draft.rename(draftFile(name).path);
+    final colors = tagColorsFile(oldName);
+    if (colors.existsSync()) {
+      await colors.parent.create(recursive: true);
+      await colors.rename(tagColorsFile(name).path);
+    }
     if (await readLastWorkspace() == oldName) await writeLastWorkspace(name);
     return name;
   }
 
   /// Elimina il workspace [name] senza cancellare nulla: note, cestino,
-  /// disposizione del grafo e bozza finiscono in
+  /// disposizione del grafo, bozza e colori dei tag finiscono in
   /// `.leviathan/deleted/<nome> <data>`.
   /// Restituisce la cartella in cui sono stati spostati.
   Future<Directory> deleteWorkspace(String name) async {
@@ -126,6 +133,10 @@ class WorkspaceRepository {
     final draft = draftFile(name);
     if (draft.existsSync()) {
       await draft.rename(p.join(target.path, _deletedDraft));
+    }
+    final colors = tagColorsFile(name);
+    if (colors.existsSync()) {
+      await colors.rename(p.join(target.path, _deletedTagColors));
     }
     return target;
   }
@@ -192,6 +203,10 @@ class WorkspaceRepository {
   /// Il file con le posizioni dei nodi del grafo del workspace [name].
   File graphLayoutFile(String name) =>
       File(p.join(root.path, _settingsDirName, 'graph', '$name.json'));
+
+  /// I colori scelti a mano per i tag del workspace [name].
+  File tagColorsFile(String name) =>
+      File(p.join(root.path, _settingsDirName, 'tag-colors', '$name.json'));
 
   /// La bozza non salvata della home del workspace [name].
   File draftFile(String name) =>

@@ -935,4 +935,12 @@ class AppLocalizationsIt extends AppLocalizations {
   String sharedSavedToDraft(String workspace) {
     return 'Testo condiviso aggiunto alla bozza di «$workspace»';
   }
+
+  @override
+  String tagColorTitle(String tag) {
+    return 'Colore di $tag';
+  }
+
+  @override
+  String get tagColorAuto => 'Colore automatico';
 }

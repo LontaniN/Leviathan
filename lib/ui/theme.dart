@@ -294,6 +294,9 @@ class LeviathanSizes {
   static const tagDot = 5.0;
   static const tagDotDense = 4.0;
 
+  /// Diametro di un colore nel foglio per scegliere il colore di un tag.
+  static const tagSwatch = 40.0;
+
   /// Altezza minima delle due schede da confrontare nel task manager.
   static const compareCard = 120.0;
 

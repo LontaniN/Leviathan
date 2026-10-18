@@ -8,6 +8,7 @@ import '../model/tags.dart';
 import '../state/notes_controller.dart';
 import 'chip_input.dart';
 import 'note_screen.dart';
+import 'tag_color_sheet.dart';
 import 'task_check.dart';
 import 'theme.dart';
 
@@ -164,6 +165,9 @@ class _SearchScreenState extends State<SearchScreen> {
     _focus.requestFocus();
   }
 
+  void _editTagColor(String tag) =>
+      showTagColorSheet(context, widget.notes, tag);
+
   void _open(Note note) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -207,6 +211,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     () => _sources = _sources.where((x) => x != s).toList(),
                   ),
                   onRemoveTask: () => setState(() => _task = null),
+                  onTagLongPress: _editTagColor,
                   onSubmitted: () => _submit(parsed),
                   onClear: hasAnything ? _clear : null,
                 ),
@@ -231,6 +236,7 @@ class _SearchScreenState extends State<SearchScreen> {
                               setState(() => _tags = [..._tags, t]),
                           onAddSource: (s) =>
                               setState(() => _sources = [..._sources, s]),
+                          onTagLongPress: _editTagColor,
                         )
                       : _Results(
                           hits: searchNotes(widget.notes.notes, query),
@@ -258,6 +264,7 @@ class _SearchBar extends StatelessWidget {
     required this.onRemoveTag,
     required this.onRemoveSource,
     required this.onRemoveTask,
+    required this.onTagLongPress,
     required this.onSubmitted,
     required this.onClear,
   });
@@ -270,6 +277,7 @@ class _SearchBar extends StatelessWidget {
   final ValueChanged<String> onRemoveTag;
   final ValueChanged<String> onRemoveSource;
   final VoidCallback onRemoveTask;
+  final ValueChanged<String> onTagLongPress;
   final VoidCallback onSubmitted;
   final VoidCallback? onClear;
 
@@ -311,7 +319,11 @@ class _SearchBar extends StatelessWidget {
                             if (task != null)
                               StatusChip(task!, onDeleted: onRemoveTask),
                             for (final tag in tags)
-                              TagChip(tag, onDeleted: () => onRemoveTag(tag)),
+                              TagChip(
+                                tag,
+                                onDeleted: () => onRemoveTag(tag),
+                                onLongPress: () => onTagLongPress(tag),
+                              ),
                             for (final source in sources)
                               SourceChip(
                                 source,
@@ -377,6 +389,7 @@ class _FilterOptions extends StatelessWidget {
     required this.sourceCounts,
     required this.onAddTag,
     required this.onAddSource,
+    required this.onTagLongPress,
   });
 
   final ValueChanged<String> onPick;
@@ -384,6 +397,7 @@ class _FilterOptions extends StatelessWidget {
   final Map<String, int> sourceCounts;
   final ValueChanged<String> onAddTag;
   final ValueChanged<String> onAddSource;
+  final ValueChanged<String> onTagLongPress;
 
   /// Quanti tag e quante fonti frequenti mostrare.
   static const _frequent = 6;
@@ -413,15 +427,18 @@ class _FilterOptions extends StatelessWidget {
           SectionTitle(l.frequentTags),
           chips([
             for (final t in tags)
-              ActionChip(
-                key: Key('frequent-tag-$t'),
-                avatar: CircleAvatar(
-                  backgroundColor: Tags.colorOf(t),
-                  radius: LeviathanSizes.tagDot,
+              GestureDetector(
+                onLongPress: () => onTagLongPress(t),
+                child: ActionChip(
+                  key: Key('frequent-tag-$t'),
+                  avatar: CircleAvatar(
+                    backgroundColor: Tags.colorOf(t),
+                    radius: LeviathanSizes.tagDot,
+                  ),
+                  label: _counted(context, t, tagCounts[t]),
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => onAddTag(t),
                 ),
-                label: _counted(context, t, tagCounts[t]),
-                visualDensity: VisualDensity.compact,
-                onPressed: () => onAddTag(t),
               ),
           ]),
         ],

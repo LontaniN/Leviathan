@@ -1597,6 +1597,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Shared text added to the draft in “{workspace}”'**
   String sharedSavedToDraft(String workspace);
+
+  /// No description provided for @tagColorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Color of {tag}'**
+  String tagColorTitle(String tag);
+
+  /// No description provided for @tagColorAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic color'**
+  String get tagColorAuto;
 }
 
 class _AppLocalizationsDelegate

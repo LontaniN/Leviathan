@@ -9,6 +9,7 @@ import '../model/tags.dart';
 import '../state/notes_controller.dart';
 import 'note_screen.dart';
 import 'search_screen.dart';
+import 'tag_color_sheet.dart';
 import 'theme.dart';
 
 /// Task, note e conoscenza del workspace in un'unica schermata: in alto si
@@ -208,6 +209,8 @@ class _ListsScreenState extends State<ListsScreen> {
                         tasks: _tasks,
                         filter: _filter,
                         onOpen: _openGroup,
+                        onTagLongPress: (tag) =>
+                            showTagColorSheet(context, widget.notes, tag),
                       ),
               ),
             ],
@@ -343,6 +346,7 @@ class _GroupGrid extends StatelessWidget {
     required this.tasks,
     required this.filter,
     required this.onOpen,
+    required this.onTagLongPress,
   });
 
   final String summary;
@@ -351,6 +355,7 @@ class _GroupGrid extends StatelessWidget {
   final bool tasks;
   final TaskFilter filter;
   final ValueChanged<String?> onOpen;
+  final ValueChanged<String> onTagLongPress;
 
   static const _columns = 3;
 
@@ -389,6 +394,11 @@ class _GroupGrid extends StatelessWidget {
               tasks: tasks,
               filter: filter,
               onTap: () => onOpen(groups[i].name),
+              onLongPress: switch (groups[i].name) {
+                final name? when grouping == NoteGrouping.tag =>
+                  () => onTagLongPress(name),
+                _ => null,
+              },
             ),
           ),
         ),
@@ -436,6 +446,7 @@ class _GroupTile extends StatelessWidget {
     required this.tasks,
     required this.filter,
     required this.onTap,
+    this.onLongPress,
   });
 
   final NoteGroup group;
@@ -445,6 +456,9 @@ class _GroupTile extends StatelessWidget {
   /// Il filtro già applicato a [group]: decide il conteggio in alto.
   final TaskFilter filter;
   final VoidCallback onTap;
+
+  /// Sui tag apre la scelta del colore.
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -484,6 +498,7 @@ class _GroupTile extends StatelessWidget {
         child: InkWell(
           borderRadius: radius,
           onTap: onTap,
+          onLongPress: onLongPress,
           child: Padding(
             padding: const EdgeInsets.all(LeviathanSpacing.sm),
             child: Column(

@@ -311,5 +311,8 @@
   "shareToWorkspace": "Save shared text to",
   "sharedAppended": "Shared text added to the end of your draft",
   "sharedSavedToDraft": "Shared text added to the draft in “{workspace}”",
-  "@sharedSavedToDraft": {"placeholders": {"workspace": {"type": "String", "example": "University"}}}
+  "@sharedSavedToDraft": {"placeholders": {"workspace": {"type": "String", "example": "University"}}},
+  "tagColorTitle": "Color of {tag}",
+  "@tagColorTitle": {"placeholders": {"tag": {"type": "String", "example": "study"}}},
+  "tagColorAuto": "Automatic color"
 }

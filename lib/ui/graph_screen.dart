@@ -11,6 +11,7 @@ import '../model/tags.dart';
 import '../state/notes_controller.dart';
 import 'chip_input.dart';
 import 'note_screen.dart';
+import 'tag_color_sheet.dart';
 import 'theme.dart';
 
 /// Il grafo delle note del workspace: ogni nodo è una nota del colore del
@@ -230,6 +231,9 @@ class _GraphScreenState extends State<GraphScreen>
     }
   }
 
+  void _editTagColor(String tag) =>
+      showTagColorSheet(context, widget.notes, tag);
+
   void _openNote(int index) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -300,6 +304,7 @@ class _GraphScreenState extends State<GraphScreen>
               tags: _filterTags,
               sources: _filterSources,
               matches: _matching!.length,
+              onTagLongPress: _editTagColor,
               onRemoveTag: (t) => setState(() {
                 _filterTags = _filterTags.where((x) => x != t).toList();
                 _applyFilter();
@@ -356,6 +361,7 @@ class _GraphScreenState extends State<GraphScreen>
                               child: _SelectedCard(
                                 node: _graph.nodes[_selected],
                                 onOpen: () => _openNote(_selected),
+                                onTagLongPress: _editTagColor,
                               ),
                             ),
                         ],
@@ -517,10 +523,15 @@ class _GraphPainter extends CustomPainter {
 }
 
 class _SelectedCard extends StatelessWidget {
-  const _SelectedCard({required this.node, required this.onOpen});
+  const _SelectedCard({
+    required this.node,
+    required this.onOpen,
+    required this.onTagLongPress,
+  });
 
   final GraphNode node;
   final VoidCallback onOpen;
+  final ValueChanged<String> onTagLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -568,7 +579,12 @@ class _SelectedCard extends StatelessWidget {
                           spacing: LeviathanSpacing.xs,
                           runSpacing: LeviathanSpacing.xs,
                           children: [
-                            for (final t in note.tags) TagChip(t, dense: true),
+                            for (final t in note.tags)
+                              TagChip(
+                                t,
+                                dense: true,
+                                onLongPress: () => onTagLongPress(t),
+                              ),
                             for (final s in note.sources)
                               SourceChip(s, dense: true),
                           ],
@@ -593,6 +609,7 @@ class _ActiveFilters extends StatelessWidget {
     required this.matches,
     required this.onRemoveTag,
     required this.onRemoveSource,
+    required this.onTagLongPress,
   });
 
   final List<String> tags;
@@ -600,6 +617,7 @@ class _ActiveFilters extends StatelessWidget {
   final int matches;
   final ValueChanged<String> onRemoveTag;
   final ValueChanged<String> onRemoveSource;
+  final ValueChanged<String> onTagLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -618,7 +636,11 @@ class _ActiveFilters extends StatelessWidget {
               runSpacing: LeviathanSpacing.sm,
               children: [
                 for (final t in tags)
-                  TagChip(t, onDeleted: () => onRemoveTag(t)),
+                  TagChip(
+                    t,
+                    onDeleted: () => onRemoveTag(t),
+                    onLongPress: () => onTagLongPress(t),
+                  ),
                 for (final s in sources)
                   SourceChip(s, onDeleted: () => onRemoveSource(s)),
               ],

@@ -6,6 +6,7 @@ import '../data/draft_store.dart';
 import '../data/graph_layout_store.dart';
 import '../data/note_repository.dart';
 import '../data/storage_access.dart';
+import '../data/tag_color_store.dart';
 import '../data/workspace_repository.dart';
 
 enum AppStatus { loading, needsPermission, onboarding, ready, error }
@@ -126,6 +127,10 @@ class AppState extends ChangeNotifier {
   /// Dove si salvano le posizioni dei nodi del grafo del workspace [name].
   GraphLayoutStore graphLayoutOf(String name) =>
       GraphLayoutStore(repository.graphLayoutFile(name));
+
+  /// Dove si salvano i colori scelti per i tag del workspace [name].
+  TagColorStore tagColorsOf(String name) =>
+      TagColorStore(repository.tagColorsFile(name));
 
   /// Dove si tiene la bozza della home del workspace [name].
   DraftStore draftOf(String name) => DraftStore(repository.draftFile(name));

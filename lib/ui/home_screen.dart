@@ -23,6 +23,7 @@ import 'pinned_screen.dart';
 import 'search_screen.dart';
 import 'settings_screen.dart';
 import 'tag_bar.dart';
+import 'tag_color_sheet.dart';
 import 'task_manager_screen.dart';
 import 'task_check.dart';
 import 'theme.dart';
@@ -63,6 +64,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   late final NotesController _notes = NotesController(
     widget.state.notesOf(widget.state.currentWorkspace!),
+    tagColors: widget.state.tagColorsOf(widget.state.currentWorkspace!),
   );
   bool _listExpanded = false;
 
@@ -420,6 +422,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   tagCounts: _notes.tagCounts,
                   sourceCounts: _notes.sourceCounts,
                   draft: widget.state.draftOf(widget.state.currentWorkspace!),
+                  onTagLongPress: (tag) =>
+                      showTagColorSheet(context, _notes, tag),
                   onSave: (draft) => _flash(
                     _notes.create(
                       title: draft.title,

@@ -1,9 +1,12 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/painting.dart' show Color;
 
 import '../data/note_repository.dart';
+import '../data/tag_color_store.dart';
 import '../model/note.dart';
+import '../model/tags.dart';
 import '../model/task_order.dart';
 
 /// Una nota appena spostata nel cestino, con il file dove è finita.
@@ -11,11 +14,13 @@ typedef DeletedNote = ({Note note, String trashPath});
 
 /// Le note del workspace aperto e i tag che usano.
 class NotesController extends ChangeNotifier {
-  NotesController(this._repo) {
+  NotesController(this._repo, {this._tagColors}) {
+    Tags.custom = _tagColors?.read() ?? const {};
     reload();
   }
 
   final NoteRepository _repo;
+  final TagColorStore? _tagColors;
 
   List<Note> notes = const [];
 
@@ -166,6 +171,20 @@ class NotesController extends ChangeNotifier {
     notes = [...notes, deleted.note]
       ..sort((a, b) => b.created.compareTo(a.created));
     _refreshCounts();
+    notifyListeners();
+  }
+
+  /// Dà a [tag] il colore [color]; con null torna quello automatico.
+  /// Vale per tutto il workspace: barrette, chip e grafo.
+  void setTagColor(String tag, Color? color) {
+    final colors = {...Tags.custom};
+    if (color == null || color == Tags.autoColorOf(tag)) {
+      colors.remove(tag);
+    } else {
+      colors[tag] = color;
+    }
+    Tags.custom = colors;
+    _tagColors?.write(colors);
     notifyListeners();
   }
 

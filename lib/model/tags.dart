@@ -157,8 +157,16 @@ class Tags {
     Color(0xFFB98AE0), // viola
   ];
 
+  /// I colori scelti a mano nel workspace aperto (li imposta
+  /// `NotesController`); vincono su quello automatico.
+  static Map<String, Color> custom = const {};
+
+  /// Il colore di un tag: quello scelto a mano, se c'è, altrimenti
+  /// [autoColorOf].
+  static Color colorOf(String tag) => custom[tag] ?? autoColorOf(tag);
+
   /// Colore stabile per un tag (lo stesso tag ha sempre lo stesso colore).
-  static Color colorOf(String tag) {
+  static Color autoColorOf(String tag) {
     var hash = 0x811c9dc5; // FNV-1a
     for (final unit in tag.codeUnits) {
       hash = ((hash ^ unit) * 0x01000193) & 0xFFFFFFFF;

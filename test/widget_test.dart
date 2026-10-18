@@ -1,10 +1,11 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_test/flutter_test.dart' hide Tags;
 import 'package:leviathan/app.dart';
 import 'package:leviathan/data/storage_access.dart';
 import 'package:leviathan/data/workspace_repository.dart';
+import 'package:leviathan/model/tags.dart';
 import 'package:leviathan/state/app_state.dart';
 import 'package:leviathan/state/settings.dart';
 import 'package:leviathan/state/share_inbox.dart';
@@ -899,6 +900,45 @@ void main() {
     await settle(tester);
     expect(file.existsSync(), isTrue);
     expect(find.text('Idea'), findsOneWidget);
+  });
+
+  testWidgets('tenendo premuto un tag se ne sceglie il colore', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+    addTearDown(() => Tags.custom = const {});
+
+    await tester.runAsync(() async {
+      await WorkspaceRepository(root).createWorkspace('Lavoro');
+      File('${root.path}/Lavoro/idea.md').writeAsStringSync(
+        '---\ntitle: "Idea"\ntags: ["studio"]\n'
+        'created: "2026-01-01T00:00:00.000"\n---\nTesto.',
+      );
+    });
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+    await settle(tester);
+
+    await tester.tap(find.text('Idea'));
+    await settle(tester);
+    final chosen = Tags.palette.firstWhere(
+      (c) => c != Tags.autoColorOf('studio'),
+    );
+    await tester.longPress(find.text('studio'));
+    await settle(tester);
+    expect(find.text('Colore di studio'), findsOneWidget);
+    await tester.tap(find.byKey(Key('tag-color-${chosen.toARGB32()}')));
+    await settle(tester);
+
+    expect(Tags.colorOf('studio'), chosen);
+    final saved = File('${root.path}/.leviathan/tag-colors/Lavoro.json');
+    expect(saved.readAsStringSync(), contains('"studio"'));
+
+    // Si torna al colore automatico.
+    await tester.longPress(find.text('studio'));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('tag-color-auto')));
+    await settle(tester);
+    expect(Tags.colorOf('studio'), Tags.autoColorOf('studio'));
   });
 
   testWidgets('la bozza della home resta dopo la riapertura', (tester) async {

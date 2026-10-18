@@ -7,16 +7,25 @@ import 'theme.dart';
 
 /// Pallino colorato + nome: come appare un tag in tutta l'app.
 class TagChip extends StatelessWidget {
-  const TagChip(this.tag, {super.key, this.onDeleted, this.dense = false});
+  const TagChip(
+    this.tag, {
+    super.key,
+    this.onDeleted,
+    this.onLongPress,
+    this.dense = false,
+  });
 
   final String tag;
   final VoidCallback? onDeleted;
+
+  /// Di solito apre la scelta del colore del tag.
+  final VoidCallback? onLongPress;
   final bool dense;
 
   @override
   Widget build(BuildContext context) {
     final color = Tags.colorOf(tag);
-    return _BaseChip(
+    final chip = _BaseChip(
       label: tag,
       avatar: CircleAvatar(
         backgroundColor: color,
@@ -26,6 +35,8 @@ class TagChip extends StatelessWidget {
       onDeleted: onDeleted,
       dense: dense,
     );
+    if (onLongPress == null) return chip;
+    return GestureDetector(onLongPress: onLongPress, child: chip);
   }
 }
 
@@ -223,6 +234,7 @@ class ChipInput extends StatefulWidget {
     required this.counts,
     required this.pending,
     this.fieldKey,
+    this.onLongPress,
   });
 
   final ChipKind kind;
@@ -231,6 +243,9 @@ class ChipInput extends StatefulWidget {
   final Map<String, int> counts;
   final TextEditingController pending;
   final Key? fieldKey;
+
+  /// Tenendo premuta una voce scelta (per i tag: la scelta del colore).
+  final ValueChanged<String>? onLongPress;
 
   /// Suggerimenti a campo vuoto: le voci più usate.
   static const popularLimit = 3;
@@ -342,10 +357,15 @@ class _ChipInputState extends State<ChipInput> {
                 spacing: LeviathanSpacing.xs,
                 children: [
                   for (final value in widget.values)
-                    kind.chip(
-                      value,
-                      () => widget.onChanged(
-                        widget.values.where((v) => v != value).toList(),
+                    GestureDetector(
+                      onLongPress: widget.onLongPress == null
+                          ? null
+                          : () => widget.onLongPress!(value),
+                      child: kind.chip(
+                        value,
+                        () => widget.onChanged(
+                          widget.values.where((v) => v != value).toList(),
+                        ),
                       ),
                     ),
                   if (suggestions.isNotEmpty && widget.values.isNotEmpty)
