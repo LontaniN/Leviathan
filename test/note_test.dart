@@ -224,6 +224,7 @@ void main() {
     test('forma canonica', () {
       expect(Tags.normalize('  Machine Learning '), 'machine-learning');
       expect(Tags.normalize('#Città'), 'citta');
+      expect(Tags.normalize('Müller Façade'), 'muller-facade');
       expect(Tags.normalize('luce/Naturale'), 'luce/naturale');
       expect(Tags.normalize('a  --  b'), 'a-b');
       expect(Tags.normalize('!!!'), '');
@@ -308,6 +309,15 @@ void main() {
         now: DateTime(2026, 1, 2),
       );
       expect(second.id, '20260102-000000-seconda-nota');
+      final accented = repo.create(
+        title: 'Perché Müller è là',
+        body: '',
+        tags: [],
+        sources: [],
+        now: DateTime(2026, 1, 3),
+      );
+      expect(accented.id, '20260103-000000-perche-muller-e-la');
+      repo.delete(accented);
 
       expect(repo.loadAll().map((n) => n.title), ['Seconda nota!', 'Prima']);
 

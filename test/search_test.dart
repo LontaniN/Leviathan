@@ -124,6 +124,7 @@ void main() {
   test('foldText toglie accenti e maiuscole solo dove servono', () {
     expect(foldText('Perché CITTÀ è così'), 'perche citta e cosi');
     expect(foldText('nessun accento'), 'nessun accento');
+    expect(foldText('Müller, François, España'), 'muller, francois, espana');
     expect(foldText(''), '');
     // Lettere non latine e simboli restano come sono.
     expect(foldText('Ω → ✓'), 'ω → ✓');

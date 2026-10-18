@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 
 import '../model/note.dart';
+import '../model/tags.dart';
 import 'atomic_write.dart';
 
 /// Legge e scrive le note di un workspace: un file `.md` per nota.
@@ -158,16 +159,7 @@ class NoteRepository {
   }
 
   static String _slug(String title) {
-    const accents = {
-      'à': 'a',
-      'è': 'e',
-      'é': 'e',
-      'ì': 'i',
-      'ò': 'o',
-      'ù': 'u',
-    };
-    var slug = title.toLowerCase().split('').map((c) => accents[c] ?? c).join();
-    slug = slug
+    var slug = foldText(title)
         .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
         .replaceAll(RegExp(r'^-+|-+$'), '');
     if (slug.length > 40) {
