@@ -69,6 +69,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final _tagsKey = GlobalKey();
   final _listKey = GlobalKey();
   final _searchKey = GlobalKey();
+  final _taskManagerKey = GlobalKey();
   final _viewsKey = GlobalKey();
 
   /// La nota appena salvata, la cui voce nella lista si illumina; [_flashSeq]
@@ -113,6 +114,11 @@ class _HomeScreenState extends State<HomeScreen> {
     (target: _tagsKey, title: l.tourTagsTitle, body: l.tourTagsBody),
     (target: _listKey, title: l.tourListTitle, body: l.tourListBody),
     (target: _searchKey, title: l.tourSearchTitle, body: l.tourSearchBody),
+    (
+      target: _taskManagerKey,
+      title: l.tourTaskManagerTitle,
+      body: l.tourTaskManagerBody,
+    ),
     (target: _viewsKey, title: l.tourViewsTitle, body: l.tourViewsBody),
   ];
 
@@ -189,6 +195,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 state: widget.state,
                 notes: _notes.notes,
                 viewsKey: _viewsKey,
+                taskManagerKey: _taskManagerKey,
                 onPinned: () => _push(PinnedScreen(notes: _notes)),
                 onGraph: _openGraph,
                 onLists: () => _push(ListsScreen(notes: _notes)),
@@ -299,6 +306,7 @@ class _Header extends StatelessWidget {
     required this.state,
     required this.notes,
     required this.viewsKey,
+    required this.taskManagerKey,
     required this.onPinned,
     required this.onGraph,
     required this.onLists,
@@ -310,8 +318,10 @@ class _Header extends StatelessWidget {
   final AppState state;
   final List<Note> notes;
 
-  /// Chiave del gruppo di icone delle altre viste, per il tour.
+  /// Chiavi del gruppo di icone delle altre viste e del pulsante del task
+  /// manager, per il tour.
   final GlobalKey viewsKey;
+  final GlobalKey taskManagerKey;
   final VoidCallback onPinned;
   final VoidCallback onGraph;
   final VoidCallback onLists;
@@ -384,11 +394,14 @@ class _Header extends StatelessWidget {
                 icon: const Icon(Icons.calendar_month_outlined),
                 onPressed: onCalendar,
               ),
-              IconButton(
-                key: const Key('task-manager-button'),
-                tooltip: l.taskManager,
-                icon: const Icon(Icons.low_priority),
-                onPressed: onTaskManager,
+              KeyedSubtree(
+                key: taskManagerKey,
+                child: IconButton(
+                  key: const Key('task-manager-button'),
+                  tooltip: l.taskManager,
+                  icon: const Icon(Icons.low_priority),
+                  onPressed: onTaskManager,
+                ),
               ),
               IconButton(
                 key: const Key('settings-button'),

@@ -1053,7 +1053,7 @@ void main() {
     expect(find.text('Lavoro è pronto'), findsOneWidget);
     await tester.tap(find.byKey(const Key('tour-start')));
     await settle(tester);
-    expect(find.text('1 DI 5'), findsOneWidget);
+    expect(find.text('1 DI 6'), findsOneWidget);
     expect(find.text('Scrivi una nota'), findsOneWidget);
     // Sul primo passo non si torna indietro.
     expect(find.byKey(const Key('tour-back')), findsNothing);
@@ -1069,7 +1069,11 @@ void main() {
       await tester.tap(find.byKey(const Key('tour-next')));
       await settle(tester);
     }
-    expect(find.text('5 DI 5'), findsOneWidget);
+    expect(find.text('5 DI 6'), findsOneWidget);
+    expect(find.text('Metti in ordine i task'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('tour-next')));
+    await settle(tester);
+    expect(find.text('6 DI 6'), findsOneWidget);
     expect(find.text('Le altre viste'), findsOneWidget);
     // All'ultimo passo resta solo Fine.
     expect(find.byKey(const Key('tour-skip')), findsNothing);
@@ -1139,7 +1143,7 @@ void main() {
     // Torna alla home e parte dal primo passo, senza benvenuto.
     expect(find.text('Impostazioni'), findsNothing);
     expect(find.byKey(const Key('tour-welcome')), findsNothing);
-    expect(find.text('1 DI 5'), findsOneWidget);
+    expect(find.text('1 DI 6'), findsOneWidget);
   });
 
   testWidgets('task manager: ordina a confronti, spunta e ritrova', (

@@ -766,7 +766,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tourWelcomeBody =>
-      'Want a quick tour of the main features? It takes five steps.';
+      'Want a quick tour of the main features? It takes six steps.';
 
   @override
   String get tourStart => 'Start the tour';
@@ -817,11 +817,18 @@ class AppLocalizationsEn extends AppLocalizations {
       'Search titles, text, tags and sources. Type # to filter by tag and @ by source.';
 
   @override
+  String get tourTaskManagerTitle => 'Put tasks in order';
+
+  @override
+  String get tourTaskManagerBody =>
+      'The task manager sorts open tasks into Now, Next and Later: their position is their priority. Press and hold a task and drag it to move it. New tasks wait in To sort: answer a few \"Which comes first?\" to place them. Ticked tasks end up in Completed.';
+
+  @override
   String get tourViewsTitle => 'Other views';
 
   @override
   String get tourViewsBody =>
-      'Pinned notes, the graph of notes linked by tags, task and note lists, the calendar, the task manager to put tasks in order, and the settings, where you can replay this tour.';
+      'Pinned notes, the graph of notes linked by tags, task and note lists, the calendar and the settings, where you can replay this tour.';
 
   @override
   String get guide => 'Guide';

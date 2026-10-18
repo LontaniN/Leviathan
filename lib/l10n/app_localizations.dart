@@ -1289,7 +1289,7 @@ abstract class AppLocalizations {
   /// No description provided for @tourWelcomeBody.
   ///
   /// In en, this message translates to:
-  /// **'Want a quick tour of the main features? It takes five steps.'**
+  /// **'Want a quick tour of the main features? It takes six steps.'**
   String get tourWelcomeBody;
 
   /// No description provided for @tourStart.
@@ -1376,6 +1376,18 @@ abstract class AppLocalizations {
   /// **'Search titles, text, tags and sources. Type # to filter by tag and @ by source.'**
   String get tourSearchBody;
 
+  /// No description provided for @tourTaskManagerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Put tasks in order'**
+  String get tourTaskManagerTitle;
+
+  /// No description provided for @tourTaskManagerBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The task manager sorts open tasks into Now, Next and Later: their position is their priority. Press and hold a task and drag it to move it. New tasks wait in To sort: answer a few \"Which comes first?\" to place them. Ticked tasks end up in Completed.'**
+  String get tourTaskManagerBody;
+
   /// No description provided for @tourViewsTitle.
   ///
   /// In en, this message translates to:
@@ -1385,7 +1397,7 @@ abstract class AppLocalizations {
   /// No description provided for @tourViewsBody.
   ///
   /// In en, this message translates to:
-  /// **'Pinned notes, the graph of notes linked by tags, task and note lists, the calendar, the task manager to put tasks in order, and the settings, where you can replay this tour.'**
+  /// **'Pinned notes, the graph of notes linked by tags, task and note lists, the calendar and the settings, where you can replay this tour.'**
   String get tourViewsBody;
 
   /// No description provided for @guide.
