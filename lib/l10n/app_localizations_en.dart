@@ -343,6 +343,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get kindTask => 'Task';
 
   @override
+  String get knowledge => 'Knowledge';
+
+  @override
+  String get knowledgeTitleHint => 'What do you know?';
+
+  @override
   String get formatBold => 'Bold';
 
   @override
@@ -473,6 +479,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get listsNoNotes => 'No notes yet: write one from the home screen.';
 
   @override
+  String get listsNoKnowledge =>
+      'No knowledge notes yet: mark a note with the light bulb in the editor.';
+
+  @override
   String get listsNoTasks =>
       'No tasks yet: write one by choosing \"Task\" in the editor.';
 
@@ -517,6 +527,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noTasksHere => 'No tasks here.';
+
+  @override
+  String get noKnowledgeHere => 'No knowledge notes here.';
 
   @override
   String taskSummary(int total, int open) {
@@ -574,6 +587,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get viewNotes => 'Notes';
+
+  @override
+  String get viewKnowledge => 'Knowledge';
 
   @override
   String get searchCalendar => 'Search the calendar';

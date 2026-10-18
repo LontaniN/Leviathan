@@ -45,6 +45,7 @@ class NotesController extends ChangeNotifier {
     required List<String> tags,
     required List<String> sources,
     bool isTask = false,
+    bool knowledge = false,
     DateTime? created,
   }) {
     final note = _repo.create(
@@ -53,6 +54,7 @@ class NotesController extends ChangeNotifier {
       tags: tags,
       sources: sources,
       isTask: isTask,
+      knowledge: knowledge,
       now: created,
     );
     // Datata a un altro giorno non va per forza in cima.

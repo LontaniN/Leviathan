@@ -11,11 +11,10 @@ import 'note_screen.dart';
 import 'search_screen.dart';
 import 'theme.dart';
 
-/// Cosa mostra la schermata degli elenchi: i task o le note.
-enum ListsView { tasks, notes }
-
-/// Task e note del workspace in un'unica schermata: in alto si sceglie quale
-/// elenco vedere, sotto se raggrupparlo per tag o per fonte. Fra i task la
+/// Task, note e conoscenza del workspace in un'unica schermata: in alto si
+/// sceglie quale elenco vedere, sotto se raggrupparlo per tag o per fonte.
+/// Le note di conoscenza non stanno fra le note: ogni elenco risponde a una
+/// domanda diversa (cosa c'è da fare, cos'è successo, cosa so). Fra i task la
 /// tendina in alto a destra mostra tutti, solo quelli da fare o solo i fatti.
 ///
 /// Ogni tag (o fonte) è un riquadro, come le caselle del calendario, così
@@ -25,22 +24,22 @@ class ListsScreen extends StatefulWidget {
   const ListsScreen({
     super.key,
     required this.notes,
-    this.initialView = ListsView.tasks,
+    this.initialView = NoteKind.task,
   });
 
   final NotesController notes;
-  final ListsView initialView;
+  final NoteKind initialView;
 
   @override
   State<ListsScreen> createState() => _ListsScreenState();
 }
 
 class _ListsScreenState extends State<ListsScreen> {
-  late ListsView _view = widget.initialView;
+  late NoteKind _view = widget.initialView;
   NoteGrouping _grouping = NoteGrouping.tag;
-  TaskFilter _filter = TaskFilter.task;
+  TaskFilter _filter = TaskFilter.aperto;
 
-  bool get _tasks => _view == ListsView.tasks;
+  bool get _tasks => _view == NoteKind.task;
 
   void _openGroup(String? name) {
     Navigator.of(context).push(
@@ -62,24 +61,16 @@ class _ListsScreenState extends State<ListsScreen> {
       listenable: widget.notes,
       builder: (context, _) {
         final all = widget.notes.notes;
-        final groups = groupNotes(
-          all,
-          _grouping,
-          tasks: _tasks,
-          filter: _filter,
-        );
+        final groups = groupNotes(all, _grouping, kind: _view, filter: _filter);
         final l = context.l10n;
         final hasTasks = all.any((n) => n.isTask);
         final summary = _tasks
             ? _taskSummary(l, all.where((n) => n.isTask), _filter)
-            : l.noteCount(all.where((n) => !n.isTask).length);
+            : l.noteCount(all.where((n) => n.kind == _view).length);
         return Scaffold(
           appBar: AppBar(
             backgroundColor: context.palette.background,
-            title: _ViewToggle(
-              view: _view,
-              onChanged: (v) => setState(() => _view = v),
-            ),
+            title: Text(l.tasksAndNotes),
             actions: [
               if (_tasks)
                 _TaskFilterMenu(
@@ -91,6 +82,20 @@ class _ListsScreenState extends State<ListsScreen> {
           body: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Sotto la barra e a tutta larghezza: tre voci non ci stanno
+              // accanto alla tendina dei task.
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  LeviathanSpacing.lg,
+                  0,
+                  LeviathanSpacing.lg,
+                  LeviathanSpacing.sm,
+                ),
+                child: _ViewToggle(
+                  view: _view,
+                  onChanged: (v) => setState(() => _view = v),
+                ),
+              ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(
                   LeviathanSpacing.lg,
@@ -133,14 +138,16 @@ class _ListsScreenState extends State<ListsScreen> {
               Expanded(
                 child: groups.isEmpty
                     ? _Empty(
-                        !_tasks
+                        _view == NoteKind.note
                             ? l.listsNoNotes
+                            : _view == NoteKind.knowledge
+                            ? l.listsNoKnowledge
                             : hasTasks
                             ? _emptyFiltered(l, _filter)
                             : l.listsNoTasks,
                       )
                     : _GroupGrid(
-                        key: Key(_tasks ? 'task-grid' : 'note-grid'),
+                        key: Key('${_view.name}-grid'),
                         summary: summary,
                         groups: groups,
                         grouping: _grouping,
@@ -411,8 +418,8 @@ class GroupScreen extends StatefulWidget {
     required this.notes,
     required this.name,
     required this.grouping,
-    this.initialView = ListsView.notes,
-    this.initialFilter = TaskFilter.task,
+    this.initialView = NoteKind.note,
+    this.initialFilter = TaskFilter.aperto,
   });
 
   final NotesController notes;
@@ -420,7 +427,7 @@ class GroupScreen extends StatefulWidget {
   /// Il tag o la fonte; null per chi non ne ha.
   final String? name;
   final NoteGrouping grouping;
-  final ListsView initialView;
+  final NoteKind initialView;
   final TaskFilter initialFilter;
 
   @override
@@ -428,7 +435,7 @@ class GroupScreen extends StatefulWidget {
 }
 
 class _GroupScreenState extends State<GroupScreen> {
-  late ListsView _view = widget.initialView;
+  late NoteKind _view = widget.initialView;
   late TaskFilter _filter = widget.initialFilter;
 
   bool _searching = false;
@@ -463,7 +470,7 @@ class _GroupScreenState extends State<GroupScreen> {
   Widget build(BuildContext context) {
     final name = widget.name;
     final grouping = widget.grouping;
-    final tasks = _view == ListsView.tasks;
+    final tasks = _view == NoteKind.task;
     final query = SearchQuery(text: _query.text);
     return ListenableBuilder(
       listenable: widget.notes,
@@ -472,7 +479,7 @@ class _GroupScreenState extends State<GroupScreen> {
         final items = widget.notes.notes
             .where(
               (n) =>
-                  n.isTask == tasks &&
+                  n.kind == _view &&
                   (!tasks || _filter.matches(n)) &&
                   groupsOf(n, grouping).contains(name),
             )
@@ -562,8 +569,10 @@ class _GroupScreenState extends State<GroupScreen> {
                     ? _Empty(
                         items.isNotEmpty
                             ? l.noResultsWhere(where)
-                            : !tasks
+                            : _view == NoteKind.note
                             ? l.noNotesHere
+                            : _view == NoteKind.knowledge
+                            ? l.noKnowledgeHere
                             : _filter == TaskFilter.task
                             ? l.noTasksHere
                             : _emptyFiltered(l, _filter),
@@ -661,30 +670,35 @@ class _TaskFilterMenu extends StatelessWidget {
   }
 }
 
-/// La scelta fra task e note.
+/// La scelta fra task, note e conoscenza.
 class _ViewToggle extends StatelessWidget {
   const _ViewToggle({required this.view, required this.onChanged});
 
-  final ListsView view;
-  final ValueChanged<ListsView> onChanged;
+  final NoteKind view;
+  final ValueChanged<NoteKind> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return SegmentedButton<ListsView>(
+    return SegmentedButton<NoteKind>(
       key: const Key('view-toggle'),
       segments: [
         ButtonSegment(
-          value: ListsView.tasks,
+          value: NoteKind.task,
           icon: const Icon(Icons.checklist, size: LeviathanIconSize.sm),
           label: Text(context.l10n.viewTasks),
         ),
         ButtonSegment(
-          value: ListsView.notes,
+          value: NoteKind.note,
           icon: const Icon(
             Icons.description_outlined,
             size: LeviathanIconSize.sm,
           ),
           label: Text(context.l10n.viewNotes),
+        ),
+        ButtonSegment(
+          value: NoteKind.knowledge,
+          icon: const Icon(Icons.lightbulb_outline, size: LeviathanIconSize.sm),
+          label: Text(context.l10n.viewKnowledge),
         ),
       ],
       selected: {view},

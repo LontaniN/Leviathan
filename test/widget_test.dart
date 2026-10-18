@@ -365,7 +365,8 @@ void main() {
 
     await tester.tap(find.byKey(const Key('lists-button')));
     await settle(tester);
-    expect(find.text('1 task · 1 da fare'), findsOneWidget);
+    // Si apre sul filtro "Da fare".
+    expect(find.text('1 task da fare'), findsOneWidget);
     expect(find.text('universita'), findsOneWidget);
 
     // La tendina in alto a destra lascia solo i fatti: qui non ce n'è.
@@ -393,6 +394,50 @@ void main() {
     await settle(tester);
     expect(find.text('Anna'), findsOneWidget);
     expect(find.text('universita'), findsNothing);
+  });
+
+  testWidgets('lampadina: la nota va fra la conoscenza, non fra le note', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    final repo = WorkspaceRepository(root);
+    await tester.runAsync(() async {
+      await repo.createWorkspace('Studio');
+      File(
+        '${root.path}/Studio/diario.md',
+      ).writeAsStringSync('---\ntitle: "Diario"\ntags: ["universita"]\n---\n');
+    });
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+    await settle(tester);
+
+    await tester.tap(find.byKey(const Key('knowledge-toggle')));
+    await tester.pump();
+    expect(find.text('Cosa sai?'), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('title-field')), 'Teorema');
+    await tester.ensureVisible(find.text('Salva nota'));
+    await tester.tap(find.text('Salva nota'));
+    await settle(tester);
+
+    final saved = Directory('${root.path}/Studio')
+        .listSync()
+        .whereType<File>()
+        .singleWhere((f) => f.path.contains('teorema'));
+    expect(saved.readAsStringSync(), contains('knowledge: true'));
+
+    await tester.tap(find.byKey(const Key('lists-button')));
+    await settle(tester);
+    await tester.tap(find.text('Conoscenza'));
+    await settle(tester);
+    expect(find.text('Teorema'), findsOneWidget);
+    expect(find.text('Diario'), findsNothing);
+
+    await tester.tap(find.text('Note').last);
+    await settle(tester);
+    expect(find.text('Diario'), findsOneWidget);
+    expect(find.text('Teorema'), findsNothing);
   });
 
   testWidgets('ricerca con testo, filtro tag e filtro fonte', (tester) async {

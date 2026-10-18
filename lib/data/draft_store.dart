@@ -8,6 +8,7 @@ typedef Draft = ({
   List<String> tags,
   List<String> sources,
   bool isTask,
+  bool knowledge,
 
   /// Il giorno a cui si riferisce la nota, se non è oggi.
   DateTime? date,
@@ -33,6 +34,7 @@ class DraftStore {
         tags: list(json['tags']),
         sources: list(json['sources']),
         isTask: json['task'] == true,
+        knowledge: json['knowledge'] == true,
         date: DateTime.tryParse('${json['date'] ?? ''}'),
       );
     } on Object {
@@ -53,6 +55,7 @@ class DraftStore {
         'tags': draft.tags,
         'sources': draft.sources,
         'task': draft.isTask,
+        'knowledge': draft.knowledge,
         if (draft.date case final date?) 'date': date.toIso8601String(),
       }),
     );

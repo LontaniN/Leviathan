@@ -49,7 +49,7 @@ class NoteScreen extends StatelessWidget {
           notes: notes,
           name: name,
           grouping: grouping,
-          initialView: note.isTask ? ListsView.tasks : ListsView.notes,
+          initialView: note.kind,
         ),
       ),
     );
@@ -301,6 +301,7 @@ class _EditNotePage extends StatelessWidget {
               tags: draft.tags,
               sources: draft.sources,
               isTask: draft.isTask,
+              knowledge: draft.knowledge,
               created: draft.date == null
                   ? null
                   : onDay(draft.date!, note.created),

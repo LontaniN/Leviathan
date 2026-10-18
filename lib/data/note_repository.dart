@@ -46,6 +46,7 @@ class NoteRepository {
     required List<String> tags,
     required List<String> sources,
     bool isTask = false,
+    bool knowledge = false,
     DateTime? now,
   }) {
     final time = now ?? DateTime.now();
@@ -58,6 +59,7 @@ class NoteRepository {
       created: time,
       updated: time,
       isTask: isTask,
+      knowledge: !isTask && knowledge,
     );
     save(note);
     return note;

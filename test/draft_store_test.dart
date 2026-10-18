@@ -25,6 +25,7 @@ void main() {
       tags: ['studio'],
       sources: ['Anna'],
       isTask: true,
+      knowledge: false,
       date: null,
     ));
     final draft = store.read()!;
@@ -42,6 +43,7 @@ void main() {
       tags: const [],
       sources: const [],
       isTask: false,
+      knowledge: false,
       date: null,
     ));
     expect(store.file.existsSync(), isTrue);
@@ -51,21 +53,24 @@ void main() {
       tags: const [],
       sources: const [],
       isTask: true,
+      knowledge: false,
       date: null,
     ));
     expect(store.file.existsSync(), isFalse);
     expect(store.read(), isNull);
   });
 
-  test('tiene il giorno scelto col calendario', () {
+  test('tiene il giorno scelto col calendario e la conoscenza', () {
     store.write((
       title: 'Dal quaderno',
       body: '',
       tags: const [],
       sources: const [],
       isTask: false,
+      knowledge: true,
       date: DateTime(2024, 3, 3),
     ));
     expect(store.read()!.date, DateTime(2024, 3, 3));
+    expect(store.read()!.knowledge, isTrue);
   });
 }

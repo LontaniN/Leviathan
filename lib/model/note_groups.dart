@@ -29,8 +29,9 @@ List<String?> groupsOf(Note note, NoteGrouping by) {
   return keys.isEmpty ? const [null] : keys;
 }
 
-/// Raggruppa per tag o per fonte i task di [notes] (se [tasks]) o le note
-/// che non sono task. Fra i task tiene solo quelli che passano [filter].
+/// Raggruppa per tag o per fonte le note di [notes] del tipo [kind]: i task,
+/// le note o quelle di conoscenza. Fra i task tiene solo quelli che passano
+/// [filter].
 ///
 /// Un elemento con più tag (o fonti) compare in ogni gruppo. In cima i
 /// gruppi con più task da fare (per i task; per i soli fatti, con più task)
@@ -39,12 +40,13 @@ List<String?> groupsOf(Note note, NoteGrouping by) {
 List<NoteGroup> groupNotes(
   List<Note> notes,
   NoteGrouping by, {
-  required bool tasks,
+  required NoteKind kind,
   TaskFilter filter = TaskFilter.task,
 }) {
+  final tasks = kind == NoteKind.task;
   final groups = <String?, List<Note>>{};
   for (final note in notes) {
-    if (note.isTask != tasks) continue;
+    if (note.kind != kind) continue;
     if (tasks && !filter.matches(note)) continue;
     for (final key in groupsOf(note, by)) {
       (groups[key] ??= []).add(note);

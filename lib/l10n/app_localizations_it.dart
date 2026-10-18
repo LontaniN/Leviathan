@@ -343,6 +343,12 @@ class AppLocalizationsIt extends AppLocalizations {
   String get kindTask => 'Task';
 
   @override
+  String get knowledge => 'Conoscenza';
+
+  @override
+  String get knowledgeTitleHint => 'Cosa sai?';
+
+  @override
   String get formatBold => 'Grassetto';
 
   @override
@@ -473,6 +479,10 @@ class AppLocalizationsIt extends AppLocalizations {
   String get listsNoNotes => 'Nessuna nota ancora: scrivine una dalla home.';
 
   @override
+  String get listsNoKnowledge =>
+      'Nessuna nota di conoscenza ancora: segnane una con la lampadina nell\'editor.';
+
+  @override
   String get listsNoTasks =>
       'Nessun task ancora: scrivine uno scegliendo \"Task\" nell\'editor.';
 
@@ -519,6 +529,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get noTasksHere => 'Nessun task qui.';
 
   @override
+  String get noKnowledgeHere => 'Nessuna nota di conoscenza qui.';
+
+  @override
   String taskSummary(int total, int open) {
     return '$total task · $open da fare';
   }
@@ -562,6 +575,9 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get viewNotes => 'Note';
+
+  @override
+  String get viewKnowledge => 'Conoscenza';
 
   @override
   String get searchCalendar => 'Cerca nel calendario';

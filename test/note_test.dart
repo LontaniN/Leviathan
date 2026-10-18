@@ -130,6 +130,43 @@ void main() {
       expect(Note.fromMarkdown('x', unpinned, date).pinned, isFalse);
     });
 
+    test('una nota di conoscenza: andata e ritorno', () {
+      final note = Note(
+        id: 'x',
+        title: 'Cosa so',
+        body: '',
+        tags: [],
+        sources: [],
+        created: date,
+        updated: date,
+        knowledge: true,
+      );
+      final text = note.toMarkdown();
+      expect(text, contains('knowledge: true'));
+      final read = Note.fromMarkdown('x', text, date);
+      expect(read.knowledge, isTrue);
+      expect(read.kind, NoteKind.knowledge);
+      final plain = note.copyWith(knowledge: false).toMarkdown();
+      expect(plain, isNot(contains('knowledge')));
+    });
+
+    test('un task non è mai conoscenza', () {
+      final note = Note(
+        id: 'x',
+        title: 'Cosa so',
+        body: '',
+        tags: [],
+        sources: [],
+        created: date,
+        updated: date,
+        knowledge: true,
+      );
+      final task = note.copyWith(isTask: true);
+      expect(task.knowledge, isFalse);
+      expect(task.kind, NoteKind.task);
+      expect(task.toMarkdown(), isNot(contains('knowledge')));
+    });
+
     test('file senza intestazione: tutto è corpo', () {
       final note = Note.fromMarkdown('z', 'Solo testo\nsu due righe', date);
       expect(note.body, 'Solo testo\nsu due righe');

@@ -9,6 +9,7 @@ Note _note(
   List<String> sources = const [],
   bool isTask = false,
   bool done = false,
+  bool knowledge = false,
   int day = 1,
 }) => Note(
   id: id,
@@ -21,6 +22,7 @@ Note _note(
   isTask: isTask,
   done: done,
   doneAt: done ? DateTime(2026, 2, day) : null,
+  knowledge: knowledge,
 );
 
 void main() {
@@ -40,13 +42,14 @@ void main() {
     _note('m', tags: ['studio', 'viaggi'], day: 6),
     _note('o', tags: ['viaggi'], sources: ['Bruno'], day: 7),
     _note('p', day: 8),
+    _note('k', tags: ['studio'], knowledge: true, day: 9),
   ];
 
   List<String> ids(List<Note> list) => list.map((n) => n.id).toList();
 
   group('task', () {
     test('per tag: più task da fare in cima, senza tag in fondo', () {
-      final groups = groupNotes(notes, NoteGrouping.tag, tasks: true);
+      final groups = groupNotes(notes, NoteGrouping.tag, kind: NoteKind.task);
       expect(groups.map((g) => g.name), ['studio', 'casa', null]);
       // Dal più recente, da fare o eseguito che sia.
       expect(ids(groups[0].notes), ['b', 'a']);
@@ -56,7 +59,11 @@ void main() {
     });
 
     test('per fonte', () {
-      final groups = groupNotes(notes, NoteGrouping.source, tasks: true);
+      final groups = groupNotes(
+        notes,
+        NoteGrouping.source,
+        kind: NoteKind.task,
+      );
       expect(groups.map((g) => g.name), ['Anna', null]);
       expect(ids(groups[0].notes), ['c', 'a']);
       expect(ids(groups[1].notes), ['d', 'b']);
@@ -66,7 +73,7 @@ void main() {
       final groups = groupNotes(
         notes,
         NoteGrouping.source,
-        tasks: true,
+        kind: NoteKind.task,
         filter: TaskFilter.aperto,
       );
       expect(groups.map((g) => g.name), ['Anna', null]);
@@ -78,7 +85,7 @@ void main() {
       final groups = groupNotes(
         notes,
         NoteGrouping.tag,
-        tasks: true,
+        kind: NoteKind.task,
         filter: TaskFilter.fatto,
       );
       expect(groups.map((g) => g.name), ['casa']);
@@ -86,13 +93,16 @@ void main() {
     });
 
     test('senza task: nessun gruppo', () {
-      expect(groupNotes(const [], NoteGrouping.tag, tasks: true), isEmpty);
+      expect(
+        groupNotes(const [], NoteGrouping.tag, kind: NoteKind.task),
+        isEmpty,
+      );
     });
   });
 
   group('note', () {
     test('per tag: i task non compaiono, a parità in ordine alfabetico', () {
-      final groups = groupNotes(notes, NoteGrouping.tag, tasks: false);
+      final groups = groupNotes(notes, NoteGrouping.tag, kind: NoteKind.note);
       expect(groups.map((g) => g.name), ['studio', 'viaggi', null]);
       expect(ids(groups[0].notes), ['m', 'n']);
       expect(ids(groups[1].notes), ['o', 'm']);
@@ -100,9 +110,25 @@ void main() {
     });
 
     test('per fonte', () {
-      final groups = groupNotes(notes, NoteGrouping.source, tasks: false);
+      final groups = groupNotes(
+        notes,
+        NoteGrouping.source,
+        kind: NoteKind.note,
+      );
       expect(groups.map((g) => g.name), ['Anna', 'Bruno', null]);
       expect(ids(groups[2].notes), ['p', 'm']);
+    });
+  });
+
+  group('conoscenza', () {
+    test('solo le note di conoscenza, che non stanno fra le note', () {
+      final groups = groupNotes(
+        notes,
+        NoteGrouping.tag,
+        kind: NoteKind.knowledge,
+      );
+      expect(groups.map((g) => g.name), ['studio']);
+      expect(ids(groups[0].notes), ['k']);
     });
   });
 }

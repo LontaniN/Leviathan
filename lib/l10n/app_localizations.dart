@@ -638,6 +638,18 @@ abstract class AppLocalizations {
   /// **'Task'**
   String get kindTask;
 
+  /// No description provided for @knowledge.
+  ///
+  /// In en, this message translates to:
+  /// **'Knowledge'**
+  String get knowledge;
+
+  /// No description provided for @knowledgeTitleHint.
+  ///
+  /// In en, this message translates to:
+  /// **'What do you know?'**
+  String get knowledgeTitleHint;
+
   /// No description provided for @formatBold.
   ///
   /// In en, this message translates to:
@@ -872,6 +884,12 @@ abstract class AppLocalizations {
   /// **'No notes yet: write one from the home screen.'**
   String get listsNoNotes;
 
+  /// No description provided for @listsNoKnowledge.
+  ///
+  /// In en, this message translates to:
+  /// **'No knowledge notes yet: mark a note with the light bulb in the editor.'**
+  String get listsNoKnowledge;
+
   /// No description provided for @listsNoTasks.
   ///
   /// In en, this message translates to:
@@ -950,6 +968,12 @@ abstract class AppLocalizations {
   /// **'No tasks here.'**
   String get noTasksHere;
 
+  /// No description provided for @noKnowledgeHere.
+  ///
+  /// In en, this message translates to:
+  /// **'No knowledge notes here.'**
+  String get noKnowledgeHere;
+
   /// No description provided for @taskSummary.
   ///
   /// In en, this message translates to:
@@ -1015,6 +1039,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Notes'**
   String get viewNotes;
+
+  /// No description provided for @viewKnowledge.
+  ///
+  /// In en, this message translates to:
+  /// **'Knowledge'**
+  String get viewKnowledge;
 
   /// No description provided for @searchCalendar.
   ///

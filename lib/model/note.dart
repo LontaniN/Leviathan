@@ -2,7 +2,12 @@ import 'dart:convert';
 
 import 'markdown.dart';
 
-/// Una nota: titolo, corpo, tag e fonti. Può essere un task da spuntare.
+/// Che domanda si fa una nota: cos'è successo (nota), cosa c'è da fare
+/// (task) o cosa so (conoscenza).
+enum NoteKind { note, task, knowledge }
+
+/// Una nota: titolo, corpo, tag e fonti. Può essere un task da spuntare, o
+/// una nota di conoscenza.
 ///
 /// Su disco è un file Markdown con un'intestazione (frontmatter) in cima:
 ///
@@ -18,8 +23,8 @@ import 'markdown.dart';
 /// ```
 ///
 /// Un task ha in più `type: "task"`, `done` e, se fatto, `done_at`; le note
-/// normali non scrivono questi campi. Una nota fissata in cima alle recenti
-/// ha `pinned: true`.
+/// normali non scrivono questi campi. Una nota di conoscenza ha
+/// `knowledge: true`; una fissata in cima alle recenti ha `pinned: true`.
 ///
 /// I valori sono scritti come JSON, che è anche YAML valido: il file resta
 /// leggibile da Obsidian e da qualsiasi editor.
@@ -35,6 +40,7 @@ class Note {
     this.isTask = false,
     this.done = false,
     this.doneAt,
+    this.knowledge = false,
     this.pinned = false,
   });
 
@@ -59,14 +65,24 @@ class Note {
   /// Quando il task è stato spuntato (se lo si sa).
   final DateTime? doneAt;
 
+  /// Solo per le note: dice cosa si sa, non cosa è successo.
+  final bool knowledge;
+
   /// Fissata in cima alle recenti.
   final bool pinned;
 
   /// Un task ancora da fare.
   bool get isOpenTask => isTask && !done;
 
+  NoteKind get kind => isTask
+      ? NoteKind.task
+      : knowledge
+      ? NoteKind.knowledge
+      : NoteKind.note;
+
   /// Togliendo [isTask] o [done] si perdono anche spunta e data di
-  /// esecuzione, così non restano valori senza senso.
+  /// esecuzione, così non restano valori senza senso; un task non è mai
+  /// conoscenza.
   Note copyWith({
     String? title,
     String? body,
@@ -77,6 +93,7 @@ class Note {
     bool? isTask,
     bool? done,
     DateTime? doneAt,
+    bool? knowledge,
     bool? pinned,
   }) {
     final task = isTask ?? this.isTask;
@@ -92,6 +109,7 @@ class Note {
       isTask: task,
       done: isDone,
       doneAt: isDone ? (doneAt ?? this.doneAt) : null,
+      knowledge: !task && (knowledge ?? this.knowledge),
       pinned: pinned ?? this.pinned,
     );
   }
@@ -121,6 +139,7 @@ class Note {
         buffer.writeln('done_at: ${jsonEncode(doneAt!.toIso8601String())}');
       }
     }
+    if (knowledge) buffer.writeln('knowledge: true');
     if (pinned) buffer.writeln('pinned: true');
     buffer
       ..writeln('---')
@@ -164,9 +183,12 @@ class Note {
       isTask: isTask,
       done: done,
       doneAt: done ? _parseDate(fields['done_at']) : null,
+      knowledge: !isTask && _isTrue(fields['knowledge']),
       pinned: fields['pinned'] == true || fields['pinned'] == 'true',
     );
   }
+
+  static bool _isTrue(Object? field) => field == true || field == 'true';
 
   static List<String> _parseList(Object? field) {
     final items = switch (field) {

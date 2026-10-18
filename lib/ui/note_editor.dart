@@ -18,6 +18,9 @@ typedef NoteDraft = ({
   List<String> sources,
   bool isTask,
 
+  /// Una nota di conoscenza (mai un task).
+  bool knowledge,
+
   /// Il giorno scelto col calendario; null se non è stato cambiato (la nota
   /// nuova è di oggi, quella modificata tiene la sua data).
   DateTime? date,
@@ -25,7 +28,9 @@ typedef NoteDraft = ({
 
 /// Editor di una nota: titolo e corpo in grande, sotto tag e fonti.
 ///
-/// In cima si sceglie se è una nota o un task da spuntare. Il corpo è
+/// In cima si sceglie se è una nota o un task da spuntare; accanto, la
+/// lampadina segna una nota come conoscenza (cosa so, non cosa è successo).
+/// Il corpo è
 /// Markdown: mentre lo si scrive compare una barra di formattazione sopra la
 /// tastiera, e un invio in un elenco lo continua. Senza [initial] scrive una
 /// nota nuova e dopo il salvataggio si svuota.
@@ -70,6 +75,7 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
   late List<String> _tags = [...?widget.initial?.tags];
   late List<String> _sources = [...?widget.initial?.sources];
   late bool _isTask = widget.initial?.isTask ?? false;
+  late bool _knowledge = widget.initial?.knowledge ?? false;
 
   /// Il giorno scelto col calendario, null finché non lo si cambia.
   DateTime? _date;
@@ -100,6 +106,7 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
     _tags = [...draft.tags];
     _sources = [...draft.sources];
     _isTask = draft.isTask;
+    _knowledge = draft.knowledge;
     _date = draft.date;
   }
 
@@ -119,6 +126,7 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
       tags: _tags,
       sources: _sources,
       isTask: _isTask,
+      knowledge: !_isTask && _knowledge,
       date: _date,
     ));
   }
@@ -248,6 +256,7 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
       tags: tags,
       sources: sources,
       isTask: _isTask,
+      knowledge: !_isTask && _knowledge,
       date: _date,
     ));
     if (widget.initial == null) {
@@ -269,6 +278,7 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
         _tags = [];
         _sources = [];
         _isTask = false;
+        _knowledge = false;
         _date = null;
       });
       _draftTimer?.cancel();
@@ -338,6 +348,8 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
               decoration: InputDecoration(
                 hintText: _isTask
                     ? context.l10n.taskTitleHint
+                    : _knowledge
+                    ? context.l10n.knowledgeTitleHint
                     : context.l10n.titleHint,
                 filled: false,
                 border: InputBorder.none,
@@ -381,36 +393,64 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Align(
-          alignment: Alignment.centerLeft,
-          child: SegmentedButton<bool>(
-            key: const Key('kind-toggle'),
-            segments: [
-              ButtonSegment(
-                value: false,
-                icon: const Icon(Icons.notes, size: LeviathanIconSize.sm),
-                label: Text(l.kindNote),
-              ),
-              ButtonSegment(
-                value: true,
-                icon: const Icon(
-                  Icons.check_box_outlined,
-                  size: LeviathanIconSize.sm,
+        Row(
+          children: [
+            // Nell'editor stretto della home si rimpicciolisce invece di
+            // spingere fuori la lampadina.
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: SegmentedButton<bool>(
+                  key: const Key('kind-toggle'),
+                  segments: [
+                    ButtonSegment(
+                      value: false,
+                      icon: const Icon(Icons.notes, size: LeviathanIconSize.sm),
+                      label: Text(l.kindNote),
+                    ),
+                    ButtonSegment(
+                      value: true,
+                      icon: const Icon(
+                        Icons.check_box_outlined,
+                        size: LeviathanIconSize.sm,
+                      ),
+                      label: Text(l.kindTask),
+                    ),
+                  ],
+                  selected: {_isTask},
+                  showSelectedIcon: false,
+                  style: const ButtonStyle(
+                    visualDensity: VisualDensity.compact,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  onSelectionChanged: (s) {
+                    setState(() => _isTask = s.first);
+                    _scheduleDraft();
+                  },
                 ),
-                label: Text(l.kindTask),
               ),
-            ],
-            selected: {_isTask},
-            showSelectedIcon: false,
-            style: const ButtonStyle(
-              visualDensity: VisualDensity.compact,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            onSelectionChanged: (s) {
-              setState(() => _isTask = s.first);
-              _scheduleDraft();
-            },
-          ),
+            const SizedBox(width: LeviathanSpacing.xs),
+            // Solo le note possono essere conoscenza: con un task è spenta.
+            IconButton(
+              key: const Key('knowledge-toggle'),
+              tooltip: l.knowledge,
+              isSelected: !_isTask && _knowledge,
+              icon: const Icon(Icons.lightbulb_outline),
+              selectedIcon: Icon(
+                Icons.lightbulb,
+                color: context.palette.accent,
+              ),
+              visualDensity: VisualDensity.compact,
+              onPressed: _isTask
+                  ? null
+                  : () {
+                      setState(() => _knowledge = !_knowledge);
+                      _scheduleDraft();
+                    },
+            ),
+          ],
         ),
         const SizedBox(height: LeviathanSpacing.sm),
         if (_writingChips)
