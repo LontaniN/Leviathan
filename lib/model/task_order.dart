@@ -110,8 +110,9 @@ class TaskBoard {
 /// Una posizione valida da mettere fra i task di [list] agli indici
 /// `index - 1` e `index` (escluso [moving], che si sta spostando).
 ///
-/// Se i vicini non hanno una posizione, o l'hanno uguale, la fascia va
-/// rinumerata: in quel caso restituisce null.
+/// Se i vicini non hanno una posizione, l'hanno uguale o non valida (es.
+/// scritta a mano con lettere maiuscole), la fascia va rinumerata: in quel
+/// caso restituisce null.
 String? rankAt(List<Note> list, int index, {Note? moving}) {
   final others = [
     for (final n in list)
@@ -120,13 +121,21 @@ String? rankAt(List<Note> list, int index, {Note? moving}) {
   final i = index.clamp(0, others.length);
   final before = i > 0 ? others[i - 1].rank : null;
   final after = i < others.length ? others[i].rank : null;
-  if (i > 0 && before == null) return null;
-  if (i < others.length && after == null) return null;
+  if (i > 0 && !_isValidRank(before)) return null;
+  if (i < others.length && !_isValidRank(after)) return null;
   if (before != null && after != null && before.compareTo(after) >= 0) {
     return null;
   }
   return rankBetween(before, after);
 }
+
+/// Una posizione con cui [rankBetween] sa lavorare: solo cifre di
+/// [_digits] e mai '0' in fondo (altrimenti prima di lei non c'è posto).
+bool _isValidRank(String? rank) =>
+    rank != null &&
+    rank.isNotEmpty &&
+    !rank.endsWith('0') &&
+    rank.split('').every(_digits.contains);
 
 /// Posizioni nuove, equidistanti e in ordine, per [count] task.
 List<String> spreadRanks(int count) {

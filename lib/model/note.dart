@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'markdown.dart';
 import 'task_order.dart';
+import 'text_cut.dart';
 
 /// Che domanda si fa una nota: cos'è successo (nota), cosa c'è da fare
 /// (task) o cosa so (conoscenza).
@@ -162,7 +163,9 @@ class Note {
     if (title.trim().isNotEmpty) return title.trim();
     final firstLine = plainText(body.trim().split('\n').first).trim();
     if (firstLine.isEmpty) return untitled;
-    return firstLine.length > 60 ? '${firstLine.substring(0, 60)}…' : firstLine;
+    return firstLine.length > 60
+        ? '${safeSubstring(firstLine, 0, 60)}…'
+        : firstLine;
   }
 
   String toMarkdown() {
@@ -199,11 +202,13 @@ class Note {
     var extra = '';
     var body = text;
     if (text.startsWith('---\n')) {
-      final end = text.indexOf('\n---', 4);
-      if (end != -1) {
-        (fields, extra) = _parseHeader(text.substring(4, end));
-        final afterHeader = text.indexOf('\n', end + 1);
-        body = afterHeader == -1 ? '' : text.substring(afterHeader + 1);
+      // La riga di chiusura può seguire subito quella di apertura: Obsidian
+      // lascia `---` e `---` quando si tolgono tutte le proprietà.
+      final close = _headerClose.allMatches(text, 3).firstOrNull;
+      if (close != null) {
+        final end = close.start;
+        (fields, extra) = _parseHeader(end > 4 ? text.substring(4, end) : '');
+        body = close.end < text.length ? text.substring(close.end + 1) : '';
       }
     }
     final tags = _parseList(fields['tags']);
@@ -250,6 +255,10 @@ class Note {
     'knowledge',
     'pinned',
   };
+
+  /// La riga che chiude l'intestazione: solo `---` (al più con spazi dopo),
+  /// non `----` o `---testo`.
+  static final _headerClose = RegExp(r'\n---[ \t]*(?=\n|$)');
 
   /// Una riga che apre una voce dell'intestazione: `chiave:` a inizio riga.
   static final _entryStart = RegExp(r'^[^\s#-][^:]*:');

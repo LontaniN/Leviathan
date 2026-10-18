@@ -1,11 +1,16 @@
 import 'package:flutter/services.dart' show TextEditingValue, TextSelection;
+import 'package:markdown/markdown.dart' as md;
 
 /// Strumenti per il Markdown del corpo delle note: caselle delle checklist,
 /// testo semplice per le anteprime e modifiche della barra di formattazione.
 
-/// Una voce di checklist (`- [ ] testo` o `- [x] testo`); il gruppo 1 è il
-/// carattere tra le quadre.
-final _taskItem = RegExp(r'^[ \t]*[-*+] \[( |x|X)\](?=\s|$)', multiLine: true);
+/// Una voce di checklist (`- [ ] testo` o `- [x] testo`), anche numerata
+/// (`1. [ ] testo`) o dentro una citazione (`> - [ ] testo`): il Markdown le
+/// disegna tutte come caselle. Il gruppo 1 è il carattere tra le quadre.
+final _taskItem = RegExp(
+  r'^[ \t]*(?:>[ \t]?)*[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t]+\[( |x|X)\](?=\s|$)',
+  multiLine: true,
+);
 
 /// Gli intervalli dentro i blocchi di codice ``` (lì `- [ ]` non è una
 /// casella).
@@ -27,6 +32,29 @@ List<int> checkboxOffsets(String body) {
     for (final m in _taskItem.allMatches(body))
       if (!code.any((b) => m.start >= b.$1 && m.start < b.$2)) m.end - 2,
   ];
+}
+
+/// Quante caselle disegna davvero la lettura della nota: lo stesso parser e
+/// le stesse estensioni di `MarkdownBody`. Se non sono quante ne trova
+/// [checkboxOffsets], numerarle contando spunterebbe la casella sbagliata.
+int renderedCheckboxCount(String body) {
+  final document = md.Document(
+    extensionSet: md.ExtensionSet.gitHubFlavored,
+    encodeHtml: false,
+  );
+  var count = 0;
+  void visit(List<md.Node>? nodes) {
+    for (final node in nodes ?? const <md.Node>[]) {
+      if (node is! md.Element) continue;
+      if (node.tag == 'input' && node.attributes['type'] == 'checkbox') {
+        count++;
+      }
+      visit(node.children);
+    }
+  }
+
+  visit(document.parse(body));
+  return count;
 }
 
 /// Spunta o toglie la spunta alla casella numero [index] (da 0).

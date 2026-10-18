@@ -35,8 +35,10 @@ class CalendarScreen extends StatefulWidget {
 class _CalendarScreenState extends State<CalendarScreen> {
   CalendarMode _mode = CalendarMode.days;
 
-  /// Solo nelle build di sviluppo: mostra note finte al posto di quelle vere.
-  bool _demo = kDebugMode;
+  /// Note finte al posto di quelle vere, per provare il calendario quando i
+  /// dati sono pochi. Si accendono dal pulsante, che c'è solo nelle build di
+  /// sviluppo.
+  bool _demo = false;
   late final List<Note> _demoNotes = demoNotes(DateTime.now().year);
 
   bool _searching = false;

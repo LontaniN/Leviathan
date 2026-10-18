@@ -147,7 +147,8 @@ class ForceLayout extends ChangeNotifier {
     return (_seed / 2147483647 - 0.5) * 1e-3;
   }
 
-  /// Fa girare la simulazione fino a fermarla (per i test e il primo avvio).
+  /// Fa girare la simulazione fino a fermarla (per i test: il grafo al primo
+  /// avvio usa un suo ciclo con un tetto di tempo).
   void runToEnd({int maxTicks = 600}) {
     for (var t = 0; t < maxTicks && tick(); t++) {}
   }
