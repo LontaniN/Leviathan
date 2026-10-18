@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'markdown.dart';
 import 'task_order.dart';
+import 'text_cut.dart';
 
 /// Che domanda si fa una nota: cos'è successo (nota), cosa c'è da fare
 /// (task) o cosa so (conoscenza).
@@ -162,7 +163,9 @@ class Note {
     if (title.trim().isNotEmpty) return title.trim();
     final firstLine = plainText(body.trim().split('\n').first).trim();
     if (firstLine.isEmpty) return untitled;
-    return firstLine.length > 60 ? '${firstLine.substring(0, 60)}…' : firstLine;
+    return firstLine.length > 60
+        ? '${safeSubstring(firstLine, 0, 60)}…'
+        : firstLine;
   }
 
   String toMarkdown() {

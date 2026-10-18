@@ -1,6 +1,7 @@
 import 'markdown.dart';
 import 'note.dart';
 import 'tags.dart';
+import 'text_cut.dart';
 
 /// Filtro sullo stato dei task: la parola dopo `stato:` (o `status:`).
 ///
@@ -155,10 +156,11 @@ String _snippet(String body, String foldedBody, List<String> terms) {
       break;
     }
   }
-  // foldText non cambia la lunghezza per l'italiano, ma per sicurezza:
+  // foldText di solito non cambia la lunghezza, ma qualche lettera in
+  // minuscolo diventa due (es. 'İ'): per sicurezza.
   if (start >= body.length) start = 0;
   final end = (start + length).clamp(0, body.length);
-  var text = plainText(body.substring(start, end))
+  var text = plainText(safeSubstring(body, start, end))
       .replaceAll(RegExp(r'\s+'), ' ')
       .trim();
   if (start > 0) text = '…$text';
@@ -250,7 +252,8 @@ String matchPreview(Note note, List<String> terms, String untitled) {
 
   final body = plainText(note.body).replaceAll(RegExp(r'\s+'), ' ').trim();
   final folded = foldText(body);
-  // foldText non cambia la lunghezza per l'italiano, ma per sicurezza:
+  // foldText di solito non cambia la lunghezza, ma qualche lettera in
+  // minuscolo diventa due (es. 'İ'): per sicurezza.
   if (folded.length != body.length) return title;
   for (final term in terms) {
     final at = folded.indexOf(term);
@@ -262,7 +265,7 @@ String matchPreview(Note note, List<String> terms, String untitled) {
       start = space != -1 && space < at ? space + 1 : at;
     }
     final end = (start + length).clamp(0, body.length);
-    var text = body.substring(start, end);
+    var text = safeSubstring(body, start, end);
     if (start > 0) text = '…$text';
     if (end < body.length) text = '$text…';
     return text;
