@@ -70,7 +70,11 @@ class PinnedScreen extends StatelessWidget {
                     final note = pinned[i - 1];
                     return NoteResultTile(
                       key: ValueKey(note.id),
-                      hit: SearchHit(note, 0, plainText(note.body.trim())),
+                      hit: SearchHit(
+                        note,
+                        0,
+                        () => plainText(note.body.trim()),
+                      ),
                       terms: const [],
                       onTap: (n) => _open(context, n),
                       onToggleDone: notes.setDone,

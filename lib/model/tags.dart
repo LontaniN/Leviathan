@@ -6,9 +6,36 @@ const _accents = {
   'ò': 'o', 'ó': 'o', 'ù': 'u', 'ú': 'u',
 };
 
+/// Le lettere di [_accents] per codice, per non creare una stringa per ogni
+/// carattere.
+final _accentCodes = {
+  for (final MapEntry(:key, :value) in _accents.entries)
+    key.codeUnitAt(0): value.codeUnitAt(0),
+};
+
 /// Minuscolo e senza accenti: la forma usata per confrontare.
-String foldText(String s) =>
-    s.toLowerCase().split('').map((c) => _accents[c] ?? c).join();
+///
+/// Gira a ogni tasto su tutte le note, quindi deve costare poco: un testo
+/// senza lettere accentate (il caso più comune) esce com'è dopo il
+/// minuscolo, gli altri si rifanno in una sola passata.
+String foldText(String s) {
+  final lower = s.toLowerCase();
+  final units = lower.codeUnits;
+  var i = 0;
+  while (i < units.length && !_isAccented(units[i])) {
+    i++;
+  }
+  if (i == units.length) return lower;
+  final folded = List<int>.of(units);
+  for (; i < folded.length; i++) {
+    if (_isAccented(folded[i])) folded[i] = _accentCodes[folded[i]]!;
+  }
+  return String.fromCharCodes(folded);
+}
+
+/// Le lettere accentate stanno tutte sopra l'ASCII: per il resto del testo
+/// basta un confronto, senza cercare nella mappa.
+bool _isAccented(int unit) => unit >= 0xC0 && _accentCodes.containsKey(unit);
 
 /// Suggerisce le voci di [counts] più vicine a [query].
 ///
