@@ -132,6 +132,7 @@ class ChipKind {
     String input,
     Map<String, int> counts,
     Iterable<String> exclude,
+    int limit,
   )
   suggest;
   final Widget Function(String value, VoidCallback onDeleted) chip;
@@ -153,8 +154,8 @@ class ChipKind {
     hint: 'Tag (virgola o invio per aggiungere)',
     icon: Icons.sell_outlined,
     canonical: (raw, _) => Tags.normalize(raw),
-    suggest: (input, counts, exclude) =>
-        Tags.suggest(input, counts, exclude: exclude),
+    suggest: (input, counts, exclude, limit) =>
+        Tags.suggest(input, counts, exclude: exclude, limit: limit),
     chip: (value, onDeleted) => TagChip(value, onDeleted: onDeleted),
     suggestionAvatar: (value) =>
         CircleAvatar(backgroundColor: Tags.colorOf(value), radius: 5),
@@ -164,18 +165,29 @@ class ChipKind {
     hint: 'Fonti, es. persone (virgola o invio)',
     icon: Icons.person_outline,
     canonical: Sources.canonical,
-    suggest: (input, counts, exclude) =>
-        Sources.suggest(input, counts, exclude: exclude),
+    suggest: (input, counts, exclude, limit) =>
+        Sources.suggest(input, counts, exclude: exclude, limit: limit),
     chip: (value, onDeleted) => SourceChip(value, onDeleted: onDeleted),
     suggestionAvatar: (_) => Builder(
-      builder: (context) =>
-          Icon(Icons.person_outline, size: 16, color: context.palette.muted),
+      builder: (context) => Icon(
+        Icons.person_outline,
+        size: LeviathanIconSize.sm,
+        color: context.palette.muted,
+      ),
     ),
   );
 }
 
 /// Campo a chip: le voci confermate diventano chip, mentre si scrive
 /// compaiono le voci esistenti più simili.
+///
+/// I suggerimenti si vedono sempre, anche senza fuoco sul campo: così dal
+/// campo dei tag si può toccare una fonte suggerita e viceversa.
+///
+/// Suggerimenti e voci scelte stanno in un'unica riga che scorre di lato,
+/// così il campo ha sempre la stessa altezza anche con tante voci: davanti le
+/// voci già scelte, dopo un separatore i suggerimenti (a campo vuoto i
+/// [popularLimit] più usati, scrivendo tutti quelli simili).
 ///
 /// Una voce si conferma con virgola, invio o toccando un suggerimento. Il
 /// testo non ancora confermato resta in [pending]: chi salva la nota lo
@@ -198,17 +210,26 @@ class ChipInput extends StatefulWidget {
   final TextEditingController pending;
   final Key? fieldKey;
 
+  /// Suggerimenti a campo vuoto: le voci più usate.
+  static const popularLimit = 3;
+
+  /// Suggerimenti mentre si scrive: tutte le voci simili, entro un tetto.
+  static const typingLimit = 30;
+
   @override
   State<ChipInput> createState() => _ChipInputState();
 }
 
 class _ChipInputState extends State<ChipInput> {
   final _focus = FocusNode();
+  final _scroll = ScrollController();
+
+  /// Il primo suggerimento: mentre si scrive la riga scorre fin lì.
+  final _firstSuggestion = GlobalKey();
 
   @override
   void initState() {
     super.initState();
-    _focus.addListener(() => setState(() {}));
     widget.pending.addListener(_onText);
   }
 
@@ -216,6 +237,7 @@ class _ChipInputState extends State<ChipInput> {
   void dispose() {
     widget.pending.removeListener(_onText);
     _focus.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
@@ -231,6 +253,16 @@ class _ChipInputState extends State<ChipInput> {
       widget.pending.text = parts.last;
     }
     setState(() {});
+    // Scrivendo, i suggerimenti cambiano: si porta in vista il più simile,
+    // che sta dopo le voci già scelte.
+    if (widget.pending.text.trim().isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final target = _firstSuggestion.currentContext;
+        if (target != null && target.mounted) {
+          Scrollable.ensureVisible(target);
+        }
+      });
+    }
   }
 
   List<String> _with(List<String> values, String raw) =>
@@ -245,12 +277,14 @@ class _ChipInputState extends State<ChipInput> {
   @override
   Widget build(BuildContext context) {
     final kind = widget.kind;
+    final text = widget.pending.text;
     final suggestions = kind.suggest(
-      widget.pending.text,
+      text,
       widget.counts,
       widget.values,
+      text.trim().isEmpty ? ChipInput.popularLimit : ChipInput.typingLimit,
     );
-    final typed = kind.canonical(widget.pending.text, widget.counts.keys);
+    final typed = kind.canonical(text, widget.counts.keys);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -266,8 +300,8 @@ class _ChipInputState extends State<ChipInput> {
           enableSuggestions: false,
           decoration: InputDecoration(
             hintText: kind.hint,
-            prefixIcon: Icon(kind.icon, size: 20),
-            helperText: typed.isNotEmpty && typed != widget.pending.text.trim()
+            prefixIcon: Icon(kind.icon, size: LeviathanIconSize.md),
+            helperText: typed.isNotEmpty && typed != text.trim()
                 ? 'Verrà salvato come: $typed'
                 : null,
           ),
@@ -276,38 +310,47 @@ class _ChipInputState extends State<ChipInput> {
             _focus.requestFocus();
           },
         ),
-        if (_focus.hasFocus && suggestions.isNotEmpty)
+        if (suggestions.isNotEmpty || widget.values.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                for (final value in suggestions)
-                  ActionChip(
-                    avatar: kind.suggestionAvatar(value),
-                    label: Text('$value  ${widget.counts[value]}'),
-                    visualDensity: VisualDensity.compact,
-                    onPressed: () => _add(value),
-                  ),
-              ],
-            ),
-          ),
-        if (widget.values.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                for (final value in widget.values)
-                  kind.chip(
-                    value,
-                    () => widget.onChanged(
-                      widget.values.where((v) => v != value).toList(),
+            padding: const EdgeInsets.only(top: LeviathanSpacing.sm),
+            child: SingleChildScrollView(
+              controller: _scroll,
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                spacing: LeviathanSpacing.xs,
+                children: [
+                  for (final value in widget.values)
+                    kind.chip(
+                      value,
+                      () => widget.onChanged(
+                        widget.values.where((v) => v != value).toList(),
+                      ),
                     ),
-                  ),
-              ],
+                  if (suggestions.isNotEmpty && widget.values.isNotEmpty)
+                    const SizedBox(
+                      height: LeviathanIconSize.md,
+                      child: VerticalDivider(width: LeviathanSpacing.sm),
+                    ),
+                  for (final (i, value) in suggestions.indexed)
+                    ActionChip(
+                      key: i == 0 ? _firstSuggestion : null,
+                      avatar: kind.suggestionAvatar(value),
+                      label: Text.rich(
+                        TextSpan(
+                          text: value,
+                          children: [
+                            TextSpan(
+                              text: '  ${widget.counts[value]}',
+                              style: TextStyle(color: context.palette.muted),
+                            ),
+                          ],
+                        ),
+                      ),
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () => _add(value),
+                    ),
+                ],
+              ),
             ),
           ),
       ],

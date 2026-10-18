@@ -43,6 +43,7 @@ class NoteEditor extends StatefulWidget {
 class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
   late final _title = TextEditingController(text: widget.initial?.title);
   late final _body = TextEditingController(text: widget.initial?.body);
+  final _titleFocus = FocusNode();
   final _bodyFocus = FocusNode();
   late TextEditingValue _lastBody = _body.value;
   final _pendingTag = TextEditingController();
@@ -56,6 +57,7 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _body.addListener(_onBodyChanged);
+    _titleFocus.addListener(() => setState(() {}));
     _bodyFocus.addListener(() => setState(() {}));
   }
 
@@ -67,14 +69,26 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
     if (next != _body.value) _body.value = next;
   }
 
-  /// Si sta scrivendo il corpo con la tastiera aperta. Chiudendo la
-  /// tastiera col tasto indietro il campo resta attivo, ma tag, fonti e
-  /// pulsante devono tornare visibili.
+  /// Si sta scrivendo titolo o corpo con la tastiera aperta: tag, fonti e
+  /// pulsante scivolano via e resta solo il riquadro del testo, così mentre
+  /// si sceglie il titolo si vede tutto il corpo. Chiudendo la tastiera col
+  /// tasto indietro il campo resta attivo, ma tag, fonti e pulsante devono
+  /// tornare visibili.
   ///
   /// L'altezza della tastiera si legge dalla finestra: lo Scaffold la toglie
   /// dal MediaQuery del suo contenuto.
-  bool get _writingBody =>
-      _bodyFocus.hasFocus && View.of(context).viewInsets.bottom > 0;
+  bool get _writingText =>
+      (_titleFocus.hasFocus || _bodyFocus.hasFocus) &&
+      View.of(context).viewInsets.bottom > 0;
+
+  /// Il fuoco è su tag o fonti.
+  bool _chipsFocused = false;
+
+  /// Si scrivono tag o fonti con la tastiera aperta: il riquadro di titolo e
+  /// corpo sparisce, così campi e suggerimenti hanno spazio. Il testo si
+  /// scrive prima, quindi qui non serve vederlo.
+  bool get _writingChips =>
+      _chipsFocused && View.of(context).viewInsets.bottom > 0;
 
   /// Se c'era la tastiera all'ultimo controllo.
   bool _keyboardWasOpen = false;
@@ -85,10 +99,14 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
   void didChangeMetrics() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final open = View.of(context).viewInsets.bottom > 0;      // Chiusa in qualunque modo (freccia, tasto indietro): il corpo smette
-      // di essere attivo, così tornano tag, fonti e pulsante e sparisce la
-      // barra di formattazione.
-      if (_keyboardWasOpen && !open) _bodyFocus.unfocus();
+      final open = View.of(context).viewInsets.bottom > 0;
+      // Chiusa in qualunque modo (freccia, tasto indietro): titolo e corpo
+      // smettono di essere attivi, così tornano tag, fonti e pulsante e
+      // sparisce la barra di formattazione.
+      if (_keyboardWasOpen && !open) {
+        _titleFocus.unfocus();
+        _bodyFocus.unfocus();
+      }
       _keyboardWasOpen = open;
       setState(() {});
     });
@@ -102,6 +120,7 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
   void dispose() {
     _title.dispose();
     _body.dispose();
+    _titleFocus.dispose();
     _bodyFocus.dispose();
     WidgetsBinding.instance.removeObserver(this);
     _pendingTag.dispose();
@@ -194,6 +213,7 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
           children: [
             TextField(
               key: const Key('title-field'),
+              focusNode: _titleFocus,
               controller: _title,
               textCapitalization: TextCapitalization.sentences,
               style: text.titleLarge,
@@ -262,47 +282,56 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
           ),
         ),
         const SizedBox(height: LeviathanSpacing.sm),
-        Expanded(child: _textCard(text)),
-        // Mentre si scrive il corpo, tag, fonti e pulsante restano al loro
+        if (_writingChips)
+          const SizedBox.shrink()
+        else
+          Expanded(child: _textCard(text)),
+        // Mentre si scrive titolo o corpo, tag, fonti e pulsante restano al loro
         // posto ma scivolano sotto la tastiera: non occupano spazio, così il
         // riquadro si allunga fino alla tastiera. Il widget è lo stesso nei
         // due casi, quindi quello che si stava scrivendo nei campi resta.
         ClipRect(
           child: Align(
             alignment: Alignment.topCenter,
-            heightFactor: _writingBody ? 0 : 1,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: LeviathanSpacing.md),
-                ChipInput(
-                  kind: ChipKind.tags,
-                  fieldKey: const Key('tag-field'),
-                  values: _tags,
-                  onChanged: (tags) => setState(() => _tags = tags),
-                  counts: widget.tagCounts,
-                  pending: _pendingTag,
-                ),
-                const SizedBox(height: LeviathanSpacing.md),
-                ChipInput(
-                  kind: ChipKind.sources,
-                  fieldKey: const Key('source-field'),
-                  values: _sources,
-                  onChanged: (sources) => setState(() => _sources = sources),
-                  counts: widget.sourceCounts,
-                  pending: _pendingSource,
-                ),
-                const SizedBox(height: LeviathanSpacing.lg),
-                FilledButton.icon(
-                  onPressed: _save,
-                  icon: const Icon(Icons.check),
-                  label: Text(
-                    widget.initial == null && _isTask
-                        ? 'Salva task'
-                        : widget.saveLabel,
+            heightFactor: _writingText ? 0 : 1,
+            child: Focus(
+              canRequestFocus: false,
+              skipTraversal: true,
+              onFocusChange: (focused) =>
+                  setState(() => _chipsFocused = focused),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: LeviathanSpacing.md),
+                  ChipInput(
+                    kind: ChipKind.tags,
+                    fieldKey: const Key('tag-field'),
+                    values: _tags,
+                    onChanged: (tags) => setState(() => _tags = tags),
+                    counts: widget.tagCounts,
+                    pending: _pendingTag,
                   ),
-                ),
-              ],
+                  const SizedBox(height: LeviathanSpacing.md),
+                  ChipInput(
+                    kind: ChipKind.sources,
+                    fieldKey: const Key('source-field'),
+                    values: _sources,
+                    onChanged: (sources) => setState(() => _sources = sources),
+                    counts: widget.sourceCounts,
+                    pending: _pendingSource,
+                  ),
+                  const SizedBox(height: LeviathanSpacing.lg),
+                  FilledButton.icon(
+                    onPressed: _save,
+                    icon: const Icon(Icons.check),
+                    label: Text(
+                      widget.initial == null && _isTask
+                          ? 'Salva task'
+                          : widget.saveLabel,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
