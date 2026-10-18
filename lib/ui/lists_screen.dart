@@ -14,7 +14,8 @@ import 'theme.dart';
 enum ListsView { tasks, notes }
 
 /// Task e note del workspace in un'unica schermata: in alto si sceglie quale
-/// elenco vedere, sotto se raggrupparlo per tag o per fonte.
+/// elenco vedere, sotto se raggrupparlo per tag o per fonte. Fra i task la
+/// tendina in alto a destra mostra tutti, solo quelli da fare o solo i fatti.
 ///
 /// Ogni tag (o fonte) è un riquadro, come le caselle del calendario, così
 /// anche con molte note la schermata resta corta. Toccando un riquadro si
@@ -36,6 +37,7 @@ class ListsScreen extends StatefulWidget {
 class _ListsScreenState extends State<ListsScreen> {
   late ListsView _view = widget.initialView;
   NoteGrouping _grouping = NoteGrouping.tag;
+  TaskFilter _filter = TaskFilter.task;
 
   bool get _tasks => _view == ListsView.tasks;
 
@@ -47,6 +49,7 @@ class _ListsScreenState extends State<ListsScreen> {
           name: name,
           grouping: _grouping,
           initialView: _view,
+          initialFilter: _filter,
         ),
       ),
     );
@@ -58,11 +61,16 @@ class _ListsScreenState extends State<ListsScreen> {
       listenable: widget.notes,
       builder: (context, _) {
         final all = widget.notes.notes;
-        final groups = groupNotes(all, _grouping, tasks: _tasks);
+        final groups = groupNotes(
+          all,
+          _grouping,
+          tasks: _tasks,
+          filter: _filter,
+        );
+        final hasTasks = all.any((n) => n.isTask);
         final String summary;
         if (_tasks) {
-          final open = all.where((n) => n.isOpenTask).length;
-          summary = open == 1 ? '1 task da fare' : '$open task da fare';
+          summary = _taskSummary(all.where((n) => n.isTask), _filter);
         } else {
           final count = all.where((n) => !n.isTask).length;
           summary = count == 1 ? '1 nota' : '$count note';
@@ -74,6 +82,13 @@ class _ListsScreenState extends State<ListsScreen> {
               view: _view,
               onChanged: (v) => setState(() => _view = v),
             ),
+            actions: [
+              if (_tasks)
+                _TaskFilterMenu(
+                  filter: _filter,
+                  onChanged: (f) => setState(() => _filter = f),
+                ),
+            ],
           ),
           body: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -120,10 +135,12 @@ class _ListsScreenState extends State<ListsScreen> {
               Expanded(
                 child: groups.isEmpty
                     ? _Empty(
-                        _tasks
-                            ? 'Nessun task ancora: scrivine uno scegliendo '
-                                  '"Task" nell\'editor.'
-                            : 'Nessuna nota ancora: scrivine una dalla home.',
+                        !_tasks
+                            ? 'Nessuna nota ancora: scrivine una dalla home.'
+                            : hasTasks
+                            ? _emptyFiltered(_filter)
+                            : 'Nessun task ancora: scrivine uno scegliendo '
+                                  '"Task" nell\'editor.',
                       )
                     : _GroupGrid(
                         key: Key(_tasks ? 'task-grid' : 'note-grid'),
@@ -131,6 +148,7 @@ class _ListsScreenState extends State<ListsScreen> {
                         groups: groups,
                         grouping: _grouping,
                         tasks: _tasks,
+                        filter: _filter,
                         onOpen: _openGroup,
                       ),
               ),
@@ -150,6 +168,7 @@ class _GroupGrid extends StatelessWidget {
     required this.groups,
     required this.grouping,
     required this.tasks,
+    required this.filter,
     required this.onOpen,
   });
 
@@ -157,6 +176,7 @@ class _GroupGrid extends StatelessWidget {
   final List<NoteGroup> groups;
   final NoteGrouping grouping;
   final bool tasks;
+  final TaskFilter filter;
   final ValueChanged<String?> onOpen;
 
   static const _columns = 3;
@@ -194,6 +214,7 @@ class _GroupGrid extends StatelessWidget {
               group: groups[i],
               grouping: grouping,
               tasks: tasks,
+              filter: filter,
               onTap: () => onOpen(groups[i].name),
             ),
           ),
@@ -240,12 +261,16 @@ class _GroupTile extends StatelessWidget {
     required this.group,
     required this.grouping,
     required this.tasks,
+    required this.filter,
     required this.onTap,
   });
 
   final NoteGroup group;
   final NoteGrouping grouping;
   final bool tasks;
+
+  /// Il filtro già applicato a [group]: decide il conteggio in alto.
+  final TaskFilter filter;
   final VoidCallback onTap;
 
   @override
@@ -253,8 +278,18 @@ class _GroupTile extends StatelessWidget {
     final palette = context.palette;
     final radius = BorderRadius.circular(LeviathanRadii.cell);
     final open = group.openTasks;
-    // Fra i task si vedono quelli da fare: gli eseguiti stanno nell'elenco.
-    final shown = tasks ? group.notes.where((n) => n.isOpenTask) : group.notes;
+    // Con tutti i task, prima quelli da fare e poi i fatti.
+    final shown = tasks && filter == TaskFilter.task
+        ? [
+            ...group.notes.where((n) => n.isOpenTask),
+            ...group.notes.where((n) => !n.isOpenTask),
+          ]
+        : group.notes;
+    final count = switch (filter) {
+      _ when !tasks => '${group.notes.length}',
+      TaskFilter.fatto => '${group.notes.length} fatti',
+      _ => open == 0 ? 'fatti' : '$open da fare',
+    };
     return Padding(
       padding: const EdgeInsets.all(LeviathanSpacing.xxs),
       child: Material(
@@ -276,9 +311,7 @@ class _GroupTile extends StatelessWidget {
                     // Con caratteri grandi si accorcia invece di sforare.
                     Expanded(
                       child: Text(
-                        tasks
-                            ? (open == 0 ? 'fatti' : '$open da fare')
-                            : '${group.notes.length}',
+                        count,
                         textAlign: TextAlign.end,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -368,6 +401,7 @@ class GroupScreen extends StatefulWidget {
     required this.name,
     required this.grouping,
     this.initialView = ListsView.notes,
+    this.initialFilter = TaskFilter.task,
   });
 
   final NotesController notes;
@@ -376,6 +410,7 @@ class GroupScreen extends StatefulWidget {
   final String? name;
   final NoteGrouping grouping;
   final ListsView initialView;
+  final TaskFilter initialFilter;
 
   @override
   State<GroupScreen> createState() => _GroupScreenState();
@@ -383,6 +418,7 @@ class GroupScreen extends StatefulWidget {
 
 class _GroupScreenState extends State<GroupScreen> {
   late ListsView _view = widget.initialView;
+  late TaskFilter _filter = widget.initialFilter;
 
   bool _searching = false;
   final _query = TextEditingController();
@@ -424,7 +460,10 @@ class _GroupScreenState extends State<GroupScreen> {
         // Ricalcolato a ogni modifica: una nota che perde il tag esce.
         final items = widget.notes.notes
             .where(
-              (n) => n.isTask == tasks && groupsOf(n, grouping).contains(name),
+              (n) =>
+                  n.isTask == tasks &&
+                  (!tasks || _filter.matches(n)) &&
+                  groupsOf(n, grouping).contains(name),
             )
             .toList();
         // La ricerca resta dentro il gruppo, così vale anche per "Senza
@@ -436,8 +475,7 @@ class _GroupScreenState extends State<GroupScreen> {
         final found = hits.map((h) => h.note);
         final String summary;
         if (tasks) {
-          final open = found.where((n) => n.isOpenTask).length;
-          summary = '${hits.length} task · $open da fare';
+          summary = _taskSummary(found, _filter);
         } else {
           summary = hits.length == 1 ? '1 nota' : '${hits.length} note';
         }
@@ -475,6 +513,11 @@ class _GroupScreenState extends State<GroupScreen> {
                     ],
                   ),
             actions: [
+              if (tasks && !_searching)
+                _TaskFilterMenu(
+                  filter: _filter,
+                  onChanged: (f) => setState(() => _filter = f),
+                ),
               _searching
                   ? IconButton(
                       key: const Key('group-search-close'),
@@ -508,9 +551,13 @@ class _GroupScreenState extends State<GroupScreen> {
               Expanded(
                 child: hits.isEmpty
                     ? _Empty(
-                        items.isEmpty
-                            ? (tasks ? 'Nessun task qui.' : 'Nessuna nota qui.')
-                            : 'Nessun risultato $where.',
+                        items.isNotEmpty
+                            ? 'Nessun risultato $where.'
+                            : !tasks
+                            ? 'Nessuna nota qui.'
+                            : _filter == TaskFilter.task
+                            ? 'Nessun task qui.'
+                            : _emptyFiltered(_filter),
                       )
                     : ListView.builder(
                         keyboardDismissBehavior:
@@ -534,6 +581,67 @@ class _GroupScreenState extends State<GroupScreen> {
           ),
         );
       },
+    );
+  }
+}
+
+/// Il riassunto in cima a un elenco di [tasks], secondo il filtro.
+String _taskSummary(Iterable<Note> tasks, TaskFilter filter) {
+  final open = tasks.where((n) => n.isOpenTask).length;
+  return switch (filter) {
+    TaskFilter.task => '${tasks.length} task · $open da fare',
+    TaskFilter.aperto => open == 1 ? '1 task da fare' : '$open task da fare',
+    TaskFilter.fatto =>
+      tasks.length == 1 ? '1 task fatto' : '${tasks.length} task fatti',
+  };
+}
+
+String _emptyFiltered(TaskFilter filter) => switch (filter) {
+  TaskFilter.task => 'Nessun task.',
+  TaskFilter.aperto => 'Nessun task da fare.',
+  TaskFilter.fatto => 'Nessun task fatto.',
+};
+
+/// La tendina in alto a destra che sceglie quali task mostrare.
+class _TaskFilterMenu extends StatelessWidget {
+  const _TaskFilterMenu({required this.filter, required this.onChanged});
+
+  final TaskFilter filter;
+  final ValueChanged<TaskFilter> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: LeviathanSpacing.sm),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<TaskFilter>(
+          key: const Key('task-filter'),
+          value: filter,
+          isDense: true,
+          dropdownColor: context.palette.surface,
+          borderRadius: BorderRadius.circular(LeviathanRadii.md),
+          icon: Icon(
+            Icons.expand_more,
+            size: LeviathanIconSize.md,
+            color: context.palette.muted,
+          ),
+          style: LeviathanText.meta.copyWith(color: context.palette.text),
+          items: [
+            for (final f in TaskFilter.values)
+              DropdownMenuItem(
+                value: f,
+                child: Text(switch (f) {
+                  TaskFilter.task => 'Tutte',
+                  TaskFilter.aperto => 'Da fare',
+                  TaskFilter.fatto => 'Fatte',
+                }),
+              ),
+          ],
+          onChanged: (f) {
+            if (f != null) onChanged(f);
+          },
+        ),
+      ),
     );
   }
 }

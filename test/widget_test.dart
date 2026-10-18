@@ -287,8 +287,19 @@ void main() {
 
     await tester.tap(find.byKey(const Key('lists-button')));
     await settle(tester);
-    expect(find.text('1 task da fare'), findsOneWidget);
+    expect(find.text('1 task · 1 da fare'), findsOneWidget);
     expect(find.text('universita'), findsOneWidget);
+
+    // La tendina in alto a destra lascia solo i fatti: qui non ce n'è.
+    await tester.tap(find.byKey(const Key('task-filter')));
+    await settle(tester);
+    await tester.tap(find.text('Fatte').last);
+    await settle(tester);
+    expect(find.text('Nessun task fatto.'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('task-filter')));
+    await settle(tester);
+    await tester.tap(find.text('Tutte').last);
+    await settle(tester);
 
     // Il riquadro del tag mostra i task da fare; toccandolo si apre
     // l'elenco.

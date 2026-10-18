@@ -1,4 +1,5 @@
 import 'note.dart';
+import 'search.dart';
 import 'tags.dart';
 
 /// Come raggruppare task e note: per tag o per fonte.
@@ -29,25 +30,30 @@ List<String?> groupsOf(Note note, NoteGrouping by) {
 }
 
 /// Raggruppa per tag o per fonte i task di [notes] (se [tasks]) o le note
-/// che non sono task.
+/// che non sono task. Fra i task tiene solo quelli che passano [filter].
 ///
 /// Un elemento con più tag (o fonti) compare in ogni gruppo. In cima i
-/// gruppi con più task da fare (per i task) o con più note; a parità, in
-/// ordine alfabetico. Il gruppo di chi non ha tag (o fonte) va in fondo.
+/// gruppi con più task da fare (per i task; per i soli fatti, con più task)
+/// o con più note; a parità, in ordine alfabetico. Il gruppo di chi non ha
+/// tag (o fonte) va in fondo.
 List<NoteGroup> groupNotes(
   List<Note> notes,
   NoteGrouping by, {
   required bool tasks,
+  TaskFilter filter = TaskFilter.task,
 }) {
   final groups = <String?, List<Note>>{};
   for (final note in notes) {
     if (note.isTask != tasks) continue;
+    if (tasks && !filter.matches(note)) continue;
     for (final key in groupsOf(note, by)) {
       (groups[key] ??= []).add(note);
     }
   }
 
-  int weight(NoteGroup g) => tasks ? g.openTasks : g.notes.length;
+  // Fra i soli task fatti non ce n'è da fare: conta quanti sono.
+  int weight(NoteGroup g) =>
+      tasks && filter != TaskFilter.fatto ? g.openTasks : g.notes.length;
   return [
     for (final entry in groups.entries)
       NoteGroup(

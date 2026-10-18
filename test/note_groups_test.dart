@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:leviathan/model/note.dart';
 import 'package:leviathan/model/note_groups.dart';
+import 'package:leviathan/model/search.dart';
 
 Note _note(
   String id, {
@@ -59,6 +60,29 @@ void main() {
       expect(groups.map((g) => g.name), ['Anna', null]);
       expect(ids(groups[0].notes), ['c', 'a']);
       expect(ids(groups[1].notes), ['d', 'b']);
+    });
+
+    test('solo da fare: i gruppi con soli task fatti spariscono', () {
+      final groups = groupNotes(
+        notes,
+        NoteGrouping.source,
+        tasks: true,
+        filter: TaskFilter.aperto,
+      );
+      expect(groups.map((g) => g.name), ['Anna', null]);
+      expect(ids(groups[0].notes), ['a']);
+      expect(ids(groups[1].notes), ['d', 'b']);
+    });
+
+    test('solo fatti', () {
+      final groups = groupNotes(
+        notes,
+        NoteGrouping.tag,
+        tasks: true,
+        filter: TaskFilter.fatto,
+      );
+      expect(groups.map((g) => g.name), ['casa']);
+      expect(ids(groups[0].notes), ['c']);
     });
 
     test('senza task: nessun gruppo', () {
