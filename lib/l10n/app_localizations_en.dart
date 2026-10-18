@@ -309,6 +309,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get saveTask => 'Save task';
 
   @override
+  String get noteDateToday => 'Date: today';
+
+  @override
+  String noteDateOn(String date) {
+    return 'Date: $date';
+  }
+
+  @override
+  String get noteDateTitle => 'When was it written?';
+
+  @override
+  String savedOnDate(String date) {
+    return 'Saved on $date';
+  }
+
+  @override
   String get writeSomething => 'Write at least a title or some text';
 
   @override

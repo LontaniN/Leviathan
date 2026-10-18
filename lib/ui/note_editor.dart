@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../data/draft_store.dart';
 import '../l10n/l10n.dart';
+import '../model/dates.dart';
 import '../model/markdown.dart';
 import '../model/note.dart';
 import 'chip_input.dart';
@@ -16,6 +17,10 @@ typedef NoteDraft = ({
   List<String> tags,
   List<String> sources,
   bool isTask,
+
+  /// Il giorno scelto col calendario; null se non è stato cambiato (la nota
+  /// nuova è di oggi, quella modificata tiene la sua data).
+  DateTime? date,
 });
 
 /// Editor di una nota: titolo e corpo in grande, sotto tag e fonti.
@@ -28,6 +33,10 @@ typedef NoteDraft = ({
 /// Con [draft] quello che si scrive viene tenuto da parte poco dopo ogni
 /// modifica (e subito se l'app va in secondo piano): riaprendo l'app la nota
 /// non salvata è ancora lì. Senza [saveLabel] il pulsante dice "Salva nota".
+///
+/// Accanto al pulsante di salvataggio un calendario sceglie il giorno a cui
+/// si riferisce la nota: serve per riportare note scritte altrove, datate al
+/// giorno in cui sono nate e non a quello in cui entrano nell'app.
 class NoteEditor extends StatefulWidget {
   const NoteEditor({
     super.key,
@@ -62,6 +71,13 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
   late List<String> _sources = [...?widget.initial?.sources];
   late bool _isTask = widget.initial?.isTask ?? false;
 
+  /// Il giorno scelto col calendario, null finché non lo si cambia.
+  DateTime? _date;
+
+  /// Il giorno a cui si riferisce la nota: quello scelto, quello che aveva,
+  /// o oggi.
+  DateTime get _shownDate => _date ?? widget.initial?.created ?? DateTime.now();
+
   Timer? _draftTimer;
 
   @override
@@ -84,6 +100,7 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
     _tags = [...draft.tags];
     _sources = [...draft.sources];
     _isTask = draft.isTask;
+    _date = draft.date;
   }
 
   /// La bozza si scrive poco dopo l'ultima modifica, non a ogni lettera.
@@ -102,6 +119,7 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
       tags: _tags,
       sources: _sources,
       isTask: _isTask,
+      date: _date,
     ));
   }
 
@@ -165,6 +183,29 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
     });
   }
 
+  Future<void> _pickDate() async {
+    final now = DateTime.now();
+    final shown = _shownDate;
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: shown,
+      firstDate: DateTime(1900),
+      // Nel futuro non si scrive; una nota già datata più avanti resta
+      // sceglibile.
+      lastDate: shown.isAfter(now) ? shown : now,
+      helpText: context.l10n.noteDateTitle,
+    );
+    if (picked == null || !mounted) return;
+    // Una nota nuova riportata a oggi torna come se la data non fosse mai
+    // stata scelta.
+    setState(
+      () => _date = widget.initial == null && sameDay(picked, now)
+          ? null
+          : picked,
+    );
+    _scheduleDraft();
+  }
+
   void _format(TextEditingValue Function(TextEditingValue) change) {
     _body.value = change(_body.value);
   }
@@ -207,8 +248,19 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
       tags: tags,
       sources: sources,
       isTask: _isTask,
+      date: _date,
     ));
     if (widget.initial == null) {
+      // Datata a un altro giorno la nota non compare in cima: lo si dice.
+      if (_date case final date? when !sameDay(date, DateTime.now())) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              context.l10n.savedOnDate(formatDate(context.l10n, date)),
+            ),
+          ),
+        );
+      }
       _title.clear();
       _body.clear();
       _pendingTag.clear();
@@ -217,6 +269,7 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
         _tags = [];
         _sources = [];
         _isTask = false;
+        _date = null;
       });
       _draftTimer?.cancel();
       _draftTimer = null;
@@ -405,14 +458,22 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
                     pending: _pendingSource,
                   ),
                   const SizedBox(height: LeviathanSpacing.lg),
-                  FilledButton.icon(
-                    onPressed: _save,
-                    icon: const Icon(Icons.check),
-                    label: Text(
-                      widget.initial == null && _isTask
-                          ? l.saveTask
-                          : widget.saveLabel ?? l.saveNote,
-                    ),
+                  Row(
+                    children: [
+                      _DateButton(date: _shownDate, onPressed: _pickDate),
+                      const SizedBox(width: LeviathanSpacing.sm),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: _save,
+                          icon: const Icon(Icons.check),
+                          label: Text(
+                            widget.initial == null && _isTask
+                                ? l.saveTask
+                                : widget.saveLabel ?? l.saveNote,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -420,6 +481,77 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// L'icona del calendario col numero del giorno dentro. Se il giorno non è
+/// oggi il pulsante si accende, così si vede che la nota andrà indietro.
+class _DateButton extends StatelessWidget {
+  const _DateButton({required this.date, required this.onPressed});
+
+  final DateTime date;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    final custom = !sameDay(date, DateTime.now());
+    final icon = _CalendarDayIcon(day: date.day);
+    final tooltip = custom
+        ? l.noteDateOn(formatDate(l, date))
+        : l.noteDateToday;
+    const size = Size.square(LeviathanSizes.button);
+    return custom
+        ? IconButton.filledTonal(
+            key: const Key('date-button'),
+            tooltip: tooltip,
+            constraints: BoxConstraints.tight(size),
+            onPressed: onPressed,
+            icon: icon,
+          )
+        : IconButton.outlined(
+            key: const Key('date-button'),
+            tooltip: tooltip,
+            constraints: BoxConstraints.tight(size),
+            onPressed: onPressed,
+            icon: icon,
+          );
+  }
+}
+
+/// Un calendario disegnato: cornice, fascia in alto e sotto, centrato nello
+/// spazio libero, il numero del giorno. Il glifo di Material ha righe dentro
+/// che il numero attraverserebbe. Prende il colore delle icone del pulsante.
+class _CalendarDayIcon extends StatelessWidget {
+  const _CalendarDayIcon({required this.day});
+
+  final int day;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = IconTheme.of(context).color;
+    return Container(
+      width: LeviathanIconSize.lg,
+      height: LeviathanIconSize.lg,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        border: Border.all(color: color!, width: LeviathanSizes.outline),
+        borderRadius: BorderRadius.circular(LeviathanRadii.cell),
+      ),
+      child: Column(
+        children: [
+          Container(height: LeviathanSizes.calendarIconBand, color: color),
+          Expanded(
+            child: Center(
+              child: Text(
+                '$day',
+                style: LeviathanText.calendarDigit.copyWith(color: color),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -8,6 +8,9 @@ typedef Draft = ({
   List<String> tags,
   List<String> sources,
   bool isTask,
+
+  /// Il giorno a cui si riferisce la nota, se non è oggi.
+  DateTime? date,
 });
 
 /// Tiene da parte la bozza della home: se Android chiude l'app mentre si
@@ -30,6 +33,7 @@ class DraftStore {
         tags: list(json['tags']),
         sources: list(json['sources']),
         isTask: json['task'] == true,
+        date: DateTime.tryParse('${json['date'] ?? ''}'),
       );
     } on Object {
       return null;
@@ -49,6 +53,7 @@ class DraftStore {
         'tags': draft.tags,
         'sources': draft.sources,
         'task': draft.isTask,
+        if (draft.date case final date?) 'date': date.toIso8601String(),
       }),
     );
   }
@@ -57,7 +62,7 @@ class DraftStore {
     if (file.existsSync()) file.deleteSync();
   }
 
-  /// Niente da tenere: né testo né tag né fonti.
+  /// Niente da tenere: né testo né tag né fonti. Una data da sola non basta.
   static bool isEmpty(Draft draft) =>
       draft.title.trim().isEmpty &&
       draft.body.trim().isEmpty &&

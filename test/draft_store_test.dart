@@ -25,6 +25,7 @@ void main() {
       tags: ['studio'],
       sources: ['Anna'],
       isTask: true,
+      date: null,
     ));
     final draft = store.read()!;
     expect(draft.title, 'Idea');
@@ -41,6 +42,7 @@ void main() {
       tags: const [],
       sources: const [],
       isTask: false,
+      date: null,
     ));
     expect(store.file.existsSync(), isTrue);
     store.write((
@@ -49,8 +51,21 @@ void main() {
       tags: const [],
       sources: const [],
       isTask: true,
+      date: null,
     ));
     expect(store.file.existsSync(), isFalse);
     expect(store.read(), isNull);
+  });
+
+  test('tiene il giorno scelto col calendario', () {
+    store.write((
+      title: 'Dal quaderno',
+      body: '',
+      tags: const [],
+      sources: const [],
+      isTask: false,
+      date: DateTime(2024, 3, 3),
+    ));
+    expect(store.read()!.date, DateTime(2024, 3, 3));
   });
 }

@@ -45,6 +45,7 @@ class NotesController extends ChangeNotifier {
     required List<String> tags,
     required List<String> sources,
     bool isTask = false,
+    DateTime? created,
   }) {
     final note = _repo.create(
       title: title,
@@ -52,8 +53,10 @@ class NotesController extends ChangeNotifier {
       tags: tags,
       sources: sources,
       isTask: isTask,
+      now: created,
     );
-    notes = [note, ...notes];
+    // Datata a un altro giorno non va per forza in cima.
+    notes = [note, ...notes]..sort((a, b) => b.created.compareTo(a.created));
     _refreshCounts();
     notifyListeners();
     return note;
@@ -62,7 +65,9 @@ class NotesController extends ChangeNotifier {
   Note update(Note note) {
     final updated = note.copyWith(updated: DateTime.now());
     _repo.save(updated);
-    notes = [for (final n in notes) n.id == updated.id ? updated : n];
+    // La data di creazione può essere cambiata: si riordina.
+    notes = [for (final n in notes) n.id == updated.id ? updated : n]
+      ..sort((a, b) => b.created.compareTo(a.created));
     _refreshCounts();
     notifyListeners();
     return updated;

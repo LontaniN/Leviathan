@@ -194,6 +194,59 @@ void main() {
     expect(find.text('luce-naturale'), findsOneWidget);
   });
 
+  testWidgets('salva una nota datata a un giorno scelto col calendario', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    addTearDown(tester.view.reset);
+    await tester.runAsync(
+      () => WorkspaceRepository(root).createWorkspace('Lavoro'),
+    );
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+    await settle(tester);
+
+    await tester.enterText(find.byKey(const Key('title-field')), 'Quaderno');
+    await tester.ensureVisible(find.byKey(const Key('date-button')));
+    await tester.tap(find.byKey(const Key('date-button')));
+    await tester.pumpAndSettle();
+    expect(find.text('Quando è stata scritta?'), findsOneWidget);
+    await tester.tap(find.byTooltip('Mese precedente'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('3'));
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+
+    // Il pulsante si accende e mostra il giorno scelto.
+    final button = find.byKey(const Key('date-button'));
+    expect(
+      find.descendant(of: button, matching: find.text('3')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Salva nota'));
+    await tester.pump();
+    expect(find.textContaining('Salvata al 3 '), findsOneWidget);
+
+    final now = DateTime.now();
+    final day = DateTime(now.year, now.month - 1, 3);
+    String two(int n) => n.toString().padLeft(2, '0');
+    final stamp = '${day.year}${two(day.month)}${two(day.day)}';
+    final files = Directory('${root.path}/Lavoro')
+        .listSync()
+        .map((f) => f.path)
+        .where((p) => p.contains('quaderno'));
+    expect(files.single, contains('$stamp-'));
+    final saved = File(files.single).readAsStringSync();
+    expect(saved, contains('created: "${day.year}-${two(day.month)}-03T'));
+
+    // Dopo il salvataggio il calendario torna a oggi.
+    expect(
+      find.descendant(of: button, matching: find.text('${now.day}')),
+      findsOneWidget,
+    );
+    await settle(tester);
+  });
+
   testWidgets('crea un task, lo spunta dalla lista e lo ritrova', (
     tester,
   ) async {

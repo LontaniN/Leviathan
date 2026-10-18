@@ -110,6 +110,12 @@
 
   "saveNote": "Save note",
   "saveTask": "Save task",
+  "noteDateToday": "Date: today",
+  "noteDateOn": "Date: {date}",
+  "@noteDateOn": {"placeholders": {"date": {"type": "String", "example": "Mar 3, 2024"}}},
+  "noteDateTitle": "When was it written?",
+  "savedOnDate": "Saved on {date}",
+  "@savedOnDate": {"placeholders": {"date": {"type": "String", "example": "Mar 3, 2024"}}},
   "writeSomething": "Write at least a title or some text",
   "taskTitleHint": "What needs doing?",
   "titleHint": "Title",

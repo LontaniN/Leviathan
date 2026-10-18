@@ -92,6 +92,10 @@
 
   "saveNote": "Salva nota",
   "saveTask": "Salva task",
+  "noteDateToday": "Data: oggi",
+  "noteDateOn": "Data: {date}",
+  "noteDateTitle": "Quando è stata scritta?",
+  "savedOnDate": "Salvata al {date}",
   "writeSomething": "Scrivi almeno un titolo o un testo",
   "taskTitleHint": "Cosa c'è da fare?",
   "titleHint": "Titolo",

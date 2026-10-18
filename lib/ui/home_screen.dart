@@ -179,6 +179,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       tags: draft.tags,
                       sources: draft.sources,
                       isTask: draft.isTask,
+                      created: draft.date == null
+                          ? null
+                          : onDay(draft.date!, DateTime.now()),
                     ),
                   ),
                 ),

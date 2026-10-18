@@ -251,6 +251,9 @@ class LeviathanSizes {
   /// Spessore dei bordi sottili (es. il giorno di oggi nel calendario).
   static const outline = 1.5;
 
+  /// Altezza della fascia in alto dell'icona del calendario con il giorno.
+  static const calendarIconBand = 5.0;
+
   /// Bordo di un elemento scelto (es. la palette attiva).
   static const selectedOutline = 2.0;
 
@@ -420,6 +423,13 @@ class LeviathanText {
 
   /// Etichette minime: chip compatti, nodi del grafo.
   static const tiny = TextStyle(fontSize: 11);
+
+  /// Il numero del giorno dentro l'icona del calendario.
+  static const calendarDigit = TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.w700,
+    height: 1,
+  );
 }
 
 ThemeData buildTheme(LeviathanPalette palette) {

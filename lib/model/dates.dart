@@ -78,6 +78,23 @@ String formatLongDate(AppLocalizations l, DateTime date) {
       : '$month ${date.day}, ${date.year}';
 }
 
+/// Il giorno di [day] con l'ora di [time]: una nota datata a un altro giorno
+/// tiene l'ora in cui la si salva (o quella che aveva), così l'ordine fra le
+/// note dello stesso giorno resta sensato.
+DateTime onDay(DateTime day, DateTime time) => DateTime(
+  day.year,
+  day.month,
+  day.day,
+  time.hour,
+  time.minute,
+  time.second,
+  time.millisecond,
+);
+
+/// Stesso giorno di calendario.
+bool sameDay(DateTime a, DateTime b) =>
+    a.year == b.year && a.month == b.month && a.day == b.day;
+
 /// L'ora: "14:05".
 String formatTime(DateTime date) => '${_two(date.hour)}:${_two(date.minute)}';
 

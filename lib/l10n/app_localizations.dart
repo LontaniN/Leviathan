@@ -578,6 +578,30 @@ abstract class AppLocalizations {
   /// **'Save task'**
   String get saveTask;
 
+  /// No description provided for @noteDateToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Date: today'**
+  String get noteDateToday;
+
+  /// No description provided for @noteDateOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Date: {date}'**
+  String noteDateOn(String date);
+
+  /// No description provided for @noteDateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'When was it written?'**
+  String get noteDateTitle;
+
+  /// No description provided for @savedOnDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved on {date}'**
+  String savedOnDate(String date);
+
   /// No description provided for @writeSomething.
   ///
   /// In en, this message translates to:
