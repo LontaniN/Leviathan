@@ -293,10 +293,23 @@ class LeviathanSizes {
 
   /// Larghezza massima del titolo di un nodo del grafo.
   static const graphLabelWidth = 140.0;
+
+  /// Larghezza massima della scheda del tour guidato.
+  static const tourCardWidth = 400.0;
+
+  /// Lo spazio minimo, sopra o sotto l'elemento illuminato, perché la scheda
+  /// del tour ci stia accanto invece di coprirlo.
+  static const tourCardRoom = 220.0;
+
+  /// Ombra della scheda del tour sopra il velo.
+  static const tourCardElevation = 8.0;
 }
 
 /// Durate delle animazioni.
 class LeviathanDurations {
+  /// Il riquadro illuminato del tour che passa da un elemento all'altro.
+  static const tourMove = Duration(milliseconds: 320);
+
   /// Apertura e chiusura della lista delle note.
   static const panel = Duration(milliseconds: 220);
 
@@ -317,6 +330,9 @@ class LeviathanDurations {
 class LeviathanOpacity {
   /// Picco del bagliore della voce appena salvata, nel colore della nota.
   static const saveFlash = 0.35;
+
+  /// Il velo scuro del tour guidato attorno all'elemento illuminato.
+  static const tourScrim = 0.72;
 
   /// Barretta delle note senza tag.
   static const untagged = 0.4;

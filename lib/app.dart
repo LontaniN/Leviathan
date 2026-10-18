@@ -73,10 +73,14 @@ class _LeviathanAppState extends State<LeviathanApp>
             AppStatus.needsPermission => PermissionScreen(state: state),
             AppStatus.onboarding => OnboardingScreen(state: state),
             // La chiave ricrea la schermata (e le sue note) a ogni cambio.
+            // Entrando la prima volta nel primo workspace creato parte il
+            // tour guidato, se non è già stato fatto.
             AppStatus.ready => HomeScreen(
               key: ValueKey(state.currentWorkspace),
               state: state,
               settings: widget.settings,
+              startTour:
+                  state.firstWorkspaceCreated && !widget.settings.tourSeen,
             ),
             AppStatus.error => Scaffold(
               body: Center(

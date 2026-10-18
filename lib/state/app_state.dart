@@ -22,6 +22,10 @@ class AppState extends ChangeNotifier {
   List<String> workspaces = const [];
   String? currentWorkspace;
 
+  /// Il primo workspace è appena stato creato dall'onboarding: entrandoci
+  /// parte il tour guidato. Resta solo in memoria per questa sessione.
+  bool firstWorkspaceCreated = false;
+
   WorkspaceRepository get repository => _repo!;
 
   Future<void> init() async {
@@ -66,6 +70,7 @@ class AppState extends ChangeNotifier {
   /// Crea un workspace e lo apre. Lancia [ArgumentError] se il nome non va.
   Future<void> createWorkspace(String name) async {
     final created = await repository.createWorkspace(name);
+    if (status == AppStatus.onboarding) firstWorkspaceCreated = true;
     workspaces = await repository.listWorkspaces();
     await switchTo(created);
   }

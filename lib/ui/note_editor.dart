@@ -51,6 +51,7 @@ class NoteEditor extends StatefulWidget {
     required this.onSave,
     this.saveLabel,
     this.draft,
+    this.tagsKey,
   });
 
   final Note? initial;
@@ -59,6 +60,9 @@ class NoteEditor extends StatefulWidget {
   final void Function(NoteDraft draft) onSave;
   final String? saveLabel;
   final DraftStore? draft;
+
+  /// Chiave del campo dei tag, per illuminarlo nel tour guidato.
+  final GlobalKey? tagsKey;
 
   @override
   State<NoteEditor> createState() => _NoteEditorState();
@@ -474,16 +478,19 @@ class _NoteEditorState extends State<NoteEditor> with WidgetsBindingObserver {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: LeviathanSpacing.md),
-                  ChipInput(
-                    kind: ChipKind.tags,
-                    fieldKey: const Key('tag-field'),
-                    values: _tags,
-                    onChanged: (tags) {
-                      setState(() => _tags = tags);
-                      _scheduleDraft();
-                    },
-                    counts: widget.tagCounts,
-                    pending: _pendingTag,
+                  KeyedSubtree(
+                    key: widget.tagsKey,
+                    child: ChipInput(
+                      kind: ChipKind.tags,
+                      fieldKey: const Key('tag-field'),
+                      values: _tags,
+                      onChanged: (tags) {
+                        setState(() => _tags = tags);
+                        _scheduleDraft();
+                      },
+                      counts: widget.tagCounts,
+                      pending: _pendingTag,
+                    ),
                   ),
                   const SizedBox(height: LeviathanSpacing.md),
                   ChipInput(

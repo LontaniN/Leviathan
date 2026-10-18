@@ -7,7 +7,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../ui/theme.dart';
 
-/// Preferenze dell'app: lingua dell'interfaccia e palette.
+/// Preferenze dell'app: lingua dell'interfaccia, palette e tour già visto.
 ///
 /// Stanno nella memoria privata dell'app, non nella cartella delle note:
 /// così si leggono prima di avere il permesso di archiviazione e l'app parte
@@ -18,6 +18,7 @@ class Settings extends ChangeNotifier {
     this.file,
     this.palette = LeviathanPalette.inchiostro,
     this.language,
+    this.tourSeen = false,
   });
 
   final File? file;
@@ -27,15 +28,21 @@ class Settings extends ChangeNotifier {
   /// al primo avvio.
   String? language;
 
+  /// Il tour guidato della home è già stato fatto (o saltato): non riparte
+  /// da solo.
+  bool tourSeen;
+
   static Future<Settings> load() async {
     final dir = await getApplicationSupportDirectory();
     final file = File(p.join(dir.path, 'preferences.json'));
     String? paletteId;
     String? language;
+    var tourSeen = false;
     try {
       final json = jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
       paletteId = json['palette'] as String?;
       language = json['language'] as String?;
+      tourSeen = json['tourSeen'] as bool? ?? false;
     } on Object {
       // Primo avvio o file illeggibile: valori predefiniti.
     }
@@ -43,6 +50,7 @@ class Settings extends ChangeNotifier {
       file: file,
       palette: LeviathanPalette.byId(paletteId),
       language: language,
+      tourSeen: tourSeen,
     );
   }
 
@@ -60,12 +68,22 @@ class Settings extends ChangeNotifier {
     _save();
   }
 
+  void markTourSeen() {
+    if (tourSeen) return;
+    tourSeen = true;
+    _save();
+  }
+
   void _save() {
     final file = this.file;
     if (file == null) return;
     file.parent.createSync(recursive: true);
     file.writeAsStringSync(
-      jsonEncode({'palette': palette.id, 'language': ?language}),
+      jsonEncode({
+        'palette': palette.id,
+        'language': ?language,
+        'tourSeen': tourSeen,
+      }),
     );
   }
 }

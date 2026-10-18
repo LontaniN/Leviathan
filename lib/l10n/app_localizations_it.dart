@@ -740,4 +740,74 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get paletteCarta => 'Carta';
+
+  @override
+  String tourWelcomeTitle(String workspace) {
+    return '$workspace è pronto';
+  }
+
+  @override
+  String get tourWelcomeBody =>
+      'Facciamo un giro veloce delle funzioni principali? Sono cinque passi.';
+
+  @override
+  String get tourStart => 'Inizia il tour';
+
+  @override
+  String get tourSkip => 'Salta';
+
+  @override
+  String get tourBack => 'Indietro';
+
+  @override
+  String get tourNext => 'Avanti';
+
+  @override
+  String get tourDone => 'Fine';
+
+  @override
+  String tourProgress(int current, int total) {
+    return '$current di $total';
+  }
+
+  @override
+  String get tourEditorTitle => 'Scrivi una nota';
+
+  @override
+  String get tourEditorBody =>
+      'Dalle un titolo e scrivi il testo in Markdown. In alto scegli se è una nota o un task da spuntare.';
+
+  @override
+  String get tourTagsTitle => 'I tag collegano tutto';
+
+  @override
+  String get tourTagsBody =>
+      'Aggiungine quanti vuoi: mentre scrivi compaiono quelli che usi già. Il primo tag dà il colore alla nota. Sotto, scrivi da dove viene l\'idea.';
+
+  @override
+  String get tourListTitle => 'Le tue note';
+
+  @override
+  String get tourListBody =>
+      'Le ultime, dalla più recente. Tocca per leggere e modificare, tieni premuto per fissare, spuntare o eliminare. La freccia allarga l\'elenco.';
+
+  @override
+  String get tourSearchTitle => 'Trova tutto';
+
+  @override
+  String get tourSearchBody =>
+      'Cerca in titoli, testo, tag e fonti. Scrivi # per filtrare per tag e @ per fonte.';
+
+  @override
+  String get tourViewsTitle => 'Le altre viste';
+
+  @override
+  String get tourViewsBody =>
+      'Le note fissate, il grafo delle note unite dai tag, gli elenchi di task e note, il calendario e le impostazioni, dove puoi rivedere questo tour.';
+
+  @override
+  String get guide => 'Guida';
+
+  @override
+  String get replayTour => 'Rivedi il tour';
 }

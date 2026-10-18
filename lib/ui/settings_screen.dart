@@ -7,15 +7,19 @@ import 'language_screen.dart';
 import 'search_screen.dart';
 import 'theme.dart';
 
-/// Impostazioni dell'app: la lingua dell'interfaccia e la palette.
+/// Impostazioni dell'app: la lingua dell'interfaccia, la palette e, se c'è
+/// [onReplayTour], il tour guidato da rivedere.
 ///
 /// Le palette sono schede a due colonne, ognuna con una miniatura della home
 /// nei suoi colori. La griglia non è pigra: sono poche e così si costruiscono
 /// tutte insieme.
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key, required this.settings});
+  const SettingsScreen({super.key, required this.settings, this.onReplayTour});
 
   final Settings settings;
+
+  /// Torna alla home e riapre il tour guidato.
+  final VoidCallback? onReplayTour;
 
   static const _columns = 2;
 
@@ -66,6 +70,16 @@ class SettingsScreen extends StatelessWidget {
                   ],
                 ),
               ),
+              if (onReplayTour case final replay?) ...[
+                const SizedBox(height: LeviathanSpacing.lg),
+                SectionTitle(context.l10n.guide),
+                ListTile(
+                  key: const Key('replay-tour'),
+                  leading: const Icon(Icons.tour_outlined),
+                  title: Text(context.l10n.replayTour),
+                  onTap: replay,
+                ),
+              ],
             ],
           ),
         ),

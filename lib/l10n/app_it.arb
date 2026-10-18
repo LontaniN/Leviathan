@@ -212,5 +212,26 @@
   "paletteBrace": "Brace",
   "paletteMuschio": "Muschio",
   "paletteAmetista": "Ametista",
-  "paletteCarta": "Carta"
+  "paletteCarta": "Carta",
+
+  "tourWelcomeTitle": "{workspace} è pronto",
+  "tourWelcomeBody": "Facciamo un giro veloce delle funzioni principali? Sono cinque passi.",
+  "tourStart": "Inizia il tour",
+  "tourSkip": "Salta",
+  "tourBack": "Indietro",
+  "tourNext": "Avanti",
+  "tourDone": "Fine",
+  "tourProgress": "{current} di {total}",
+  "tourEditorTitle": "Scrivi una nota",
+  "tourEditorBody": "Dalle un titolo e scrivi il testo in Markdown. In alto scegli se è una nota o un task da spuntare.",
+  "tourTagsTitle": "I tag collegano tutto",
+  "tourTagsBody": "Aggiungine quanti vuoi: mentre scrivi compaiono quelli che usi già. Il primo tag dà il colore alla nota. Sotto, scrivi da dove viene l'idea.",
+  "tourListTitle": "Le tue note",
+  "tourListBody": "Le ultime, dalla più recente. Tocca per leggere e modificare, tieni premuto per fissare, spuntare o eliminare. La freccia allarga l'elenco.",
+  "tourSearchTitle": "Trova tutto",
+  "tourSearchBody": "Cerca in titoli, testo, tag e fonti. Scrivi # per filtrare per tag e @ per fonte.",
+  "tourViewsTitle": "Le altre viste",
+  "tourViewsBody": "Le note fissate, il grafo delle note unite dai tag, gli elenchi di task e note, il calendario e le impostazioni, dove puoi rivedere questo tour.",
+  "guide": "Guida",
+  "replayTour": "Rivedi il tour"
 }

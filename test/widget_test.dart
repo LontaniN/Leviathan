@@ -7,6 +7,7 @@ import 'package:leviathan/data/storage_access.dart';
 import 'package:leviathan/data/workspace_repository.dart';
 import 'package:leviathan/state/app_state.dart';
 import 'package:leviathan/state/settings.dart';
+import 'package:leviathan/ui/app_tour.dart';
 import 'package:leviathan/ui/graph_screen.dart';
 import 'package:leviathan/ui/search_screen.dart';
 import 'package:leviathan/ui/theme.dart';
@@ -1030,5 +1031,114 @@ void main() {
     expect(settings.language, 'it');
     expect(find.text('Impostazioni'), findsOneWidget);
     expect(find.text('Inchiostro'), findsOneWidget);
+  });
+
+  testWidgets('tour guidato al primo workspace: avanti, indietro, fine', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    final file = File('${root.path}/preferences.json');
+    final settings = Settings(file: file, language: 'it');
+    await tester.pumpWidget(
+      LeviathanApp(state: AppState(_FakeStorage(root)), settings: settings),
+    );
+    await settle(tester);
+    await tester.enterText(find.byType(TextField), 'Lavoro');
+    await tester.tap(find.text('Crea workspace'));
+    await settle(tester);
+
+    expect(find.text('Lavoro è pronto'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('tour-start')));
+    await settle(tester);
+    expect(find.text('1 DI 5'), findsOneWidget);
+    expect(find.text('Scrivi una nota'), findsOneWidget);
+    // Sul primo passo non si torna indietro.
+    expect(find.byKey(const Key('tour-back')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('tour-next')));
+    await settle(tester);
+    expect(find.text('I tag collegano tutto'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('tour-back')));
+    await settle(tester);
+    expect(find.text('Scrivi una nota'), findsOneWidget);
+
+    for (var i = 0; i < 4; i++) {
+      await tester.tap(find.byKey(const Key('tour-next')));
+      await settle(tester);
+    }
+    expect(find.text('5 DI 5'), findsOneWidget);
+    expect(find.text('Le altre viste'), findsOneWidget);
+    // All'ultimo passo resta solo Fine.
+    expect(find.byKey(const Key('tour-skip')), findsNothing);
+    await tester.tap(find.text('Fine'));
+    await settle(tester);
+
+    expect(find.byType(AppTour), findsNothing);
+    expect(settings.tourSeen, isTrue);
+    expect(file.readAsStringSync(), contains('"tourSeen":true'));
+    // Finito il tour la home risponde di nuovo.
+    await tester.tap(find.byKey(const Key('settings-button')));
+    await settle(tester);
+    expect(find.text('Impostazioni'), findsOneWidget);
+  });
+
+  testWidgets('il tour si salta e non riparte', (tester) async {
+    final settings = Settings(language: 'it');
+    final state = AppState(_FakeStorage(root));
+    await tester.pumpWidget(LeviathanApp(state: state, settings: settings));
+    await settle(tester);
+    await tester.enterText(find.byType(TextField), 'Lavoro');
+    await tester.tap(find.text('Crea workspace'));
+    await settle(tester);
+
+    await tester.tap(find.byKey(const Key('tour-skip')));
+    await settle(tester);
+    expect(find.byType(AppTour), findsNothing);
+    expect(settings.tourSeen, isTrue);
+
+    // Un secondo workspace non lo fa ripartire.
+    await tester.runAsync(() => state.createWorkspace('Studio'));
+    await settle(tester);
+    expect(find.text('Studio'), findsOneWidget);
+    expect(find.byType(AppTour), findsNothing);
+  });
+
+  testWidgets('niente tour aprendo un workspace che c\'era già', (
+    tester,
+  ) async {
+    await tester.runAsync(() => WorkspaceRepository(root).createWorkspace('A'));
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+    await settle(tester);
+
+    expect(find.text('A'), findsOneWidget);
+    expect(find.byType(AppTour), findsNothing);
+  });
+
+  testWidgets('il tour si rivede dalle impostazioni', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    await tester.runAsync(() => WorkspaceRepository(root).createWorkspace('A'));
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+    await settle(tester);
+
+    await tester.tap(find.byKey(const Key('settings-button')));
+    await settle(tester);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('replay-tour')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.byKey(const Key('replay-tour')));
+    await settle(tester);
+
+    // Torna alla home e parte dal primo passo, senza benvenuto.
+    expect(find.text('Impostazioni'), findsNothing);
+    expect(find.byKey(const Key('tour-welcome')), findsNothing);
+    expect(find.text('1 DI 5'), findsOneWidget);
   });
 }

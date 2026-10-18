@@ -1267,6 +1267,126 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Paper'**
   String get paletteCarta;
+
+  /// No description provided for @tourWelcomeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{workspace} is ready'**
+  String tourWelcomeTitle(String workspace);
+
+  /// No description provided for @tourWelcomeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Want a quick tour of the main features? It takes five steps.'**
+  String get tourWelcomeBody;
+
+  /// No description provided for @tourStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start the tour'**
+  String get tourStart;
+
+  /// No description provided for @tourSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get tourSkip;
+
+  /// No description provided for @tourBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get tourBack;
+
+  /// No description provided for @tourNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get tourNext;
+
+  /// No description provided for @tourDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get tourDone;
+
+  /// No description provided for @tourProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'{current} of {total}'**
+  String tourProgress(int current, int total);
+
+  /// No description provided for @tourEditorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Write a note'**
+  String get tourEditorTitle;
+
+  /// No description provided for @tourEditorBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Give it a title and write the text in Markdown. At the top, choose whether it\'s a note or a task to check off.'**
+  String get tourEditorBody;
+
+  /// No description provided for @tourTagsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tags connect everything'**
+  String get tourTagsTitle;
+
+  /// No description provided for @tourTagsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Add as many as you like: the ones you already use are suggested as you type. The first tag gives the note its color. Below, note where the idea came from.'**
+  String get tourTagsBody;
+
+  /// No description provided for @tourListTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your notes'**
+  String get tourListTitle;
+
+  /// No description provided for @tourListBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The latest ones, newest first. Tap to read and edit; press and hold to pin, check off or delete. The arrow widens the list.'**
+  String get tourListBody;
+
+  /// No description provided for @tourSearchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Find anything'**
+  String get tourSearchTitle;
+
+  /// No description provided for @tourSearchBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Search titles, text, tags and sources. Type # to filter by tag and @ by source.'**
+  String get tourSearchBody;
+
+  /// No description provided for @tourViewsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Other views'**
+  String get tourViewsTitle;
+
+  /// No description provided for @tourViewsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Pinned notes, the graph of notes linked by tags, task and note lists, the calendar, and the settings, where you can replay this tour.'**
+  String get tourViewsBody;
+
+  /// No description provided for @guide.
+  ///
+  /// In en, this message translates to:
+  /// **'Guide'**
+  String get guide;
+
+  /// No description provided for @replayTour.
+  ///
+  /// In en, this message translates to:
+  /// **'Replay the tour'**
+  String get replayTour;
 }
 
 class _AppLocalizationsDelegate

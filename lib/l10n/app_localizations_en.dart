@@ -752,4 +752,74 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get paletteCarta => 'Paper';
+
+  @override
+  String tourWelcomeTitle(String workspace) {
+    return '$workspace is ready';
+  }
+
+  @override
+  String get tourWelcomeBody =>
+      'Want a quick tour of the main features? It takes five steps.';
+
+  @override
+  String get tourStart => 'Start the tour';
+
+  @override
+  String get tourSkip => 'Skip';
+
+  @override
+  String get tourBack => 'Back';
+
+  @override
+  String get tourNext => 'Next';
+
+  @override
+  String get tourDone => 'Done';
+
+  @override
+  String tourProgress(int current, int total) {
+    return '$current of $total';
+  }
+
+  @override
+  String get tourEditorTitle => 'Write a note';
+
+  @override
+  String get tourEditorBody =>
+      'Give it a title and write the text in Markdown. At the top, choose whether it\'s a note or a task to check off.';
+
+  @override
+  String get tourTagsTitle => 'Tags connect everything';
+
+  @override
+  String get tourTagsBody =>
+      'Add as many as you like: the ones you already use are suggested as you type. The first tag gives the note its color. Below, note where the idea came from.';
+
+  @override
+  String get tourListTitle => 'Your notes';
+
+  @override
+  String get tourListBody =>
+      'The latest ones, newest first. Tap to read and edit; press and hold to pin, check off or delete. The arrow widens the list.';
+
+  @override
+  String get tourSearchTitle => 'Find anything';
+
+  @override
+  String get tourSearchBody =>
+      'Search titles, text, tags and sources. Type # to filter by tag and @ by source.';
+
+  @override
+  String get tourViewsTitle => 'Other views';
+
+  @override
+  String get tourViewsBody =>
+      'Pinned notes, the graph of notes linked by tags, task and note lists, the calendar, and the settings, where you can replay this tour.';
+
+  @override
+  String get guide => 'Guide';
+
+  @override
+  String get replayTour => 'Replay the tour';
 }

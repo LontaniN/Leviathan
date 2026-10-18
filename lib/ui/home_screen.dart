@@ -10,6 +10,7 @@ import '../model/tags.dart';
 import '../state/app_state.dart';
 import '../state/notes_controller.dart';
 import '../state/settings.dart';
+import 'app_tour.dart';
 import 'calendar_screen.dart';
 import 'chip_input.dart';
 import 'graph_screen.dart';
@@ -32,11 +33,20 @@ import 'workspace_name_form.dart';
 /// tag e data di ogni nota. Le note fissate stanno in cima, le altre sotto
 /// intestazioni per giorno o mese. Tenendo premuta una nota si fissa, si
 /// spunta o si elimina.
+///
+/// Con [startTour] sopra la home parte il tour guidato delle funzioni
+/// principali (vedi [AppTour]); si può rivedere dalle impostazioni.
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, required this.state, required this.settings});
+  const HomeScreen({
+    super.key,
+    required this.state,
+    required this.settings,
+    this.startTour = false,
+  });
 
   final AppState state;
   final Settings settings;
+  final bool startTour;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -48,16 +58,62 @@ class _HomeScreenState extends State<HomeScreen> {
   );
   bool _listExpanded = false;
 
+  /// Il tour guidato è aperto; [_tourWelcome] se parte dal benvenuto (la
+  /// prima volta, non quando lo si rivede dalle impostazioni).
+  late bool _touring = widget.startTour;
+  late bool _tourWelcome = widget.startTour;
+
+  /// Gli elementi che il tour illumina.
+  final _editorKey = GlobalKey();
+  final _tagsKey = GlobalKey();
+  final _listKey = GlobalKey();
+  final _searchKey = GlobalKey();
+  final _viewsKey = GlobalKey();
+
   /// La nota appena salvata, la cui voce nella lista si illumina; [_flashSeq]
   /// cambia a ogni salvataggio, così il bagliore riparte anche sulla stessa.
   String? _flashId;
   int _flashSeq = 0;
 
   @override
+  void initState() {
+    super.initState();
+    // Arrivando dall'onboarding la tastiera del nome può essere ancora
+    // aperta e nasconderebbe parte della home.
+    if (_touring) FocusManager.instance.primaryFocus?.unfocus();
+  }
+
+  @override
   void dispose() {
     _notes.dispose();
     super.dispose();
   }
+
+  /// Riapre il tour dalle impostazioni: senza benvenuto, con la lista
+  /// stretta così l'editor si vede.
+  void _replayTour() {
+    Navigator.of(context).popUntil((route) => route.isFirst);
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() {
+      _listExpanded = false;
+      _tourWelcome = false;
+      _touring = true;
+    });
+  }
+
+  void _endTour() {
+    widget.settings.markTourSeen();
+    widget.state.firstWorkspaceCreated = false;
+    setState(() => _touring = false);
+  }
+
+  List<TourStep> _tourSteps(AppLocalizations l) => [
+    (target: _editorKey, title: l.tourEditorTitle, body: l.tourEditorBody),
+    (target: _tagsKey, title: l.tourTagsTitle, body: l.tourTagsBody),
+    (target: _listKey, title: l.tourListTitle, body: l.tourListBody),
+    (target: _searchKey, title: l.tourSearchTitle, body: l.tourSearchBody),
+    (target: _viewsKey, title: l.tourViewsTitle, body: l.tourViewsBody),
+  ];
 
   void _flash(Note note) {
     final seq = ++_flashSeq;
@@ -89,6 +145,38 @@ class _HomeScreenState extends State<HomeScreen> {
     // e lascia lo spazio all'editor. Qui, sopra lo Scaffold, il MediaQuery
     // ha ancora l'altezza della tastiera.
     final writing = MediaQuery.viewInsetsOf(context).bottom > 0;
+    final l = context.l10n;
+    // Durante il tour il tasto indietro lo chiude invece di uscire dall'app.
+    return PopScope(
+      canPop: !_touring,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _touring) _endTour();
+      },
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          _scaffold(writing),
+          if (_touring)
+            Positioned.fill(
+              child: AppTour(
+                steps: _tourSteps(l),
+                welcome: _tourWelcome
+                    ? (
+                        title: l.tourWelcomeTitle(
+                          widget.state.currentWorkspace ?? '',
+                        ),
+                        body: l.tourWelcomeBody,
+                      )
+                    : null,
+                onDone: _endTour,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _scaffold(bool writing) {
     return Scaffold(
       body: SafeArea(
         child: ListenableBuilder(
@@ -99,12 +187,17 @@ class _HomeScreenState extends State<HomeScreen> {
               _Header(
                 state: widget.state,
                 notes: _notes.notes,
+                viewsKey: _viewsKey,
                 onPinned: () => _push(PinnedScreen(notes: _notes)),
                 onGraph: _openGraph,
                 onLists: () => _push(ListsScreen(notes: _notes)),
                 onCalendar: () => _push(CalendarScreen(notes: _notes)),
-                onSettings: () =>
-                    _push(SettingsScreen(settings: widget.settings)),
+                onSettings: () => _push(
+                  SettingsScreen(
+                    settings: widget.settings,
+                    onReplayTour: _replayTour,
+                  ),
+                ),
               ),
               AnimatedSize(
                 duration: LeviathanDurations.panel,
@@ -113,6 +206,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: writing
                     ? const SizedBox(width: double.infinity)
                     : _SearchPill(
+                        key: _searchKey,
                         onTap: () => _push(SearchScreen(notes: _notes)),
                       ),
               ),
@@ -141,6 +235,7 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             AnimatedContainer(
+              key: _listKey,
               duration: LeviathanDurations.panel,
               curve: Curves.easeOutCubic,
               width: listWidth,
@@ -169,6 +264,8 @@ class _HomeScreenState extends State<HomeScreen> {
             if (!_listExpanded)
               Expanded(
                 child: NoteEditor(
+                  key: _editorKey,
+                  tagsKey: _tagsKey,
                   tagCounts: _notes.tagCounts,
                   sourceCounts: _notes.sourceCounts,
                   draft: widget.state.draftOf(widget.state.currentWorkspace!),
@@ -199,6 +296,7 @@ class _Header extends StatelessWidget {
   const _Header({
     required this.state,
     required this.notes,
+    required this.viewsKey,
     required this.onPinned,
     required this.onGraph,
     required this.onLists,
@@ -208,6 +306,9 @@ class _Header extends StatelessWidget {
 
   final AppState state;
   final List<Note> notes;
+
+  /// Chiave del gruppo di icone delle altre viste, per il tour.
+  final GlobalKey viewsKey;
   final VoidCallback onPinned;
   final VoidCallback onGraph;
   final VoidCallback onLists;
@@ -251,35 +352,41 @@ class _Header extends StatelessWidget {
               ],
             ),
           ),
-          IconButton(
-            key: const Key('pinned-button'),
-            tooltip: l.pinned,
-            icon: const Icon(Icons.push_pin_outlined),
-            onPressed: onPinned,
-          ),
-          IconButton(
-            key: const Key('graph-button'),
-            tooltip: l.graph,
-            icon: const Icon(Icons.hub_outlined),
-            onPressed: onGraph,
-          ),
-          IconButton(
-            key: const Key('lists-button'),
-            tooltip: l.tasksAndNotes,
-            icon: const Icon(Icons.checklist),
-            onPressed: onLists,
-          ),
-          IconButton(
-            key: const Key('calendar-button'),
-            tooltip: l.calendar,
-            icon: const Icon(Icons.calendar_month_outlined),
-            onPressed: onCalendar,
-          ),
-          IconButton(
-            key: const Key('settings-button'),
-            tooltip: l.settings,
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: onSettings,
+          Row(
+            key: viewsKey,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                key: const Key('pinned-button'),
+                tooltip: l.pinned,
+                icon: const Icon(Icons.push_pin_outlined),
+                onPressed: onPinned,
+              ),
+              IconButton(
+                key: const Key('graph-button'),
+                tooltip: l.graph,
+                icon: const Icon(Icons.hub_outlined),
+                onPressed: onGraph,
+              ),
+              IconButton(
+                key: const Key('lists-button'),
+                tooltip: l.tasksAndNotes,
+                icon: const Icon(Icons.checklist),
+                onPressed: onLists,
+              ),
+              IconButton(
+                key: const Key('calendar-button'),
+                tooltip: l.calendar,
+                icon: const Icon(Icons.calendar_month_outlined),
+                onPressed: onCalendar,
+              ),
+              IconButton(
+                key: const Key('settings-button'),
+                tooltip: l.settings,
+                icon: const Icon(Icons.settings_outlined),
+                onPressed: onSettings,
+              ),
+            ],
           ),
         ],
       ),
@@ -290,7 +397,7 @@ class _Header extends StatelessWidget {
 /// La barra di ricerca della home: una pillola che apre la ricerca vera e
 /// ricorda le scorciatoie dei filtri.
 class _SearchPill extends StatelessWidget {
-  const _SearchPill({required this.onTap});
+  const _SearchPill({super.key, required this.onTap});
 
   final VoidCallback onTap;
 
