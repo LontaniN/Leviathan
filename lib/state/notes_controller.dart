@@ -188,6 +188,56 @@ class NotesController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Rinomina il tag [from] in [to] in tutte le note che lo usano; se [to]
+  /// esiste già i due tag si uniscono. Il colore scelto a mano passa al
+  /// nuovo nome, se quello non ne ha già uno.
+  void renameTag(String from, String to) {
+    if (from == to || to.isEmpty) return;
+    final colors = {...Tags.custom};
+    final color = colors.remove(from);
+    if (color != null) {
+      colors.putIfAbsent(to, () => color);
+      Tags.custom = colors;
+      _tagColors?.write(colors);
+    }
+    _renameIn(from, to, (n) => n.tags, (n, tags) => n.copyWith(tags: tags));
+  }
+
+  /// Rinomina la fonte [from] in [to] in tutte le note che la citano; se
+  /// [to] esiste già le due fonti si uniscono.
+  void renameSource(String from, String to) {
+    if (from == to || to.isEmpty) return;
+    _renameIn(
+      from,
+      to,
+      (n) => n.sources,
+      (n, sources) => n.copyWith(sources: sources),
+    );
+  }
+
+  /// Come la spunta, rinominare non conta come modifica delle note.
+  void _renameIn(
+    String from,
+    String to,
+    List<String> Function(Note) values,
+    Note Function(Note, List<String>) withValues,
+  ) {
+    final changed = [
+      for (final note in notes)
+        if (values(note).contains(from))
+          withValues(note, [
+            ...{for (final v in values(note)) v == from ? to : v},
+          ]),
+    ];
+    for (final note in changed) {
+      _repo.save(note);
+    }
+    final byId = {for (final n in changed) n.id: n};
+    notes = [for (final n in notes) byId[n.id] ?? n];
+    _refreshCounts();
+    notifyListeners();
+  }
+
   Note? byId(String id) {
     for (final note in notes) {
       if (note.id == id) return note;

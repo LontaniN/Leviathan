@@ -46,16 +46,20 @@ class SourceChip extends StatelessWidget {
     this.source, {
     super.key,
     this.onDeleted,
+    this.onLongPress,
     this.dense = false,
   });
 
   final String source;
   final VoidCallback? onDeleted;
+
+  /// Di solito apre il foglio della fonte (per rinominarla).
+  final VoidCallback? onLongPress;
   final bool dense;
 
   @override
   Widget build(BuildContext context) {
-    return _BaseChip(
+    final chip = _BaseChip(
       label: source,
       avatar: Icon(
         Icons.person_outline,
@@ -66,6 +70,8 @@ class SourceChip extends StatelessWidget {
       onDeleted: onDeleted,
       dense: dense,
     );
+    if (onLongPress == null) return chip;
+    return GestureDetector(onLongPress: onLongPress, child: chip);
   }
 }
 
@@ -244,8 +250,9 @@ class ChipInput extends StatefulWidget {
   final TextEditingController pending;
   final Key? fieldKey;
 
-  /// Tenendo premuta una voce scelta (per i tag: la scelta del colore).
-  final ValueChanged<String>? onLongPress;
+  /// Tenendo premuta una voce scelta: apre il foglio della voce (colore,
+  /// nome). Se restituisce un nuovo nome, la voce viene sostituita.
+  final Future<String?> Function(String value)? onLongPress;
 
   /// Suggerimenti a campo vuoto: le voci più usate.
   static const popularLimit = 3;
@@ -311,6 +318,14 @@ class _ChipInputState extends State<ChipInput> {
     widget.pending.clear();
   }
 
+  Future<void> _longPress(String value) async {
+    final renamed = await widget.onLongPress!(value);
+    if (renamed == null || !mounted) return;
+    widget.onChanged([
+      ...{for (final v in widget.values) v == value ? renamed : v},
+    ]);
+  }
+
   @override
   Widget build(BuildContext context) {
     final kind = widget.kind;
@@ -360,7 +375,7 @@ class _ChipInputState extends State<ChipInput> {
                     GestureDetector(
                       onLongPress: widget.onLongPress == null
                           ? null
-                          : () => widget.onLongPress!(value),
+                          : () => _longPress(value),
                       child: kind.chip(
                         value,
                         () => widget.onChanged(

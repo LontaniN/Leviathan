@@ -62,4 +62,39 @@ void main() {
     expect(store.read(), isEmpty);
     expect(Tags.colorOf('studio'), Tags.autoColorOf('studio'));
   });
+
+  test('rinominare un tag lo cambia in ogni nota, colore compreso', () {
+    final notes = open();
+    final a = notes.create(
+      title: 'a',
+      body: '',
+      tags: ['studio', 'idee'],
+      sources: [],
+    );
+    notes.create(title: 'b', body: '', tags: ['lavoro'], sources: []);
+    notes.setTagColor('studio', Tags.palette.first);
+
+    notes.renameTag('studio', 'idee');
+    expect(notes.byId(a.id)!.tags, ['idee']);
+    expect(notes.byId(a.id)!.updated, a.updated);
+    expect(notes.tagCounts, {'idee': 1, 'lavoro': 1});
+    expect(Tags.custom, {'idee': Tags.palette.first});
+    expect(store.read(), {'idee': Tags.palette.first});
+
+    expect(open().byId(a.id)!.tags, ['idee']);
+  });
+
+  test('rinominare una fonte la cambia in ogni nota', () {
+    final notes = open();
+    final a = notes.create(
+      title: 'a',
+      body: '',
+      tags: [],
+      sources: ['mario rossi', 'Anna'],
+    );
+    notes.renameSource('mario rossi', 'Mario Rossi');
+    expect(notes.byId(a.id)!.sources, ['Mario Rossi', 'Anna']);
+    expect(notes.sourceCounts, {'Mario Rossi': 1, 'Anna': 1});
+    expect(open().byId(a.id)!.sources, ['Mario Rossi', 'Anna']);
+  });
 }

@@ -954,4 +954,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tagColorAuto => 'Automatic color';
+
+  @override
+  String renameTagTitle(String tag) {
+    return 'Rename $tag';
+  }
+
+  @override
+  String renameSourceTitle(String source) {
+    return 'Rename $source';
+  }
+
+  @override
+  String renameMerges(String name) {
+    return 'Already exists: notes will be merged into $name';
+  }
 }

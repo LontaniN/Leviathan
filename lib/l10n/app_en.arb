@@ -314,5 +314,11 @@
   "@sharedSavedToDraft": {"placeholders": {"workspace": {"type": "String", "example": "University"}}},
   "tagColorTitle": "Color of {tag}",
   "@tagColorTitle": {"placeholders": {"tag": {"type": "String", "example": "study"}}},
-  "tagColorAuto": "Automatic color"
+  "tagColorAuto": "Automatic color",
+  "renameTagTitle": "Rename {tag}",
+  "@renameTagTitle": {"placeholders": {"tag": {"type": "String", "example": "study"}}},
+  "renameSourceTitle": "Rename {source}",
+  "@renameSourceTitle": {"placeholders": {"source": {"type": "String", "example": "Mario Rossi"}}},
+  "renameMerges": "Already exists: notes will be merged into {name}",
+  "@renameMerges": {"placeholders": {"name": {"type": "String", "example": "study"}}}
 }

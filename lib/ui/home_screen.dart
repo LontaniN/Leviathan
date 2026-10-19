@@ -424,6 +424,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   draft: widget.state.draftOf(widget.state.currentWorkspace!),
                   onTagLongPress: (tag) =>
                       showTagColorSheet(context, _notes, tag),
+                  onSourceLongPress: (source) =>
+                      showSourceSheet(context, _notes, source),
                   onSave: (draft) => _flash(
                     _notes.create(
                       title: draft.title,

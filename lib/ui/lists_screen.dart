@@ -209,8 +209,9 @@ class _ListsScreenState extends State<ListsScreen> {
                         tasks: _tasks,
                         filter: _filter,
                         onOpen: _openGroup,
-                        onTagLongPress: (tag) =>
-                            showTagColorSheet(context, widget.notes, tag),
+                        onLongPress: (name) => _grouping == NoteGrouping.tag
+                            ? showTagColorSheet(context, widget.notes, name)
+                            : showSourceSheet(context, widget.notes, name),
                       ),
               ),
             ],
@@ -346,7 +347,7 @@ class _GroupGrid extends StatelessWidget {
     required this.tasks,
     required this.filter,
     required this.onOpen,
-    required this.onTagLongPress,
+    required this.onLongPress,
   });
 
   final String summary;
@@ -355,7 +356,8 @@ class _GroupGrid extends StatelessWidget {
   final bool tasks;
   final TaskFilter filter;
   final ValueChanged<String?> onOpen;
-  final ValueChanged<String> onTagLongPress;
+  /// Tenendo premuto un gruppo con nome: il foglio del tag o della fonte.
+  final ValueChanged<String> onLongPress;
 
   static const _columns = 3;
 
@@ -395,9 +397,8 @@ class _GroupGrid extends StatelessWidget {
               filter: filter,
               onTap: () => onOpen(groups[i].name),
               onLongPress: switch (groups[i].name) {
-                final name? when grouping == NoteGrouping.tag =>
-                  () => onTagLongPress(name),
-                _ => null,
+                final name? => () => onLongPress(name),
+                null => null,
               },
             ),
           ),

@@ -1609,6 +1609,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Automatic color'**
   String get tagColorAuto;
+
+  /// No description provided for @renameTagTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename {tag}'**
+  String renameTagTitle(String tag);
+
+  /// No description provided for @renameSourceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename {source}'**
+  String renameSourceTitle(String source);
+
+  /// No description provided for @renameMerges.
+  ///
+  /// In en, this message translates to:
+  /// **'Already exists: notes will be merged into {name}'**
+  String renameMerges(String name);
 }
 
 class _AppLocalizationsDelegate

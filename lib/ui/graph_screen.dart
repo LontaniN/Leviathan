@@ -231,8 +231,31 @@ class _GraphScreenState extends State<GraphScreen>
     }
   }
 
-  void _editTagColor(String tag) =>
-      showTagColorSheet(context, widget.notes, tag);
+  Future<void> _editTag(String tag) async {
+    final renamed = await showTagColorSheet(context, widget.notes, tag);
+    if (renamed == null || !mounted || !_filterTags.contains(tag)) return;
+    setState(() {
+      _filterTags = _renamed(_filterTags, tag, renamed);
+      _applyFilter();
+    });
+  }
+
+  Future<void> _editSource(String source) async {
+    final renamed = await showSourceSheet(context, widget.notes, source);
+    if (renamed == null || !mounted || !_filterSources.contains(source)) {
+      return;
+    }
+    setState(() {
+      _filterSources = _renamed(_filterSources, source, renamed);
+      _applyFilter();
+    });
+  }
+
+  /// Un filtro rinominato resta attivo con il nuovo nome.
+  static List<String> _renamed(List<String> values, String from, String to) =>
+      [
+        ...{for (final v in values) v == from ? to : v},
+      ];
 
   void _openNote(int index) {
     Navigator.of(context).push(
@@ -304,7 +327,8 @@ class _GraphScreenState extends State<GraphScreen>
               tags: _filterTags,
               sources: _filterSources,
               matches: _matching!.length,
-              onTagLongPress: _editTagColor,
+              onTagLongPress: _editTag,
+              onSourceLongPress: _editSource,
               onRemoveTag: (t) => setState(() {
                 _filterTags = _filterTags.where((x) => x != t).toList();
                 _applyFilter();
@@ -361,7 +385,8 @@ class _GraphScreenState extends State<GraphScreen>
                               child: _SelectedCard(
                                 node: _graph.nodes[_selected],
                                 onOpen: () => _openNote(_selected),
-                                onTagLongPress: _editTagColor,
+                                onTagLongPress: _editTag,
+                                onSourceLongPress: _editSource,
                               ),
                             ),
                         ],
@@ -527,11 +552,13 @@ class _SelectedCard extends StatelessWidget {
     required this.node,
     required this.onOpen,
     required this.onTagLongPress,
+    required this.onSourceLongPress,
   });
 
   final GraphNode node;
   final VoidCallback onOpen;
   final ValueChanged<String> onTagLongPress;
+  final ValueChanged<String> onSourceLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -586,7 +613,11 @@ class _SelectedCard extends StatelessWidget {
                                 onLongPress: () => onTagLongPress(t),
                               ),
                             for (final s in note.sources)
-                              SourceChip(s, dense: true),
+                              SourceChip(
+                                s,
+                                dense: true,
+                                onLongPress: () => onSourceLongPress(s),
+                              ),
                           ],
                         ),
                       ),
@@ -610,6 +641,7 @@ class _ActiveFilters extends StatelessWidget {
     required this.onRemoveTag,
     required this.onRemoveSource,
     required this.onTagLongPress,
+    required this.onSourceLongPress,
   });
 
   final List<String> tags;
@@ -618,6 +650,7 @@ class _ActiveFilters extends StatelessWidget {
   final ValueChanged<String> onRemoveTag;
   final ValueChanged<String> onRemoveSource;
   final ValueChanged<String> onTagLongPress;
+  final ValueChanged<String> onSourceLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -642,7 +675,11 @@ class _ActiveFilters extends StatelessWidget {
                     onLongPress: () => onTagLongPress(t),
                   ),
                 for (final s in sources)
-                  SourceChip(s, onDeleted: () => onRemoveSource(s)),
+                  SourceChip(
+                    s,
+                    onDeleted: () => onRemoveSource(s),
+                    onLongPress: () => onSourceLongPress(s),
+                  ),
               ],
             ),
           ),

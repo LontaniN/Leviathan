@@ -270,5 +270,8 @@
   "sharedAppended": "Testo condiviso aggiunto in fondo alla bozza",
   "sharedSavedToDraft": "Testo condiviso aggiunto alla bozza di «{workspace}»",
   "tagColorTitle": "Colore di {tag}",
-  "tagColorAuto": "Colore automatico"
+  "tagColorAuto": "Colore automatico",
+  "renameTagTitle": "Rinomina {tag}",
+  "renameSourceTitle": "Rinomina {source}",
+  "renameMerges": "Esiste già: le note verranno unite a {name}"
 }

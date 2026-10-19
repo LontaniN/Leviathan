@@ -165,8 +165,23 @@ class _SearchScreenState extends State<SearchScreen> {
     _focus.requestFocus();
   }
 
-  void _editTagColor(String tag) =>
-      showTagColorSheet(context, widget.notes, tag);
+  Future<void> _editTag(String tag) async {
+    final renamed = await showTagColorSheet(context, widget.notes, tag);
+    if (renamed == null || !mounted) return;
+    setState(() => _tags = _renamed(_tags, tag, renamed));
+  }
+
+  Future<void> _editSource(String source) async {
+    final renamed = await showSourceSheet(context, widget.notes, source);
+    if (renamed == null || !mounted) return;
+    setState(() => _sources = _renamed(_sources, source, renamed));
+  }
+
+  /// Un filtro rinominato resta attivo con il nuovo nome.
+  static List<String> _renamed(List<String> values, String from, String to) =>
+      [
+        ...{for (final v in values) v == from ? to : v},
+      ];
 
   void _open(Note note) {
     Navigator.of(context).push(
@@ -211,7 +226,8 @@ class _SearchScreenState extends State<SearchScreen> {
                     () => _sources = _sources.where((x) => x != s).toList(),
                   ),
                   onRemoveTask: () => setState(() => _task = null),
-                  onTagLongPress: _editTagColor,
+                  onTagLongPress: _editTag,
+                  onSourceLongPress: _editSource,
                   onSubmitted: () => _submit(parsed),
                   onClear: hasAnything ? _clear : null,
                 ),
@@ -236,7 +252,8 @@ class _SearchScreenState extends State<SearchScreen> {
                               setState(() => _tags = [..._tags, t]),
                           onAddSource: (s) =>
                               setState(() => _sources = [..._sources, s]),
-                          onTagLongPress: _editTagColor,
+                          onTagLongPress: _editTag,
+                          onSourceLongPress: _editSource,
                         )
                       : _Results(
                           hits: searchNotes(widget.notes.notes, query),
@@ -265,6 +282,7 @@ class _SearchBar extends StatelessWidget {
     required this.onRemoveSource,
     required this.onRemoveTask,
     required this.onTagLongPress,
+    required this.onSourceLongPress,
     required this.onSubmitted,
     required this.onClear,
   });
@@ -278,6 +296,7 @@ class _SearchBar extends StatelessWidget {
   final ValueChanged<String> onRemoveSource;
   final VoidCallback onRemoveTask;
   final ValueChanged<String> onTagLongPress;
+  final ValueChanged<String> onSourceLongPress;
   final VoidCallback onSubmitted;
   final VoidCallback? onClear;
 
@@ -328,6 +347,7 @@ class _SearchBar extends StatelessWidget {
                               SourceChip(
                                 source,
                                 onDeleted: () => onRemoveSource(source),
+                                onLongPress: () => onSourceLongPress(source),
                               ),
                           ],
                         ),
@@ -390,6 +410,7 @@ class _FilterOptions extends StatelessWidget {
     required this.onAddTag,
     required this.onAddSource,
     required this.onTagLongPress,
+    required this.onSourceLongPress,
   });
 
   final ValueChanged<String> onPick;
@@ -398,6 +419,7 @@ class _FilterOptions extends StatelessWidget {
   final ValueChanged<String> onAddTag;
   final ValueChanged<String> onAddSource;
   final ValueChanged<String> onTagLongPress;
+  final ValueChanged<String> onSourceLongPress;
 
   /// Quanti tag e quante fonti frequenti mostrare.
   static const _frequent = 6;
@@ -446,15 +468,18 @@ class _FilterOptions extends StatelessWidget {
           SectionTitle(l.frequentSources),
           chips([
             for (final s in sources)
-              ActionChip(
-                avatar: Icon(
-                  Icons.person_outline,
-                  size: LeviathanIconSize.sm,
-                  color: context.palette.muted,
+              GestureDetector(
+                onLongPress: () => onSourceLongPress(s),
+                child: ActionChip(
+                  avatar: Icon(
+                    Icons.person_outline,
+                    size: LeviathanIconSize.sm,
+                    color: context.palette.muted,
+                  ),
+                  label: _counted(context, s, sourceCounts[s]),
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => onAddSource(s),
                 ),
-                label: _counted(context, s, sourceCounts[s]),
-                visualDensity: VisualDensity.compact,
-                onPressed: () => onAddSource(s),
               ),
           ]),
         ],

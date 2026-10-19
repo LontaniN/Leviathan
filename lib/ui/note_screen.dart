@@ -220,7 +220,12 @@ class NoteScreen extends StatelessWidget {
                                   NoteGrouping.source,
                                   source,
                                 ),
-                          child: SourceChip(source),
+                          child: SourceChip(
+                            source,
+                            onLongPress: readOnly
+                                ? null
+                                : () => showSourceSheet(context, notes, source),
+                          ),
                         ),
                     ],
                   ),
@@ -316,6 +321,8 @@ class _EditNotePage extends StatelessWidget {
           sourceCounts: notes.sourceCounts,
           saveLabel: context.l10n.saveChanges,
           onTagLongPress: (tag) => showTagColorSheet(context, notes, tag),
+          onSourceLongPress: (source) =>
+              showSourceSheet(context, notes, source),
           onSave: (draft) {
             notes.update(
               note.copyWith(

@@ -62,6 +62,7 @@ class NoteEditor extends StatefulWidget {
     this.draft,
     this.tagsKey,
     this.onTagLongPress,
+    this.onSourceLongPress,
   });
 
   /// Il nome della pagina che modifica una nota già salvata: arrivando una
@@ -78,8 +79,13 @@ class NoteEditor extends StatefulWidget {
   /// Chiave del campo dei tag, per illuminarlo nel tour guidato.
   final GlobalKey? tagsKey;
 
-  /// Tenendo premuto un tag scelto (apre la scelta del colore).
-  final ValueChanged<String>? onTagLongPress;
+  /// Tenendo premuto un tag scelto (apre colore e nome); restituisce il
+  /// nuovo nome se il tag è stato rinominato.
+  final Future<String?> Function(String tag)? onTagLongPress;
+
+  /// Tenendo premuta una fonte scelta (per rinominarla), come
+  /// [onTagLongPress].
+  final Future<String?> Function(String source)? onSourceLongPress;
 
   @override
   State<NoteEditor> createState() => _NoteEditorState();
@@ -533,6 +539,7 @@ class _NoteEditorState extends State<NoteEditor>
                     },
                     counts: widget.sourceCounts,
                     pending: _pendingSource,
+                    onLongPress: widget.onSourceLongPress,
                   ),
                   const SizedBox(height: LeviathanSpacing.lg),
                   Row(
