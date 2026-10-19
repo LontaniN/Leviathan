@@ -38,10 +38,13 @@ available in English and Italian.
 - **Automatic draft**: whatever you're writing is kept aside; if Android
   kills the app, the text is still there when you reopen it.
 - **Share from other apps**: pick Leviathan in Android's *Share* menu and the
-  text lands in the editor, ready for tags and a source. The subject (e.g. a
-  page title) becomes the title; if you were halfway through a note, the
-  shared text is added at the end instead. With more than one workspace
-  you choose where it goes.
+  text lands in the editor as a **quote** (`> `), with the cursor on an empty
+  line above it: write what it means to you in your own words, which you'll
+  remember better than a copy. Blank lines left above the quote are dropped
+  when you save. The subject (e.g. a page title) becomes the title; if you
+  were halfway through a note, the quote is added at the end instead and the
+  cursor stays after your text. With more than one workspace you choose
+  where it goes.
 - Long-pressing a note in the list: pin it to the top, check off the task,
   move it to the trash.
 - The first time you open a workspace, a short **guided tour** walks you
@@ -192,7 +195,8 @@ the top of the recent list.
 If you get interrupted, the draft is still there when you come back.
 
 From another app (a browser, a chat, a PDF reader) use **Share →
-Leviathan**: the text opens in the editor and you only add tags.
+Leviathan**: the text opens in the editor as a quote; add a line of your
+own above it, then tags.
 
 ### 2. Organize
 

@@ -147,13 +147,19 @@ class _NoteEditorState extends State<NoteEditor>
     _date = draft.date;
   }
 
+  /// Il testo condiviso entra come citazione e il cursore va dove si
+  /// scrive il proprio commento (vedi [mergeShared]).
   @override
   bool receiveShared(SharedText share) {
     final merged = mergeShared(_title.text, _body.text, share);
     _title.text = merged.title;
-    _body.text = merged.body;
+    _body.value = TextEditingValue(
+      text: merged.body,
+      selection: TextSelection.collapsed(offset: merged.cursor),
+    );
     _lastBody = _body.value;
     if (widget.draft != null && widget.initial == null) _writeDraft();
+    _bodyFocus.requestFocus();
     return merged.appended;
   }
 
@@ -299,7 +305,7 @@ class _NoteEditorState extends State<NoteEditor>
       widget.sourceCounts.keys,
     );
     final title = _title.text.trim();
-    final body = _body.text.trimRight();
+    final body = withoutLeadingBlankLines(_body.text.trimRight());
     if (title.isEmpty && body.trim().isEmpty) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(context.l10n.writeSomething)));

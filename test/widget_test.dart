@@ -1031,11 +1031,77 @@ void main() {
       );
       await settle(tester);
       expect(field(tester, 'title-field'), 'Limiti notevoli');
-      expect(field(tester, 'body-field'), 'https://esempio.it');
+      expect(field(tester, 'body-field'), '\n\n> https://esempio.it');
       expect(shares.hasPending, isFalse);
       // La bozza è già salvata: sopravvive se Android chiude l'app.
       final draft = File('${root.path}/.leviathan/drafts/Lavoro.json');
       expect(draft.readAsStringSync(), contains('esempio.it'));
+    });
+
+    testWidgets('il testo condiviso è una citazione e si scrive sopra', (
+      tester,
+    ) async {
+      await phone(tester);
+      await tester.runAsync(
+        () => WorkspaceRepository(root).createWorkspace('Lavoro'),
+      );
+      final shares = ShareInbox();
+      await tester.pumpWidget(
+        _app(AppState(_FakeStorage(root)), shares: shares),
+      );
+      await settle(tester);
+
+      shares.receive((subject: '', text: 'Frase da un libro'));
+      await settle(tester);
+      final body = tester.widget<TextField>(
+        find.byKey(const Key('body-field')),
+      );
+      // Il corpo è attivo con il cursore sopra la citazione.
+      expect(body.focusNode!.hasFocus, isTrue);
+      expect(body.controller!.selection.baseOffset, 0);
+      body.controller!.value = body.controller!.value.replaced(
+        body.controller!.selection,
+        'Il mio commento',
+      );
+      await settle(tester);
+
+      // Si chiude la tastiera, così torna il pulsante.
+      FocusManager.instance.primaryFocus?.unfocus();
+      await settle(tester);
+      await tester.ensureVisible(find.text('Salva nota'));
+      await tester.tap(find.text('Salva nota'));
+      await settle(tester);
+      final saved = Directory('${root.path}/Lavoro')
+          .listSync()
+          .whereType<File>()
+          .single
+          .readAsStringSync();
+      expect(saved, endsWith('---\nIl mio commento\n\n> Frase da un libro'));
+    });
+
+    testWidgets('senza commento le righe vuote in cima non si salvano', (
+      tester,
+    ) async {
+      await phone(tester);
+      await tester.runAsync(
+        () => WorkspaceRepository(root).createWorkspace('Lavoro'),
+      );
+      final shares = ShareInbox()..receive((subject: '', text: 'Solo questo'));
+      await tester.pumpWidget(
+        _app(AppState(_FakeStorage(root)), shares: shares),
+      );
+      await settle(tester);
+      FocusManager.instance.primaryFocus?.unfocus();
+      await settle(tester);
+      await tester.ensureVisible(find.text('Salva nota'));
+      await tester.tap(find.text('Salva nota'));
+      await settle(tester);
+      final saved = Directory('${root.path}/Lavoro')
+          .listSync()
+          .whereType<File>()
+          .single
+          .readAsStringSync();
+      expect(saved, endsWith('---\n> Solo questo'));
     });
 
     testWidgets('con una bozza a metà il testo va in fondo', (tester) async {
@@ -1055,7 +1121,7 @@ void main() {
       shares.receive((subject: '', text: 'Citazione condivisa'));
       await settle(tester);
       expect(field(tester, 'title-field'), 'Idea');
-      expect(field(tester, 'body-field'), 'Inizio\n\nCitazione condivisa');
+      expect(field(tester, 'body-field'), 'Inizio\n\n> Citazione condivisa');
       expect(
         find.text('Testo condiviso aggiunto in fondo alla bozza'),
         findsOneWidget,
@@ -1089,7 +1155,7 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(field(tester, 'body-field'), "Per l'esame");
+      expect(field(tester, 'body-field'), "\n\n> Per l'esame");
     });
 
     testWidgets('non chiude la modifica di una nota già salvata', (
@@ -1147,7 +1213,7 @@ void main() {
 
       shares.receive((subject: '', text: 'Dalla lista'));
       await settle(tester);
-      expect(field(tester, 'body-field'), 'Dalla lista');
+      expect(field(tester, 'body-field'), '\n\n> Dalla lista');
     });
   });
 
