@@ -57,6 +57,7 @@ class NoteRepository {
     required List<String> sources,
     bool isTask = false,
     bool knowledge = false,
+    String nextStep = '',
     DateTime? now,
   }) {
     final time = now ?? DateTime.now();
@@ -70,6 +71,7 @@ class NoteRepository {
       updated: time,
       isTask: isTask,
       knowledge: !isTask && knowledge,
+      nextStep: isTask ? nextStep.trim() : '',
     );
     save(note);
     return note;

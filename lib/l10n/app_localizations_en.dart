@@ -969,4 +969,94 @@ class AppLocalizationsEn extends AppLocalizations {
   String renameMerges(String name) {
     return 'Already exists: notes will be merged into $name';
   }
+
+  @override
+  String get nextStepHint => 'Next step: when, where, what first';
+
+  @override
+  String get nextStep => 'Next step';
+
+  @override
+  String get addNextStep => 'Add a next step';
+
+  @override
+  String get nextStepHelp =>
+      'One concrete line, e.g. “after lunch, at the library: read chapter 3”.';
+
+  @override
+  String get brainDump => 'Empty your head';
+
+  @override
+  String get brainDumpHelp =>
+      'Write down everything on your mind, one thing per line. Each line becomes a task in To sort: you\'ll put them in order later.';
+
+  @override
+  String get brainDumpHint =>
+      'Call the dentist\nReturn the book\nAsk Anna about the exam';
+
+  @override
+  String brainDumpAddCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Add $count',
+      one: 'Add 1',
+      zero: 'Add',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String brainDumpAdded(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count tasks added to To sort',
+      one: '1 task added to To sort',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get brainDumpDiscardTitle => 'Discard what you wrote?';
+
+  @override
+  String get brainDumpDiscard => 'Discard';
+
+  @override
+  String resumeEditing(String title) {
+    return 'You were editing “$title”';
+  }
+
+  @override
+  String get resume => 'Resume';
+
+  @override
+  String get discardEdit => 'Discard the changes';
+
+  @override
+  String get recentlyOpened => 'Recently opened';
+
+  @override
+  String get tagsAndSources => 'Tags and sources';
+
+  @override
+  String get alphabeticalGroups => 'Always in alphabetical order';
+
+  @override
+  String get alphabeticalGroupsHelp =>
+      'In search, Tasks and notes and the task manager filter, tags and sources stay in the same place instead of following how much you use them.';
+
+  @override
+  String get linkNote => 'Link note';
+
+  @override
+  String get pickNoteHint => 'Search the note to link';
+
+  @override
+  String get noNotesToLink => 'There are no other notes to link yet';
+
+  @override
+  String get linkedNoteMissing =>
+      'This note no longer exists: it may be in the trash';
 }

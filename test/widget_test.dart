@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart' hide Tags;
 import 'package:leviathan/app.dart';
+import 'package:leviathan/data/draft_store.dart';
 import 'package:leviathan/data/storage_access.dart';
 import 'package:leviathan/data/workspace_repository.dart';
 import 'package:leviathan/model/tags.dart';
@@ -970,6 +971,218 @@ void main() {
     expect(draft.existsSync(), isFalse);
   });
 
+  group('riprendere da dove si era', () {
+    Future<void> phone(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1080, 2424);
+      tester.view.devicePixelRatio = 2.625;
+      addTearDown(tester.view.reset);
+    }
+
+    Future<void> noteFile() async {
+      await WorkspaceRepository(root).createWorkspace('Lavoro');
+      await File('${root.path}/Lavoro/nota.md')
+          .writeAsString('---\ntitle: "Da rivedere"\n---\nCorpo');
+    }
+
+    testWidgets('la modifica a metà si tiene da parte e si butta uscendo', (
+      tester,
+    ) async {
+      await phone(tester);
+      await tester.runAsync(noteFile);
+      await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+      await settle(tester);
+      await tester.tap(find.text('Da rivedere').first);
+      await settle(tester);
+      await tester.tap(find.byTooltip('Modifica'));
+      await settle(tester);
+
+      final edit = File('${root.path}/.leviathan/edit-drafts/Lavoro.json');
+      // Solo aprire la modifica non lascia niente da riprendere.
+      await tester.tap(find.byKey(const Key('body-field')));
+      await settle(tester);
+      expect(edit.existsSync(), isFalse);
+
+      await tester.enterText(find.byKey(const Key('body-field')), 'Nuovo');
+      await settle(tester);
+      expect(edit.readAsStringSync(), contains('"note":"nota"'));
+      expect(edit.readAsStringSync(), contains('Nuovo'));
+
+      // Tornando indietro di proposito non resta nulla da riprendere.
+      await tester.tap(find.byType(BackButton));
+      await settle(tester);
+      expect(edit.existsSync(), isFalse);
+    });
+
+    testWidgets('riaprendo l\'app si riprende la modifica col cursore', (
+      tester,
+    ) async {
+      await phone(tester);
+      await tester.runAsync(() async {
+        await noteFile();
+        EditDraftStore(File('${root.path}/.leviathan/edit-drafts/Lavoro.json'))
+            .write('nota', (
+              title: 'Da rivedere',
+              body: 'Corpo cambiato a metà',
+              tags: const [],
+              sources: const [],
+              isTask: false,
+              knowledge: false,
+              nextStep: '',
+              date: null,
+            ), 5);
+      });
+      await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+      await settle(tester);
+
+      expect(find.text('Stavi modificando «Da rivedere»'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('resume-edit')));
+      await settle(tester);
+      expect(find.byKey(const Key('resume-banner')), findsNothing);
+      final body = tester.widget<TextField>(
+        find.byKey(const Key('body-field')),
+      );
+      expect(body.controller!.text, 'Corpo cambiato a metà');
+      expect(body.controller!.selection.baseOffset, 5);
+      expect(body.focusNode!.hasFocus, isTrue);
+
+      FocusManager.instance.primaryFocus?.unfocus();
+      await settle(tester);
+      await tester.tap(find.text('Salva modifiche'));
+      await settle(tester);
+      expect(
+        File('${root.path}/Lavoro/nota.md').readAsStringSync(),
+        endsWith('Corpo cambiato a metà'),
+      );
+      expect(
+        File('${root.path}/.leviathan/edit-drafts/Lavoro.json').existsSync(),
+        isFalse,
+      );
+    });
+
+    testWidgets('la modifica a metà si può buttare dalla home', (tester) async {
+      await phone(tester);
+      final edit = File('${root.path}/.leviathan/edit-drafts/Lavoro.json');
+      await tester.runAsync(() async {
+        await noteFile();
+        EditDraftStore(edit).write('nota', (
+          title: 'Da rivedere',
+          body: 'Altro',
+          tags: const [],
+          sources: const [],
+          isTask: false,
+          knowledge: false,
+          nextStep: '',
+          date: null,
+        ), 0);
+      });
+      await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('resume-dismiss')));
+      await settle(tester);
+      expect(find.byKey(const Key('resume-banner')), findsNothing);
+      expect(edit.existsSync(), isFalse);
+      expect(
+        File('${root.path}/Lavoro/nota.md').readAsStringSync(),
+        endsWith('Corpo'),
+      );
+    });
+
+    testWidgets('la ricerca vuota mostra le note aperte di recente', (
+      tester,
+    ) async {
+      await phone(tester);
+      await tester.runAsync(() async {
+        await noteFile();
+        await File('${root.path}/Lavoro/altra.md')
+            .writeAsString('---\ntitle: "Altra nota"\n---\n');
+      });
+      await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+      await settle(tester);
+
+      await tester.tap(find.byKey(const Key('search-button')));
+      await settle(tester);
+      expect(find.text('APERTE DI RECENTE'), findsNothing);
+      await tester.tap(find.byType(BackButton));
+      await settle(tester);
+
+      await tester.tap(find.text('Da rivedere').first);
+      await settle(tester);
+      await tester.tap(find.byType(BackButton));
+      await settle(tester);
+
+      await tester.tap(find.byKey(const Key('search-button')));
+      await settle(tester);
+      expect(find.text('APERTE DI RECENTE'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('recent-nota')));
+      await settle(tester);
+      expect(find.byTooltip('Modifica'), findsOneWidget);
+    });
+  });
+
+  testWidgets(
+    'connetti nota: dal corpo si collega un\'altra nota e la si apre',
+    (tester) async {
+      tester.view.physicalSize = const Size(1080, 2424);
+      tester.view.devicePixelRatio = 2.625;
+      addTearDown(tester.view.reset);
+
+      await tester.runAsync(() async {
+        await WorkspaceRepository(root).createWorkspace('Studio');
+        await File('${root.path}/Studio/limiti.md')
+            .writeAsString('---\ntitle: "Limiti notevoli"\n---\nTeoria');
+        await File('${root.path}/Studio/esame.md')
+            .writeAsString('---\ntitle: "Esame"\n---\nRipassa ');
+      });
+      await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+      await settle(tester);
+
+      await tester.tap(find.text('Esame').first);
+      await settle(tester);
+      await tester.tap(find.byTooltip('Modifica'));
+      await settle(tester);
+
+      final body = find.byKey(const Key('body-field'));
+      final controller = tester.widget<TextField>(body).controller!;
+      await tester.tap(body);
+      await settle(tester);
+      controller.selection = TextSelection.collapsed(
+        offset: controller.text.length,
+      );
+      await tester.longPress(body);
+      await settle(tester);
+      await tester.tap(find.text('Connetti nota'));
+      await settle(tester);
+
+      // La nota che si sta modificando non si collega a sé stessa.
+      expect(find.byKey(const Key('pick-esame')), findsNothing);
+      await tester.enterText(
+        find.byKey(const Key('note-picker-field')),
+        'limiti',
+      );
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('pick-limiti')));
+      await settle(tester);
+      expect(controller.text, 'Ripassa [[limiti|Limiti notevoli]]');
+
+      FocusManager.instance.primaryFocus?.unfocus();
+      await settle(tester);
+      await tester.tap(find.text('Salva modifiche'));
+      await settle(tester);
+      expect(
+        File('${root.path}/Studio/esame.md').readAsStringSync(),
+        endsWith('Ripassa [[limiti|Limiti notevoli]]'),
+      );
+
+      // Nella lettura il collegamento mostra il titolo e apre la nota.
+      expect(find.textContaining('[[limiti'), findsNothing);
+      final link = find.textContaining('Limiti notevoli', findRichText: true);
+      expect(link, findsOneWidget);
+      await tester.tapOnText(find.textRange.ofSubstring('Limiti notevoli'));
+      await settle(tester);
+      expect(find.text('Teoria'), findsOneWidget);
+    },
+  );
+
   testWidgets('tornando nell\'app mostra le note cambiate da fuori', (
     tester,
   ) async {
@@ -1031,11 +1244,77 @@ void main() {
       );
       await settle(tester);
       expect(field(tester, 'title-field'), 'Limiti notevoli');
-      expect(field(tester, 'body-field'), 'https://esempio.it');
+      expect(field(tester, 'body-field'), '\n\n> https://esempio.it');
       expect(shares.hasPending, isFalse);
       // La bozza è già salvata: sopravvive se Android chiude l'app.
       final draft = File('${root.path}/.leviathan/drafts/Lavoro.json');
       expect(draft.readAsStringSync(), contains('esempio.it'));
+    });
+
+    testWidgets('il testo condiviso è una citazione e si scrive sopra', (
+      tester,
+    ) async {
+      await phone(tester);
+      await tester.runAsync(
+        () => WorkspaceRepository(root).createWorkspace('Lavoro'),
+      );
+      final shares = ShareInbox();
+      await tester.pumpWidget(
+        _app(AppState(_FakeStorage(root)), shares: shares),
+      );
+      await settle(tester);
+
+      shares.receive((subject: '', text: 'Frase da un libro'));
+      await settle(tester);
+      final body = tester.widget<TextField>(
+        find.byKey(const Key('body-field')),
+      );
+      // Il corpo è attivo con il cursore sopra la citazione.
+      expect(body.focusNode!.hasFocus, isTrue);
+      expect(body.controller!.selection.baseOffset, 0);
+      body.controller!.value = body.controller!.value.replaced(
+        body.controller!.selection,
+        'Il mio commento',
+      );
+      await settle(tester);
+
+      // Si chiude la tastiera, così torna il pulsante.
+      FocusManager.instance.primaryFocus?.unfocus();
+      await settle(tester);
+      await tester.ensureVisible(find.text('Salva nota'));
+      await tester.tap(find.text('Salva nota'));
+      await settle(tester);
+      final saved = Directory('${root.path}/Lavoro')
+          .listSync()
+          .whereType<File>()
+          .single
+          .readAsStringSync();
+      expect(saved, endsWith('---\nIl mio commento\n\n> Frase da un libro'));
+    });
+
+    testWidgets('senza commento le righe vuote in cima non si salvano', (
+      tester,
+    ) async {
+      await phone(tester);
+      await tester.runAsync(
+        () => WorkspaceRepository(root).createWorkspace('Lavoro'),
+      );
+      final shares = ShareInbox()..receive((subject: '', text: 'Solo questo'));
+      await tester.pumpWidget(
+        _app(AppState(_FakeStorage(root)), shares: shares),
+      );
+      await settle(tester);
+      FocusManager.instance.primaryFocus?.unfocus();
+      await settle(tester);
+      await tester.ensureVisible(find.text('Salva nota'));
+      await tester.tap(find.text('Salva nota'));
+      await settle(tester);
+      final saved = Directory('${root.path}/Lavoro')
+          .listSync()
+          .whereType<File>()
+          .single
+          .readAsStringSync();
+      expect(saved, endsWith('---\n> Solo questo'));
     });
 
     testWidgets('con una bozza a metà il testo va in fondo', (tester) async {
@@ -1055,7 +1334,7 @@ void main() {
       shares.receive((subject: '', text: 'Citazione condivisa'));
       await settle(tester);
       expect(field(tester, 'title-field'), 'Idea');
-      expect(field(tester, 'body-field'), 'Inizio\n\nCitazione condivisa');
+      expect(field(tester, 'body-field'), 'Inizio\n\n> Citazione condivisa');
       expect(
         find.text('Testo condiviso aggiunto in fondo alla bozza'),
         findsOneWidget,
@@ -1089,7 +1368,7 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(field(tester, 'body-field'), "Per l'esame");
+      expect(field(tester, 'body-field'), "\n\n> Per l'esame");
     });
 
     testWidgets('non chiude la modifica di una nota già salvata', (
@@ -1147,7 +1426,7 @@ void main() {
 
       shares.receive((subject: '', text: 'Dalla lista'));
       await settle(tester);
-      expect(field(tester, 'body-field'), 'Dalla lista');
+      expect(field(tester, 'body-field'), '\n\n> Dalla lista');
     });
   });
 
@@ -1179,6 +1458,67 @@ void main() {
     final context = tester.element(find.text('Impostazioni'));
     expect(Theme.of(context).brightness, Brightness.light);
     expect(file.readAsStringSync(), contains('"carta"'));
+  });
+
+  testWidgets('tag in ordine alfabetico: la ricerca non li riordina', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    await tester.runAsync(() async {
+      await WorkspaceRepository(root).createWorkspace('Lavoro');
+      var i = 0;
+      for (final tags in [
+        ['zeta'],
+        ['zeta'],
+        ['zeta'],
+        ['beta'],
+        ['beta'],
+        ['alfa'],
+      ]) {
+        await File('${root.path}/Lavoro/n${i++}.md').writeAsString(
+          '---\ntitle: "N$i"\ntags: ${tags.map((t) => '"$t"').toList()}\n---\n',
+        );
+      }
+    });
+    final file = File('${root.path}/preferences.json');
+    final settings = Settings(file: file, language: 'it');
+    await tester.pumpWidget(
+      LeviathanApp(state: AppState(_FakeStorage(root)), settings: settings),
+    );
+    await settle(tester);
+
+    // Prima in ordine di lettura: i chip possono andare a capo.
+    bool before(String a, String b) {
+      Offset at(String tag) =>
+          tester.getTopLeft(find.byKey(Key('frequent-tag-$tag')));
+      final (pa, pb) = (at(a), at(b));
+      return pa.dy < pb.dy || (pa.dy == pb.dy && pa.dx < pb.dx);
+    }
+
+    // Di serie i più usati vengono prima.
+    await tester.tap(find.byKey(const Key('search-button')));
+    await settle(tester);
+    expect(before('zeta', 'beta'), isTrue);
+    expect(before('beta', 'alfa'), isTrue);
+    await tester.tap(find.byType(BackButton));
+    await settle(tester);
+
+    await tester.tap(find.byKey(const Key('settings-button')));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('alphabetical-groups')));
+    await settle(tester);
+    expect(settings.alphabeticalGroups, isTrue);
+    expect(file.readAsStringSync(), contains('"groupOrder":"alphabetical"'));
+    await tester.tap(find.byType(BackButton));
+    await settle(tester);
+
+    await tester.tap(find.byKey(const Key('search-button')));
+    await settle(tester);
+    expect(before('alfa', 'beta'), isTrue);
+    expect(before('beta', 'zeta'), isTrue);
   });
 
   testWidgets('primo avvio: si sceglie la lingua dal menu a tendina', (
@@ -1433,6 +1773,140 @@ void main() {
     await settle(tester);
     expect(find.text('Primo'), findsOneWidget);
     expect(find.text('OGGI'), findsOneWidget);
+  });
+
+  testWidgets('prossimo passo: si scrive nel task e si vede nel task manager', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    await tester.runAsync(
+      () => WorkspaceRepository(root).createWorkspace('Studio'),
+    );
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+    await settle(tester);
+
+    // Il campo c'è solo per i task.
+    expect(find.byKey(const Key('next-step-field')), findsNothing);
+    await tester.tap(find.text('Task'));
+    await tester.pump();
+    await tester.enterText(find.byKey(const Key('title-field')), 'Tesina');
+    await tester.enterText(
+      find.byKey(const Key('next-step-field')),
+      'Stasera alla scrivania',
+    );
+    await tester.ensureVisible(find.text('Salva task'));
+    await tester.tap(find.text('Salva task'));
+    await settle(tester);
+
+    final file = Directory('${root.path}/Studio')
+        .listSync()
+        .whereType<File>()
+        .singleWhere((f) => f.path.contains('tesina'));
+    expect(
+      file.readAsStringSync(),
+      contains('next_step: "Stasera alla scrivania"'),
+    );
+
+    await tester.tap(find.byKey(const Key('task-manager-button')));
+    await settle(tester);
+    expect(find.text('Stasera alla scrivania'), findsOneWidget);
+
+    // Dalla lettura del task lo si cambia.
+    await tester.tap(find.text('Tesina'));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('next-step')));
+    await settle(tester);
+    await tester.enterText(
+      find.byKey(const Key('next-step-input')),
+      'Domattina in biblioteca',
+    );
+    await tester.tap(find.byKey(const Key('next-step-save')));
+    await settle(tester);
+    expect(find.text('Domattina in biblioteca'), findsOneWidget);
+    expect(file.readAsStringSync(), contains('Domattina in biblioteca'));
+  });
+
+  testWidgets('svuota la testa: ogni riga diventa un task da ordinare', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    await tester.runAsync(
+      () => WorkspaceRepository(root).createWorkspace('Lavoro'),
+    );
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('task-manager-button')));
+    await settle(tester);
+
+    await tester.tap(find.byKey(const Key('brain-dump-button')));
+    await settle(tester);
+    expect(find.text('Svuota la testa'), findsOneWidget);
+    // Senza righe non si aggiunge niente.
+    final add = find.byKey(const Key('brain-dump-add'));
+    expect(tester.widget<FilledButton>(add).onPressed, isNull);
+
+    await tester.enterText(
+      find.byKey(const Key('brain-dump-field')),
+      '- Chiamare il dentista\n\nRestituire il libro\nChiedere ad Anna',
+    );
+    await tester.enterText(find.byKey(const Key('brain-dump-tags')), 'casa');
+    await tester.pump();
+    expect(find.text('Aggiungi 3'), findsOneWidget);
+    await tester.tap(add);
+    await settle(tester);
+
+    expect(find.text('3 task aggiunti a Da ordinare'), findsOneWidget);
+    expect(find.text('DA ORDINARE'), findsOneWidget);
+    double y(String t) => tester.getTopLeft(find.text(t)).dy;
+    expect(y('Chiamare il dentista'), lessThan(y('Restituire il libro')));
+    expect(y('Restituire il libro'), lessThan(y('Chiedere ad Anna')));
+    final files = Directory('${root.path}/Lavoro')
+        .listSync()
+        .whereType<File>()
+        .map((f) => f.readAsStringSync())
+        .toList();
+    expect(files, hasLength(3));
+    for (final file in files) {
+      expect(file, contains('type: "task"'));
+      expect(file, contains('tags: ["casa"]'));
+    }
+  });
+
+  testWidgets('svuota la testa: chiudendo con del testo chiede conferma', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    await tester.runAsync(
+      () => WorkspaceRepository(root).createWorkspace('Lavoro'),
+    );
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('task-manager-button')));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('brain-dump-button')));
+    await settle(tester);
+    await tester.enterText(find.byKey(const Key('brain-dump-field')), 'Pane');
+    await tester.pump();
+
+    await tester.tap(find.byType(CloseButton));
+    await settle(tester);
+    expect(find.text('Buttare quello che hai scritto?'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('brain-dump-discard')));
+    await settle(tester);
+    expect(find.text('Svuota la testa'), findsNothing);
+    expect(
+      Directory('${root.path}/Lavoro').listSync().whereType<File>(),
+      isEmpty,
+    );
   });
 
   testWidgets('task manager: trascina nella fascia e fra le fasce', (

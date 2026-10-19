@@ -958,4 +958,94 @@ class AppLocalizationsIt extends AppLocalizations {
   String renameMerges(String name) {
     return 'Esiste già: le note verranno unite a $name';
   }
+
+  @override
+  String get nextStepHint => 'Prossimo passo: quando, dove, da cosa parti';
+
+  @override
+  String get nextStep => 'Prossimo passo';
+
+  @override
+  String get addNextStep => 'Aggiungi il prossimo passo';
+
+  @override
+  String get nextStepHelp =>
+      'Una riga concreta, es. “dopo pranzo, in biblioteca: leggo il cap. 3”.';
+
+  @override
+  String get brainDump => 'Svuota la testa';
+
+  @override
+  String get brainDumpHelp =>
+      'Scrivi tutto quello che hai in testa, una cosa per riga. Ogni riga diventa un task in Da ordinare: l\'ordine lo decidi dopo.';
+
+  @override
+  String get brainDumpHint =>
+      'Chiamare il dentista\nRestituire il libro\nChiedere ad Anna dell\'esame';
+
+  @override
+  String brainDumpAddCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Aggiungi $count',
+      one: 'Aggiungi 1',
+      zero: 'Aggiungi',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String brainDumpAdded(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count task aggiunti a Da ordinare',
+      one: '1 task aggiunto a Da ordinare',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get brainDumpDiscardTitle => 'Buttare quello che hai scritto?';
+
+  @override
+  String get brainDumpDiscard => 'Butta';
+
+  @override
+  String resumeEditing(String title) {
+    return 'Stavi modificando «$title»';
+  }
+
+  @override
+  String get resume => 'Riprendi';
+
+  @override
+  String get discardEdit => 'Butta le modifiche';
+
+  @override
+  String get recentlyOpened => 'Aperte di recente';
+
+  @override
+  String get tagsAndSources => 'Tag e fonti';
+
+  @override
+  String get alphabeticalGroups => 'Sempre in ordine alfabetico';
+
+  @override
+  String get alphabeticalGroupsHelp =>
+      'Nella ricerca, in Task e note e nel filtro del task manager tag e fonti restano sempre nello stesso posto, invece di seguire quanto li usi.';
+
+  @override
+  String get linkNote => 'Connetti nota';
+
+  @override
+  String get pickNoteHint => 'Cerca la nota da collegare';
+
+  @override
+  String get noNotesToLink => 'Non ci sono ancora altre note da collegare';
+
+  @override
+  String get linkedNoteMissing =>
+      'Questa nota non c\'è più: forse è nel cestino';
 }

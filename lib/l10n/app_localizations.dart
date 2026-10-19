@@ -1627,6 +1627,138 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Already exists: notes will be merged into {name}'**
   String renameMerges(String name);
+
+  /// No description provided for @nextStepHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Next step: when, where, what first'**
+  String get nextStepHint;
+
+  /// No description provided for @nextStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Next step'**
+  String get nextStep;
+
+  /// No description provided for @addNextStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a next step'**
+  String get addNextStep;
+
+  /// No description provided for @nextStepHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'One concrete line, e.g. “after lunch, at the library: read chapter 3”.'**
+  String get nextStepHelp;
+
+  /// No description provided for @brainDump.
+  ///
+  /// In en, this message translates to:
+  /// **'Empty your head'**
+  String get brainDump;
+
+  /// No description provided for @brainDumpHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Write down everything on your mind, one thing per line. Each line becomes a task in To sort: you\'ll put them in order later.'**
+  String get brainDumpHelp;
+
+  /// No description provided for @brainDumpHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Call the dentist\nReturn the book\nAsk Anna about the exam'**
+  String get brainDumpHint;
+
+  /// No description provided for @brainDumpAddCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{Add} =1{Add 1} other{Add {count}}}'**
+  String brainDumpAddCount(int count);
+
+  /// No description provided for @brainDumpAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 task added to To sort} other{{count} tasks added to To sort}}'**
+  String brainDumpAdded(int count);
+
+  /// No description provided for @brainDumpDiscardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard what you wrote?'**
+  String get brainDumpDiscardTitle;
+
+  /// No description provided for @brainDumpDiscard.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard'**
+  String get brainDumpDiscard;
+
+  /// No description provided for @resumeEditing.
+  ///
+  /// In en, this message translates to:
+  /// **'You were editing “{title}”'**
+  String resumeEditing(String title);
+
+  /// No description provided for @resume.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume'**
+  String get resume;
+
+  /// No description provided for @discardEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard the changes'**
+  String get discardEdit;
+
+  /// No description provided for @recentlyOpened.
+  ///
+  /// In en, this message translates to:
+  /// **'Recently opened'**
+  String get recentlyOpened;
+
+  /// No description provided for @tagsAndSources.
+  ///
+  /// In en, this message translates to:
+  /// **'Tags and sources'**
+  String get tagsAndSources;
+
+  /// No description provided for @alphabeticalGroups.
+  ///
+  /// In en, this message translates to:
+  /// **'Always in alphabetical order'**
+  String get alphabeticalGroups;
+
+  /// No description provided for @alphabeticalGroupsHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'In search, Tasks and notes and the task manager filter, tags and sources stay in the same place instead of following how much you use them.'**
+  String get alphabeticalGroupsHelp;
+
+  /// No description provided for @linkNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Link note'**
+  String get linkNote;
+
+  /// No description provided for @pickNoteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search the note to link'**
+  String get pickNoteHint;
+
+  /// No description provided for @noNotesToLink.
+  ///
+  /// In en, this message translates to:
+  /// **'There are no other notes to link yet'**
+  String get noNotesToLink;
+
+  /// No description provided for @linkedNoteMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'This note no longer exists: it may be in the trash'**
+  String get linkedNoteMissing;
 }
 
 class _AppLocalizationsDelegate

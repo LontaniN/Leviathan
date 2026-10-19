@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 
 import '../data/draft_store.dart';
@@ -7,6 +8,7 @@ import '../l10n/l10n.dart';
 import '../model/dates.dart';
 import '../model/markdown.dart';
 import '../model/note.dart';
+import '../model/note_links.dart';
 import '../model/shared_text.dart';
 import 'chip_input.dart';
 import 'theme.dart';
@@ -21,6 +23,9 @@ typedef NoteDraft = ({
 
   /// Una nota di conoscenza (mai un task).
   bool knowledge,
+
+  /// Il prossimo passo del task; vuoto per le note.
+  String nextStep,
 
   /// Il giorno scelto col calendario; null se non è stato cambiato (la nota
   /// nuova è di oggi, quella modificata tiene la sua data).
@@ -48,6 +53,16 @@ abstract interface class SharedTextReceiver {
 /// modifica (e subito se l'app va in secondo piano): riaprendo l'app la nota
 /// non salvata è ancora lì. Senza [saveLabel] il pulsante dice "Salva nota".
 ///
+/// Modificando una nota già salvata ([initial]) con [editDraft], le
+/// modifiche si tengono da parte allo stesso modo, insieme alla posizione
+/// del cursore, finché non si salva o si esce dalla pagina; [resume] riapre
+/// una modifica rimasta a metà, col cursore dove era.
+///
+/// Con [onPickNote], tenendo premuto nel corpo compare "Connetti nota": si
+/// sceglie una nota e al posto della selezione (o al cursore) entra un
+/// collegamento a lei (vedi [insertNoteLink]). Nel campo il collegamento
+/// si vede già colorato, col nome del file in piccolo.
+///
 /// Accanto al pulsante di salvataggio un calendario sceglie il giorno a cui
 /// si riferisce la nota: serve per riportare note scritte altrove, datate al
 /// giorno in cui sono nate e non a quello in cui entrano nell'app.
@@ -60,9 +75,12 @@ class NoteEditor extends StatefulWidget {
     required this.onSave,
     this.saveLabel,
     this.draft,
+    this.editDraft,
+    this.resume,
     this.tagsKey,
     this.onTagLongPress,
     this.onSourceLongPress,
+    this.onPickNote,
   });
 
   /// Il nome della pagina che modifica una nota già salvata: arrivando una
@@ -76,6 +94,12 @@ class NoteEditor extends StatefulWidget {
   final String? saveLabel;
   final DraftStore? draft;
 
+  /// Dove tenere da parte le modifiche di [initial].
+  final EditDraftStore? editDraft;
+
+  /// La modifica di [initial] rimasta a metà, da riprendere.
+  final EditDraft? resume;
+
   /// Chiave del campo dei tag, per illuminarlo nel tour guidato.
   final GlobalKey? tagsKey;
 
@@ -87,6 +111,9 @@ class NoteEditor extends StatefulWidget {
   /// [onTagLongPress].
   final Future<String?> Function(String source)? onSourceLongPress;
 
+  /// Sceglie la nota da collegare nel corpo; null se non si sceglie.
+  final Future<Note?> Function()? onPickNote;
+
   @override
   State<NoteEditor> createState() => _NoteEditorState();
 }
@@ -95,7 +122,9 @@ class _NoteEditorState extends State<NoteEditor>
     with WidgetsBindingObserver
     implements SharedTextReceiver {
   late final _title = TextEditingController(text: widget.initial?.title);
-  late final _body = TextEditingController(text: widget.initial?.body);
+  late final _body = _BodyController(text: widget.initial?.body);
+  late final _nextStep = TextEditingController(text: widget.initial?.nextStep);
+  final _nextStepFocus = FocusNode();
   final _titleFocus = FocusNode();
   final _bodyFocus = FocusNode();
   late TextEditingValue _lastBody = _body.value;
@@ -119,16 +148,28 @@ class _NoteEditorState extends State<NoteEditor>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    if (widget.initial == null) _restoreDraft();
+    if (widget.initial == null) {
+      if (widget.draft?.read() case final draft?) _apply(draft);
+    } else if (widget.resume case final resume?) {
+      _apply(resume.draft);
+      // Si riparte dal punto in cui si era: corpo attivo, cursore lì.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _body.selection = TextSelection.collapsed(
+          offset: resume.cursor.clamp(0, _body.text.length),
+        );
+        _bodyFocus.requestFocus();
+      });
+    }
     _body.addListener(_onBodyChanged);
     _title.addListener(_scheduleDraft);
+    _nextStep.addListener(_scheduleDraft);
     _titleFocus.addListener(() => setState(() {}));
     _bodyFocus.addListener(() => setState(() {}));
+    _nextStepFocus.addListener(() => setState(() {}));
   }
 
-  void _restoreDraft() {
-    final draft = widget.draft?.read();
-    if (draft == null) return;
+  void _apply(Draft draft) {
     _title.text = draft.title;
     _body.text = draft.body;
     _lastBody = _body.value;
@@ -136,22 +177,34 @@ class _NoteEditorState extends State<NoteEditor>
     _sources = [...draft.sources];
     _isTask = draft.isTask;
     _knowledge = draft.knowledge;
+    _nextStep.text = draft.nextStep;
     _date = draft.date;
   }
 
+  /// Il testo condiviso entra come citazione e il cursore va dove si
+  /// scrive il proprio commento (vedi [mergeShared]).
   @override
   bool receiveShared(SharedText share) {
     final merged = mergeShared(_title.text, _body.text, share);
     _title.text = merged.title;
-    _body.text = merged.body;
+    _body.value = TextEditingValue(
+      text: merged.body,
+      selection: TextSelection.collapsed(offset: merged.cursor),
+    );
     _lastBody = _body.value;
     if (widget.draft != null && widget.initial == null) _writeDraft();
+    _bodyFocus.requestFocus();
     return merged.appended;
   }
 
+  /// Se quello che si scrive va tenuto da parte: la bozza della home o la
+  /// modifica di una nota salvata.
+  bool get _keepsDraft =>
+      widget.initial == null ? widget.draft != null : widget.editDraft != null;
+
   /// La bozza si scrive poco dopo l'ultima modifica, non a ogni lettera.
   void _scheduleDraft() {
-    if (widget.draft == null || widget.initial != null) return;
+    if (!_keepsDraft) return;
     _draftTimer?.cancel();
     _draftTimer = Timer(LeviathanDurations.draftSave, _writeDraft);
   }
@@ -159,16 +212,40 @@ class _NoteEditorState extends State<NoteEditor>
   void _writeDraft() {
     _draftTimer?.cancel();
     _draftTimer = null;
-    widget.draft?.write((
+    final Draft draft = (
       title: _title.text,
       body: _body.text,
       tags: _tags,
       sources: _sources,
       isTask: _isTask,
       knowledge: !_isTask && _knowledge,
+      nextStep: _isTask ? _nextStep.text : '',
       date: _date,
-    ));
+    );
+    final initial = widget.initial;
+    if (initial == null) {
+      widget.draft?.write(draft);
+    } else if (_sameAs(initial, draft)) {
+      // Spostare il cursore senza cambiare nulla non è una modifica.
+      widget.editDraft?.clear();
+    } else {
+      final cursor = _body.selection.isValid
+          ? _body.selection.baseOffset
+          : _body.text.length;
+      widget.editDraft?.write(initial.id, draft, cursor);
+    }
   }
+
+  /// La nota com'era aperta, senza modifiche.
+  static bool _sameAs(Note note, Draft draft) =>
+      draft.title == note.title &&
+      draft.body == note.body &&
+      listEquals(draft.tags, note.tags) &&
+      listEquals(draft.sources, note.sources) &&
+      draft.isTask == note.isTask &&
+      draft.knowledge == note.knowledge &&
+      draft.nextStep.trim() == note.nextStep &&
+      draft.date == null;
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -196,8 +273,12 @@ class _NoteEditorState extends State<NoteEditor>
   /// L'altezza della tastiera si legge dalla finestra: lo Scaffold la toglie
   /// dal MediaQuery del suo contenuto.
   bool get _writingText =>
-      (_titleFocus.hasFocus || _bodyFocus.hasFocus) &&
-      View.of(context).viewInsets.bottom > 0;
+      _textFocused && View.of(context).viewInsets.bottom > 0;
+
+  /// Il fuoco è in uno dei campi del riquadro: titolo, prossimo passo o
+  /// corpo.
+  bool get _textFocused =>
+      _titleFocus.hasFocus || _nextStepFocus.hasFocus || _bodyFocus.hasFocus;
 
   /// Il fuoco è su tag o fonti.
   bool _chipsFocused = false;
@@ -223,6 +304,7 @@ class _NoteEditorState extends State<NoteEditor>
       // sparisce la barra di formattazione.
       if (_keyboardWasOpen && !open) {
         _titleFocus.unfocus();
+        _nextStepFocus.unfocus();
         _bodyFocus.unfocus();
       }
       _keyboardWasOpen = open;
@@ -253,17 +335,60 @@ class _NoteEditorState extends State<NoteEditor>
     _scheduleDraft();
   }
 
+  /// "Connetti nota": si sceglie la nota e il collegamento entra dove era
+  /// il cursore, al posto del testo selezionato.
+  Future<void> _linkNote() async {
+    final before = _body.value;
+    final note = await widget.onPickNote?.call();
+    if (note == null || !mounted) return;
+    _body.value = insertNoteLink(
+      TextEditingValue(text: _body.text, selection: before.selection),
+      note,
+      note.displayTitle(context.l10n.untitled),
+    );
+    _bodyFocus.requestFocus();
+  }
+
+  /// Il menu che compare tenendo premuto nel corpo, con "Connetti nota" in
+  /// testa.
+  Widget _bodyMenu(BuildContext context, EditableTextState state) {
+    return AdaptiveTextSelectionToolbar.buttonItems(
+      anchors: state.contextMenuAnchors,
+      buttonItems: [
+        if (widget.onPickNote != null)
+          ContextMenuButtonItem(
+            label: context.l10n.linkNote,
+            onPressed: () {
+              state.hideToolbar();
+              _linkNote();
+            },
+          ),
+        ...state.contextMenuButtonItems,
+      ],
+    );
+  }
+
   void _format(TextEditingValue Function(TextEditingValue) change) {
     _body.value = change(_body.value);
   }
 
   @override
   void dispose() {
-    if (_draftTimer != null) _writeDraft();
+    if (widget.initial == null) {
+      if (_draftTimer != null) _writeDraft();
+    } else {
+      // Si esce dalla modifica (salvando o tornando indietro): non c'è più
+      // niente da riprendere. Se invece Android chiude l'app, dispose non
+      // arriva e la modifica resta da parte.
+      _draftTimer?.cancel();
+      widget.editDraft?.clear();
+    }
     _title.dispose();
     _body.dispose();
+    _nextStep.dispose();
     _titleFocus.dispose();
     _bodyFocus.dispose();
+    _nextStepFocus.dispose();
     WidgetsBinding.instance.removeObserver(this);
     _pendingTag.dispose();
     _pendingSource.dispose();
@@ -283,7 +408,7 @@ class _NoteEditorState extends State<NoteEditor>
       widget.sourceCounts.keys,
     );
     final title = _title.text.trim();
-    final body = _body.text.trimRight();
+    final body = withoutLeadingBlankLines(_body.text.trimRight());
     if (title.isEmpty && body.trim().isEmpty) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(context.l10n.writeSomething)));
@@ -296,6 +421,7 @@ class _NoteEditorState extends State<NoteEditor>
       sources: sources,
       isTask: _isTask,
       knowledge: !_isTask && _knowledge,
+      nextStep: _isTask ? _nextStep.text.trim() : '',
       date: _date,
     ));
     if (widget.initial == null) {
@@ -311,6 +437,7 @@ class _NoteEditorState extends State<NoteEditor>
       }
       _title.clear();
       _body.clear();
+      _nextStep.clear();
       _pendingTag.clear();
       _pendingSource.clear();
       setState(() {
@@ -356,7 +483,7 @@ class _NoteEditorState extends State<NoteEditor>
 
   Widget _textCard(TextTheme text) {
     final palette = context.palette;
-    final focused = _titleFocus.hasFocus || _bodyFocus.hasFocus;
+    final focused = _textFocused;
     return AnimatedContainer(
       duration: LeviathanDurations.quick,
       decoration: BoxDecoration(
@@ -398,12 +525,18 @@ class _NoteEditorState extends State<NoteEditor>
               ),
             ),
             const Divider(height: 1),
+            // Un task dice anche da dove si comincia: quando, dove, cosa.
+            if (_isTask) ...[
+              _NextStepField(controller: _nextStep, focusNode: _nextStepFocus),
+              const Divider(height: 1),
+            ],
             // Il corpo occupa tutto il riquadro, così lo si tocca ovunque.
             Expanded(
               child: TextField(
                 key: const Key('body-field'),
                 controller: _body,
                 focusNode: _bodyFocus,
+                contextMenuBuilder: _bodyMenu,
                 expands: true,
                 minLines: null,
                 maxLines: null,
@@ -565,6 +698,102 @@ class _NoteEditorState extends State<NoteEditor>
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Il controller del corpo: i collegamenti ad altre note si vedono come
+/// nella lettura, nel colore dell'accento, mentre parentesi e nome del file
+/// restano piccoli e spenti. Il testo resta quello vero, carattere per
+/// carattere: cambia solo come lo si disegna.
+class _BodyController extends TextEditingController {
+  _BodyController({super.text});
+
+  @override
+  TextSpan buildTextSpan({
+    required BuildContext context,
+    TextStyle? style,
+    required bool withComposing,
+  }) {
+    final matches = noteLinkPattern.allMatches(text).toList();
+    if (matches.isEmpty) {
+      return super.buildTextSpan(
+        context: context,
+        style: style,
+        withComposing: withComposing,
+      );
+    }
+    final palette = context.palette;
+    final quiet = (style ?? const TextStyle()).copyWith(
+      color: palette.muted,
+      fontSize: LeviathanText.tiny.fontSize,
+    );
+    final label = (style ?? const TextStyle()).copyWith(
+      color: palette.accent,
+      fontWeight: FontWeight.w600,
+    );
+    final spans = <TextSpan>[];
+    var at = 0;
+    for (final m in matches) {
+      if (m.start > at) spans.add(TextSpan(text: text.substring(at, m.start)));
+      final target = m[1]!;
+      final targetEnd = m.start + 2 + target.length;
+      if (m[2] == null) {
+        spans
+          ..add(TextSpan(text: '[[', style: quiet))
+          ..add(TextSpan(text: target, style: label));
+      } else {
+        spans
+          ..add(
+            TextSpan(
+              text: text.substring(m.start, targetEnd + 1),
+              style: quiet,
+            ),
+          )
+          ..add(TextSpan(text: m[2], style: label));
+      }
+      spans.add(TextSpan(text: ']]', style: quiet));
+      at = m.end;
+    }
+    if (at < text.length) spans.add(TextSpan(text: text.substring(at)));
+    return TextSpan(style: style, children: spans);
+  }
+}
+
+/// Il campo del prossimo passo di un task, su una riga, fra titolo e corpo.
+class _NextStepField extends StatelessWidget {
+  const _NextStepField({required this.controller, required this.focusNode});
+
+  final TextEditingController controller;
+  final FocusNode focusNode;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return TextField(
+      key: const Key('next-step-field'),
+      controller: controller,
+      focusNode: focusNode,
+      textCapitalization: TextCapitalization.sentences,
+      textInputAction: TextInputAction.next,
+      style: LeviathanText.body.copyWith(color: palette.text),
+      decoration: InputDecoration(
+        hintText: context.l10n.nextStepHint,
+        filled: false,
+        border: InputBorder.none,
+        isDense: true,
+        prefixIcon: Icon(
+          Icons.subdirectory_arrow_right,
+          size: LeviathanIconSize.sm,
+          color: palette.accent,
+        ),
+        prefixIconConstraints: const BoxConstraints(
+          minWidth: LeviathanIconSize.lg,
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: LeviathanSpacing.md,
+        ),
+      ),
     );
   }
 }

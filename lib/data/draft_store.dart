@@ -12,9 +12,16 @@ typedef Draft = ({
   bool isTask,
   bool knowledge,
 
+  /// Il prossimo passo, se è un task.
+  String nextStep,
+
   /// Il giorno a cui si riferisce la nota, se non è oggi.
   DateTime? date,
 });
+
+/// La modifica di una nota già salvata rimasta a metà: la nota, il testo e
+/// dove era il cursore nel corpo.
+typedef EditDraft = ({String noteId, Draft draft, int cursor});
 
 /// Tiene da parte la bozza della home: se Android chiude l'app mentre si
 /// scrive, riaprendola il testo è ancora lì.
@@ -28,17 +35,7 @@ class DraftStore {
 
   Draft? read() {
     try {
-      final json = jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
-      List<String> list(Object? v) => [if (v is List) ...v.map((e) => '$e')];
-      return (
-        title: '${json['title'] ?? ''}',
-        body: '${json['body'] ?? ''}',
-        tags: list(json['tags']),
-        sources: list(json['sources']),
-        isTask: json['task'] == true,
-        knowledge: json['knowledge'] == true,
-        date: DateTime.tryParse('${json['date'] ?? ''}'),
-      );
+      return _decode(jsonDecode(file.readAsStringSync()) as Map);
     } on Object {
       return null;
     }
@@ -49,18 +46,7 @@ class DraftStore {
       clear();
       return;
     }
-    writeFileAtomic(
-      file,
-      jsonEncode({
-        'title': draft.title,
-        'body': draft.body,
-        'tags': draft.tags,
-        'sources': draft.sources,
-        'task': draft.isTask,
-        'knowledge': draft.knowledge,
-        if (draft.date case final date?) 'date': date.toIso8601String(),
-      }),
-    );
+    writeFileAtomic(file, jsonEncode(_encode(draft)));
   }
 
   void clear() {
@@ -72,5 +58,70 @@ class DraftStore {
       draft.title.trim().isEmpty &&
       draft.body.trim().isEmpty &&
       draft.tags.isEmpty &&
-      draft.sources.isEmpty;
+      draft.sources.isEmpty &&
+      draft.nextStep.trim().isEmpty;
+}
+
+/// Tiene da parte la modifica di una nota già salvata, finché non la si
+/// salva o si esce dalla pagina: se Android chiude l'app nel frattempo, la
+/// home propone di riprenderla dal punto in cui si era.
+///
+/// File: `.leviathan/edit-drafts/<workspace>.json`, una sola modifica per
+/// workspace (se ne apre una alla volta).
+class EditDraftStore {
+  EditDraftStore(this.file);
+
+  final File file;
+
+  EditDraft? read() {
+    try {
+      final json = jsonDecode(file.readAsStringSync()) as Map;
+      final id = json['note'];
+      if (id is! String || id.isEmpty) return null;
+      final cursor = json['cursor'];
+      return (
+        noteId: id,
+        draft: _decode(json),
+        cursor: cursor is int ? cursor : 0,
+      );
+    } on Object {
+      return null;
+    }
+  }
+
+  void write(String noteId, Draft draft, int cursor) {
+    writeFileAtomic(
+      file,
+      jsonEncode({'note': noteId, 'cursor': cursor, ..._encode(draft)}),
+    );
+  }
+
+  void clear() {
+    if (file.existsSync()) file.deleteSync();
+  }
+}
+
+Map<String, Object?> _encode(Draft draft) => {
+  'title': draft.title,
+  'body': draft.body,
+  'tags': draft.tags,
+  'sources': draft.sources,
+  'task': draft.isTask,
+  'knowledge': draft.knowledge,
+  if (draft.nextStep.isNotEmpty) 'nextStep': draft.nextStep,
+  if (draft.date case final date?) 'date': date.toIso8601String(),
+};
+
+Draft _decode(Map<dynamic, dynamic> json) {
+  List<String> list(Object? v) => [if (v is List) ...v.map((e) => '$e')];
+  return (
+    title: '${json['title'] ?? ''}',
+    body: '${json['body'] ?? ''}',
+    tags: list(json['tags']),
+    sources: list(json['sources']),
+    isTask: json['task'] == true,
+    knowledge: json['knowledge'] == true,
+    nextStep: '${json['nextStep'] ?? ''}',
+    date: DateTime.tryParse('${json['date'] ?? ''}'),
+  );
 }

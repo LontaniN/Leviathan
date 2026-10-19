@@ -2,10 +2,11 @@
 
 Funzionalità scelte a partire da come viene usata l'app: idee, appunti di
 studio e cose da fare; cattura scrivendo nell'app o condividendo da altre app;
-si ritrova cercando; collegamenti solo tramite tag; solo telefono più backup.
+si ritrova cercando; collegamenti soprattutto tramite tag, più i link a una
+nota precisa dal corpo (`[[id|testo]]`, fatto); solo telefono più backup.
 
-Escluse di proposito: AI, note vocali e OCR, `[[link]]` e backlink,
-sincronizzazione col PC, flashcard e riaffioramento delle note, template.
+Escluse di proposito: AI, note vocali e OCR, backlink, sincronizzazione col
+PC, flashcard e riaffioramento delle note, template.
 
 Ordine consigliato: 1 → 3 → 2 → 4/5.
 

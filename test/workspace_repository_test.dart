@@ -57,6 +57,26 @@ void main() {
     expect(await repo.readLastWorkspace(), 'Ufficio');
   });
 
+  test('rinominando ed eliminando seguono modifica a metà e recenti', () async {
+    await repo.createWorkspace('Lavoro');
+    for (final file in [
+      repo.editDraftFile('Lavoro'),
+      repo.recentFile('Lavoro'),
+    ]) {
+      await file.parent.create(recursive: true);
+      await file.writeAsString('[]');
+    }
+    await repo.renameWorkspace('Lavoro', 'Ufficio');
+    expect(repo.editDraftFile('Ufficio').existsSync(), true);
+    expect(repo.recentFile('Ufficio').existsSync(), true);
+    expect(repo.recentFile('Lavoro').existsSync(), false);
+
+    final moved = await repo.deleteWorkspace('Ufficio');
+    expect(File('${moved.path}/edit-draft.json').existsSync(), true);
+    expect(File('${moved.path}/recent.json').existsSync(), true);
+    expect(repo.recentFile('Ufficio').existsSync(), false);
+  });
+
   test('rinomina cambiando solo le maiuscole', () async {
     await repo.createWorkspace('lavoro');
     await repo.renameWorkspace('lavoro', 'Lavoro');

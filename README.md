@@ -37,11 +37,20 @@ available in English and Italian.
   toast.
 - **Automatic draft**: whatever you're writing is kept aside; if Android
   kills the app, the text is still there when you reopen it.
+- **Resume where you left off**: changes to a saved note are kept aside
+  too, with the cursor position, until you save or leave the page. If
+  Android closes the app halfway through, the home shows "You were editing
+  …": *Resume* reopens the editor with your changes and the cursor where it
+  was, ✕ discards them. Getting back into an interrupted task is costly;
+  a cue to where you were makes it quicker.
 - **Share from other apps**: pick Leviathan in Android's *Share* menu and the
-  text lands in the editor, ready for tags and a source. The subject (e.g. a
-  page title) becomes the title; if you were halfway through a note, the
-  shared text is added at the end instead. With more than one workspace
-  you choose where it goes.
+  text lands in the editor as a **quote** (`> `), with the cursor on an empty
+  line above it: write what it means to you in your own words, which you'll
+  remember better than a copy. Blank lines left above the quote are dropped
+  when you save. The subject (e.g. a page title) becomes the title; if you
+  were halfway through a note, the quote is added at the end instead and the
+  cursor stays after your text. With more than one workspace you choose
+  where it goes.
 - Long-pressing a note in the list: pin it to the top, check off the task,
   move it to the trash.
 - The first time you open a workspace, a short **guided tour** walks you
@@ -66,6 +75,11 @@ available in English and Italian.
 - A toggle in the editor turns a note into a **task** to check off; tags and
   sources stay. In the reading view a single button turns a note into a task
   and back.
+- A task can have a **next step**: one concrete line under the title on
+  when, where and how to start ("after lunch, at the library: read chapter
+  3"). Writing down when and where you'll do something makes it more likely
+  to happen and stops it nagging at you. It shows in the task manager and in
+  the reading view, where a tap changes it, and search finds it too.
 - The **light bulb** next to the Note/Task switch marks a note as
   **knowledge**: what you know, not what happened. Knowledge notes have their
   own view in Tasks and notes.
@@ -83,6 +97,16 @@ available in English and Italian.
 - A **formatting bar** above the keyboard inserts the syntax; pressing enter
   in a list continues it.
 - **Checklists** `- [ ]` can be checked directly while reading.
+- **Links between notes**: long-press in the body and pick *Link note*,
+  then search the note to link. The link goes where the cursor is; if you
+  had selected some text, that text becomes the link's label, otherwise the
+  note's title does. In the editor the link already shows in the accent
+  color, with the file name small and dimmed; in the reading view it shows
+  only the label, with an arrow, and a tap opens the linked note. A link
+  to a note that no longer exists (e.g. in the trash) is struck through.
+  On disk it's an Obsidian-style wiki link with the file name, which never
+  changes even if you rename the note: `[[20261017-140512-limiti-notevoli|Limiti notevoli]]`.
+  Links written by hand as `[[Title]]` work too.
 
 ### Search
 
@@ -99,8 +123,9 @@ available in English and Italian.
 - Searches title, body, tags and sources, ignoring case and accents. Title
   matches rank higher; ties go to the most recent note.
 - Matching words are highlighted in the snippet.
-- With an empty query it shows the most used tags and sources, which become
-  filters with a tap.
+- With an empty query it shows the notes you **opened recently** (often
+  the very ones you're looking for, one tap away), then the most used tags
+  and sources, which become filters with a tap.
 
 ### Tasks and notes by tag or source
 
@@ -120,8 +145,14 @@ available in English and Italian.
   priority is the position, not a label. Now suggests a limit of 3.
 - New tasks land in **To sort**: answer a few "Which comes first?" questions
   and they slot into the right place.
+- **Empty your head**: the button at the top opens a page where you write
+  everything on your mind, one thing per line (list dashes and checkboxes
+  are ignored). Each line becomes a task in To sort, with the tags you pick
+  below; you order them later. Unfinished things keep coming back to mind
+  until they have a place, so getting them all down at once frees your
+  attention.
 - Completed tasks have their own tab, newest first. Each row shows the color
-  of its first tag.
+  of its first tag, and open tasks show their next step under the title.
 - The app bar filters by tag or source, showing how many open tasks each one
   has. The filtered view keeps the same bands and order but is read-only; a
   banner shows the active filter and lets you clear it.
@@ -162,6 +193,11 @@ available in English and Italian.
 - **English or Italian**: chosen from a drop-down menu on first launch
   (pre-selected from the phone's language) and changeable any time in the
   settings.
+- **Tags and sources always in alphabetical order** (settings, off by
+  default): in search, Tasks and notes and the task manager filter they
+  stay in the same place instead of moving with how often you use them, so
+  you learn where to find them. Suggestions while typing still put the
+  closest match first.
 - Several **palettes** to choose from in the settings, each with a preview
   of the home screen: Ink (the default, pure black for OLED screens), Sepia,
   Slate, Graphite, Abyss, Ember, Moss, Amethyst and the light Paper.
@@ -181,14 +217,16 @@ the top of the recent list.
 If you get interrupted, the draft is still there when you come back.
 
 From another app (a browser, a chat, a PDF reader) use **Share →
-Leviathan**: the text opens in the editor and you only add tags.
+Leviathan**: the text opens in the editor as a quote; add a line of your
+own above it, then tags.
 
 ### 2. Organize
 
-There are no folders and no links between notes: **everything goes through
-tags**. Reusing the tags suggested by autocomplete keeps similar notes in the
-same group, with the same color and close together in the graph. Sources
-help you remember who or where a piece of information came from.
+There are no folders: **tags do the grouping**. Reusing the tags suggested
+by autocomplete keeps similar notes in the same group, with the same color
+and close together in the graph. Sources help you remember who or where a
+piece of information came from. When one note points to a specific other
+note, **link it** from the body (long-press → *Link note*).
 
 Notes you come back to often can be **pinned** to the top.
 
@@ -220,7 +258,7 @@ Documents/LeviathanNotes/
 │   ├── 20261017-140512-limiti-notevoli.md
 │   └── …
 ├── Personal/
-└── .leviathan/          ← trash, drafts, graph layout, settings
+└── .leviathan/          ← trash, drafts, graph layout, recent notes, settings
 ```
 
 ```markdown
@@ -235,7 +273,8 @@ Note body in **Markdown**…
 ```
 
 Tasks also have `type: "task"`, `done` and `done_at`, plus `priority`
-(`now`, `next` or `later`) and `rank` once placed in the task manager;
+(`now`, `next` or `later`) and `rank` once placed in the task manager, and
+`next_step` when they have one;
 knowledge notes have `knowledge: true` and pinned notes `pinned: true`. Files can be copied, synced or edited by hand: Leviathan
 also reads files written without a header, understands the YAML lists
 Obsidian writes (`tags:` followed by `  - tag` lines) and keeps any property

@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
+import '../data/draft_store.dart';
 import '../l10n/l10n.dart';
 import '../model/dates.dart';
 import '../model/markdown.dart';
@@ -18,6 +19,7 @@ import 'graph_screen.dart';
 import 'lists_screen.dart';
 import 'note_actions.dart';
 import 'note_editor.dart';
+import 'note_picker_screen.dart';
 import 'note_screen.dart';
 import 'pinned_screen.dart';
 import 'search_screen.dart';
@@ -65,7 +67,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   late final NotesController _notes = NotesController(
     widget.state.notesOf(widget.state.currentWorkspace!),
     tagColors: widget.state.tagColorsOf(widget.state.currentWorkspace!),
+    editDraft: widget.state.editDraftOf(widget.state.currentWorkspace!),
+    recent: widget.state.recentOf(widget.state.currentWorkspace!),
   );
+
+  /// La modifica di una nota rimasta a metà quando Android ha chiuso l'app:
+  /// la home propone di riprenderla.
+  EditDraft? _resume;
   bool _listExpanded = false;
 
   /// Il tour guidato è aperto; [_tourWelcome] se parte dal benvenuto (la
@@ -90,6 +98,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _resume = _pendingEdit();
     widget.shares.addListener(_onShare);
     // Aperta da una condivisione, o arrivata mentre la home non c'era.
     WidgetsBinding.instance.addPostFrameCallback((_) => _onShare());
@@ -111,6 +120,31 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // Mentre l'app era in secondo piano le note possono essere cambiate da
     // fuori (Obsidian, sincronizzazione, file manager).
     if (lifecycle == AppLifecycleState.resumed) _notes.reloadIfChanged();
+  }
+
+  /// La modifica rimasta a metà, se la sua nota c'è ancora; altrimenti la
+  /// si butta.
+  EditDraft? _pendingEdit() {
+    final store = _notes.editDraft;
+    final edit = store?.read();
+    if (edit == null) return null;
+    if (_notes.byId(edit.noteId) == null) {
+      store!.clear();
+      return null;
+    }
+    return edit;
+  }
+
+  void _resumeEdit() {
+    final edit = _resume;
+    final note = edit == null ? null : _notes.byId(edit.noteId);
+    setState(() => _resume = null);
+    if (note != null) openNoteEditor(context, _notes, note, resume: edit);
+  }
+
+  void _dismissResume() {
+    _notes.editDraft?.clear();
+    setState(() => _resume = null);
   }
 
   /// Una condivisione alla volta: la scelta del workspace aspetta l'utente.
@@ -200,6 +234,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       sources: draft?.sources ?? const [],
       isTask: draft?.isTask ?? false,
       knowledge: draft?.knowledge ?? false,
+      nextStep: draft?.nextStep ?? '',
       date: draft?.date,
     ));
     return merged.appended;
@@ -363,6 +398,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         onTap: () => _push(SearchScreen(notes: _notes)),
                       ),
               ),
+              if (_resume case final edit? when !writing)
+                _ResumeBanner(
+                  title:
+                      _notes
+                          .byId(edit.noteId)
+                          ?.displayTitle(context.l10n.untitled) ??
+                      '',
+                  onResume: _resumeEdit,
+                  onDismiss: _dismissResume,
+                ),
               Expanded(
                 child: _notes.error != null
                     ? _LoadError(message: _notes.error!, onRetry: _notes.reload)
@@ -426,6 +471,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       showTagColorSheet(context, _notes, tag),
                   onSourceLongPress: (source) =>
                       showSourceSheet(context, _notes, source),
+                  onPickNote: () => pickNote(context, _notes),
                   onSave: (draft) => _flash(
                     _notes.create(
                       title: draft.title,
@@ -434,6 +480,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       sources: draft.sources,
                       isTask: draft.isTask,
                       knowledge: draft.knowledge,
+                      nextStep: draft.nextStep,
                       created: draft.date == null
                           ? null
                           : onDay(draft.date!, DateTime.now()),
@@ -444,6 +491,72 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ],
         );
       },
+    );
+  }
+}
+
+/// "Stavi modificando …": riprende una modifica rimasta a metà quando
+/// Android ha chiuso l'app, col cursore dove era.
+class _ResumeBanner extends StatelessWidget {
+  const _ResumeBanner({
+    required this.title,
+    required this.onResume,
+    required this.onDismiss,
+  });
+
+  final String title;
+  final VoidCallback onResume;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    final palette = context.palette;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        LeviathanSpacing.md,
+        0,
+        LeviathanSpacing.md,
+        LeviathanSpacing.sm,
+      ),
+      child: Material(
+        key: const Key('resume-banner'),
+        color: palette.surface,
+        borderRadius: BorderRadius.circular(LeviathanRadii.lg),
+        child: Padding(
+          padding: const EdgeInsets.only(left: LeviathanSpacing.lg),
+          child: Row(
+            children: [
+              Icon(
+                Icons.edit_note,
+                size: LeviathanIconSize.md,
+                color: palette.accent,
+              ),
+              const SizedBox(width: LeviathanSpacing.md),
+              Expanded(
+                child: Text(
+                  l.resumeEditing(title),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: LeviathanText.meta.copyWith(color: palette.text),
+                ),
+              ),
+              TextButton(
+                key: const Key('resume-edit'),
+                onPressed: onResume,
+                child: Text(l.resume),
+              ),
+              IconButton(
+                key: const Key('resume-dismiss'),
+                tooltip: l.discardEdit,
+                icon: const Icon(Icons.close, size: LeviathanIconSize.md),
+                color: palette.muted,
+                onPressed: onDismiss,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

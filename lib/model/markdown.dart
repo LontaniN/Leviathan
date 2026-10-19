@@ -1,6 +1,8 @@
 import 'package:flutter/services.dart' show TextEditingValue, TextSelection;
 import 'package:markdown/markdown.dart' as md;
 
+import 'note_links.dart';
+
 /// Strumenti per il Markdown del corpo delle note: caselle delle checklist,
 /// testo semplice per le anteprime e modifiche della barra di formattazione.
 
@@ -75,7 +77,7 @@ int wordCount(String markdown) => RegExp(
 /// Il testo senza i simboli Markdown, per anteprime e titoli ricavati dal
 /// corpo. Le caselle diventano ☐ e ☑.
 String plainText(String markdown) {
-  return markdown
+  return withLinkLabels(markdown)
       .split('\n')
       .map((line) {
         var l = line;

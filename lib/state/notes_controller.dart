@@ -3,7 +3,9 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart' show Color;
 
+import '../data/draft_store.dart';
 import '../data/note_repository.dart';
+import '../data/recent_store.dart';
 import '../data/tag_color_store.dart';
 import '../model/note.dart';
 import '../model/tags.dart';
@@ -14,13 +16,21 @@ typedef DeletedNote = ({Note note, String trashPath});
 
 /// Le note del workspace aperto e i tag che usano.
 class NotesController extends ChangeNotifier {
-  NotesController(this._repo, {this._tagColors}) {
+  NotesController(this._repo, {this._tagColors, this.editDraft, this._recent}) {
     Tags.custom = _tagColors?.read() ?? const {};
+    _recentIds = _recent?.read() ?? [];
     reload();
   }
 
   final NoteRepository _repo;
   final TagColorStore? _tagColors;
+  final RecentStore? _recent;
+
+  /// Dove si tiene da parte la modifica di una nota rimasta a metà.
+  final EditDraftStore? editDraft;
+
+  /// Gli id delle note aperte di recente, dalla più recente.
+  List<String> _recentIds = [];
 
   List<Note> notes = const [];
 
@@ -63,6 +73,7 @@ class NotesController extends ChangeNotifier {
     required List<String> sources,
     bool isTask = false,
     bool knowledge = false,
+    String nextStep = '',
     DateTime? created,
   }) {
     final note = _repo.create(
@@ -72,6 +83,7 @@ class NotesController extends ChangeNotifier {
       sources: sources,
       isTask: isTask,
       knowledge: knowledge,
+      nextStep: nextStep,
       now: created,
     );
     // Datata a un altro giorno non va per forza in cima.
@@ -79,6 +91,30 @@ class NotesController extends ChangeNotifier {
     _refreshCounts();
     notifyListeners();
     return note;
+  }
+
+  /// Crea un task da ordinare per ogni titolo di [titles], tutti con i tag
+  /// [tags]. Nel task manager "Da ordinare" va dal più recente: ogni task è
+  /// un millisecondo più vecchio del precedente, così compaiono nell'ordine
+  /// in cui sono stati scritti.
+  List<Note> createTasks(List<String> titles, {List<String> tags = const []}) {
+    final now = DateTime.now();
+    final created = [
+      for (var i = 0; i < titles.length; i++)
+        _repo.create(
+          title: titles[i],
+          body: '',
+          tags: tags,
+          sources: const [],
+          isTask: true,
+          now: now.subtract(Duration(milliseconds: i)),
+        ),
+    ];
+    notes = [...created, ...notes]
+      ..sort((a, b) => b.created.compareTo(a.created));
+    _refreshCounts();
+    notifyListeners();
+    return created;
   }
 
   Note update(Note note) {
@@ -236,6 +272,25 @@ class NotesController extends ChangeNotifier {
     notes = [for (final n in notes) byId[n.id] ?? n];
     _refreshCounts();
     notifyListeners();
+  }
+
+  /// Ricorda che la nota [id] è appena stata aperta. Non avvisa chi
+  /// ascolta: l'elenco serve solo alla ricerca, che lo rilegge quando si
+  /// apre.
+  void markOpened(String id) {
+    if (_recentIds.isNotEmpty && _recentIds.first == id) return;
+    _recentIds = [
+      id,
+      for (final other in _recentIds)
+        if (other != id) other,
+    ].take(RecentStore.limit).toList();
+    _recent?.write(_recentIds);
+  }
+
+  /// Le note aperte di recente che esistono ancora, dalla più recente.
+  List<Note> recentlyOpened({int limit = 5}) {
+    final byId = {for (final n in notes) n.id: n};
+    return [for (final id in _recentIds) ?byId[id]].take(limit).toList();
   }
 
   Note? byId(String id) {

@@ -57,13 +57,15 @@ List<String?> groupsOf(Note note, NoteGrouping by) {
 ///
 /// Un elemento con più tag (o fonti) compare in ogni gruppo. In cima i
 /// gruppi con più task da fare (per i task; per i soli fatti, con più task)
-/// o con più note; a parità, in ordine alfabetico. Il gruppo di chi non ha
-/// tag (o fonte) va in fondo.
+/// o con più note; a parità, in ordine alfabetico. Con [alphabetical] conta
+/// solo l'ordine alfabetico, così i gruppi non cambiano posto. Il gruppo di
+/// chi non ha tag (o fonte) va in fondo.
 List<NoteGroup> groupNotes(
   List<Note> notes,
   NoteGrouping by, {
   required NoteKind kind,
   TaskFilter filter = TaskFilter.task,
+  bool alphabetical = false,
 }) {
   final tasks = kind == NoteKind.task;
   final groups = <String?, List<Note>>{};
@@ -88,8 +90,10 @@ List<NoteGroup> groupNotes(
     if (a.name == null || b.name == null) {
       return a.name == null ? (b.name == null ? 0 : 1) : -1;
     }
-    final byWeight = weight(b).compareTo(weight(a));
-    if (byWeight != 0) return byWeight;
+    if (!alphabetical) {
+      final byWeight = weight(b).compareTo(weight(a));
+      if (byWeight != 0) return byWeight;
+    }
     return foldText(a.name!).compareTo(foldText(b.name!));
   });
 }
