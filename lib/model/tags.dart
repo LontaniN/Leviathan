@@ -47,6 +47,13 @@ String foldText(String s) {
 /// basta un confronto, senza cercare nella mappa.
 bool _isAccented(int unit) => unit >= 0xC0 && _accentCodes.containsKey(unit);
 
+/// [names] in ordine alfabetico, senza badare a maiuscole e accenti.
+List<String> sortedByName(Iterable<String> names) => [...names]
+  ..sort((a, b) {
+    final byFolded = foldText(a).compareTo(foldText(b));
+    return byFolded != 0 ? byFolded : a.compareTo(b);
+  });
+
 /// Suggerisce le voci di [counts] più vicine a [query].
 ///
 /// [counts] associa ogni voce al numero di note che la usano. L'ordine

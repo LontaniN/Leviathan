@@ -7,6 +7,7 @@ import '../model/note_groups.dart';
 import '../model/tags.dart';
 import '../model/task_order.dart';
 import '../state/notes_controller.dart';
+import '../state/settings.dart';
 import 'brain_dump_screen.dart';
 import 'note_screen.dart';
 import 'task_check.dart';
@@ -812,7 +813,12 @@ class _FilterSheetState extends State<_FilterSheet> {
     final l = context.l10n;
     final palette = context.palette;
     List<NoteGroup> named(NoteGrouping by) => [
-      for (final g in groupNotes(widget.notes, by, kind: NoteKind.task))
+      for (final g in groupNotes(
+        widget.notes,
+        by,
+        kind: NoteKind.task,
+        alphabetical: SettingsScope.alphabeticalGroups(context),
+      ))
         if (g.name != null) g,
     ];
     final tags = named(NoteGrouping.tag);

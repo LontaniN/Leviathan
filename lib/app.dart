@@ -58,7 +58,7 @@ class _LeviathanAppState extends State<LeviathanApp>
       listenable: widget.settings,
       builder: (context, home) {
         final language = widget.settings.language;
-        return MaterialApp(
+        final app = MaterialApp(
           title: 'Leviathan',
           debugShowCheckedModeBanner: false,
           theme: buildTheme(widget.settings.palette),
@@ -70,6 +70,7 @@ class _LeviathanAppState extends State<LeviathanApp>
               ? LanguageScreen(settings: widget.settings)
               : home,
         );
+        return SettingsScope(settings: widget.settings, child: app);
       },
       child: ListenableBuilder(
         listenable: widget.state,

@@ -48,6 +48,16 @@ void main() {
   List<String> ids(List<Note> list) => list.map((n) => n.id).toList();
 
   group('task', () {
+    test('in ordine alfabetico i gruppi non seguono i conteggi', () {
+      final groups = groupNotes(
+        notes,
+        NoteGrouping.tag,
+        kind: NoteKind.task,
+        alphabetical: true,
+      );
+      expect(groups.map((g) => g.name), ['casa', 'studio', null]);
+    });
+
     test('per tag: più task da fare in cima, senza tag in fondo', () {
       final groups = groupNotes(notes, NoteGrouping.tag, kind: NoteKind.task);
       expect(groups.map((g) => g.name), ['studio', 'casa', null]);

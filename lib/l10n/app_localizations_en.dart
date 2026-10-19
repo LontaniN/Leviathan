@@ -1036,4 +1036,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recentlyOpened => 'Recently opened';
+
+  @override
+  String get tagsAndSources => 'Tags and sources';
+
+  @override
+  String get alphabeticalGroups => 'Always in alphabetical order';
+
+  @override
+  String get alphabeticalGroupsHelp =>
+      'In search, Tasks and notes and the task manager filter, tags and sources stay in the same place instead of following how much you use them.';
 }

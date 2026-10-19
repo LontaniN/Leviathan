@@ -48,6 +48,16 @@ class SettingsScreen extends StatelessWidget {
                   onChanged: settings.setLanguage,
                 ),
               ),
+              SectionTitle(context.l10n.tagsAndSources),
+              SwitchListTile(
+                key: const Key('alphabetical-groups'),
+                secondary: const Icon(Icons.sort_by_alpha),
+                title: Text(context.l10n.alphabeticalGroups),
+                subtitle: Text(context.l10n.alphabeticalGroupsHelp),
+                value: settings.alphabeticalGroups,
+                onChanged: settings.setAlphabeticalGroups,
+              ),
+              const SizedBox(height: LeviathanSpacing.md),
               SectionTitle(context.l10n.palette),
               Padding(
                 padding: const EdgeInsets.symmetric(

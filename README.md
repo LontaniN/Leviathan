@@ -183,6 +183,11 @@ available in English and Italian.
 - **English or Italian**: chosen from a drop-down menu on first launch
   (pre-selected from the phone's language) and changeable any time in the
   settings.
+- **Tags and sources always in alphabetical order** (settings, off by
+  default): in search, Tasks and notes and the task manager filter they
+  stay in the same place instead of moving with how often you use them, so
+  you learn where to find them. Suggestions while typing still put the
+  closest match first.
 - Several **palettes** to choose from in the settings, each with a preview
   of the home screen: Ink (the default, pure black for OLED screens), Sepia,
   Slate, Graphite, Abyss, Ember, Moss, Amethyst and the light Paper.

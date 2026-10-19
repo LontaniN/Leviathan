@@ -1396,6 +1396,67 @@ void main() {
     expect(file.readAsStringSync(), contains('"carta"'));
   });
 
+  testWidgets('tag in ordine alfabetico: la ricerca non li riordina', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    await tester.runAsync(() async {
+      await WorkspaceRepository(root).createWorkspace('Lavoro');
+      var i = 0;
+      for (final tags in [
+        ['zeta'],
+        ['zeta'],
+        ['zeta'],
+        ['beta'],
+        ['beta'],
+        ['alfa'],
+      ]) {
+        await File('${root.path}/Lavoro/n${i++}.md').writeAsString(
+          '---\ntitle: "N$i"\ntags: ${tags.map((t) => '"$t"').toList()}\n---\n',
+        );
+      }
+    });
+    final file = File('${root.path}/preferences.json');
+    final settings = Settings(file: file, language: 'it');
+    await tester.pumpWidget(
+      LeviathanApp(state: AppState(_FakeStorage(root)), settings: settings),
+    );
+    await settle(tester);
+
+    // Prima in ordine di lettura: i chip possono andare a capo.
+    bool before(String a, String b) {
+      Offset at(String tag) =>
+          tester.getTopLeft(find.byKey(Key('frequent-tag-$tag')));
+      final (pa, pb) = (at(a), at(b));
+      return pa.dy < pb.dy || (pa.dy == pb.dy && pa.dx < pb.dx);
+    }
+
+    // Di serie i più usati vengono prima.
+    await tester.tap(find.byKey(const Key('search-button')));
+    await settle(tester);
+    expect(before('zeta', 'beta'), isTrue);
+    expect(before('beta', 'alfa'), isTrue);
+    await tester.tap(find.byType(BackButton));
+    await settle(tester);
+
+    await tester.tap(find.byKey(const Key('settings-button')));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('alphabetical-groups')));
+    await settle(tester);
+    expect(settings.alphabeticalGroups, isTrue);
+    expect(file.readAsStringSync(), contains('"groupOrder":"alphabetical"'));
+    await tester.tap(find.byType(BackButton));
+    await settle(tester);
+
+    await tester.tap(find.byKey(const Key('search-button')));
+    await settle(tester);
+    expect(before('alfa', 'beta'), isTrue);
+    expect(before('beta', 'zeta'), isTrue);
+  });
+
   testWidgets('primo avvio: si sceglie la lingua dal menu a tendina', (
     tester,
   ) async {

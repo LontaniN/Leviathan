@@ -1025,4 +1025,14 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get recentlyOpened => 'Aperte di recente';
+
+  @override
+  String get tagsAndSources => 'Tag e fonti';
+
+  @override
+  String get alphabeticalGroups => 'Sempre in ordine alfabetico';
+
+  @override
+  String get alphabeticalGroupsHelp =>
+      'Nella ricerca, in Task e note e nel filtro del task manager tag e fonti restano sempre nello stesso posto, invece di seguire quanto li usi.';
 }

@@ -288,5 +288,8 @@
   "resumeEditing": "Stavi modificando «{title}»",
   "resume": "Riprendi",
   "discardEdit": "Butta le modifiche",
-  "recentlyOpened": "Aperte di recente"
+  "recentlyOpened": "Aperte di recente",
+  "tagsAndSources": "Tag e fonti",
+  "alphabeticalGroups": "Sempre in ordine alfabetico",
+  "alphabeticalGroupsHelp": "Nella ricerca, in Task e note e nel filtro del task manager tag e fonti restano sempre nello stesso posto, invece di seguire quanto li usi."
 }

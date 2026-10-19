@@ -1717,6 +1717,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Recently opened'**
   String get recentlyOpened;
+
+  /// No description provided for @tagsAndSources.
+  ///
+  /// In en, this message translates to:
+  /// **'Tags and sources'**
+  String get tagsAndSources;
+
+  /// No description provided for @alphabeticalGroups.
+  ///
+  /// In en, this message translates to:
+  /// **'Always in alphabetical order'**
+  String get alphabeticalGroups;
+
+  /// No description provided for @alphabeticalGroupsHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'In search, Tasks and notes and the task manager filter, tags and sources stay in the same place instead of following how much you use them.'**
+  String get alphabeticalGroupsHelp;
 }
 
 class _AppLocalizationsDelegate

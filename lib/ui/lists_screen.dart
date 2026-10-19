@@ -7,6 +7,7 @@ import '../model/note_groups.dart';
 import '../model/search.dart';
 import '../model/tags.dart';
 import '../state/notes_controller.dart';
+import '../state/settings.dart';
 import 'note_screen.dart';
 import 'search_screen.dart';
 import 'tag_color_sheet.dart';
@@ -87,7 +88,13 @@ class _ListsScreenState extends State<ListsScreen> {
       listenable: widget.notes,
       builder: (context, _) {
         final all = widget.notes.notes;
-        final groups = groupNotes(all, _grouping, kind: _view, filter: _filter);
+        final groups = groupNotes(
+          all,
+          _grouping,
+          kind: _view,
+          filter: _filter,
+          alphabetical: SettingsScope.alphabeticalGroups(context),
+        );
         final l = context.l10n;
         final hasTasks = all.any((n) => n.isTask);
         final summary = _tasks

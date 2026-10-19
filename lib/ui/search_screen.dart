@@ -6,6 +6,7 @@ import '../model/note.dart';
 import '../model/search.dart';
 import '../model/tags.dart';
 import '../state/notes_controller.dart';
+import '../state/settings.dart';
 import 'chip_input.dart';
 import 'note_screen.dart';
 import 'tag_bar.dart';
@@ -115,8 +116,18 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   /// Con un filtro di tag o fonte aperto li propone tutti (quelli che
-  /// corrispondono a quanto scritto), in un elenco che si scorre.
-  List<String> _suggestions(SearchInput parsed) => switch (parsed.activeKind) {
+  /// corrispondono a quanto scritto), in un elenco che si scorre. Prima di
+  /// scrivere, se così è impostato, sono in ordine alfabetico.
+  List<String> _suggestions(SearchInput parsed) {
+    final all = _matching(parsed);
+    final alphabetical =
+        parsed.activeKind != FilterKind.status &&
+        parsed.activeValue.trim().isEmpty &&
+        SettingsScope.alphabeticalGroups(context);
+    return alphabetical ? sortedByName(all) : all;
+  }
+
+  List<String> _matching(SearchInput parsed) => switch (parsed.activeKind) {
     FilterKind.tag => Tags.suggest(
       parsed.activeValue,
       widget.notes.tagCounts,
@@ -436,8 +447,13 @@ class _FilterOptions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
-    final tags = Tags.suggest('', tagCounts, limit: _frequent);
-    final sources = Sources.suggest('', sourceCounts, limit: _frequent);
+    // In ordine alfabetico i più usati restano gli stessi, ma non si
+    // scambiano di posto a ogni nota.
+    final alphabetical = SettingsScope.alphabeticalGroups(context);
+    List<String> order(List<String> names) =>
+        alphabetical ? sortedByName(names) : names;
+    final tags = order(Tags.suggest('', tagCounts, limit: _frequent));
+    final sources = order(Sources.suggest('', sourceCounts, limit: _frequent));
     Widget chips(List<Widget> children) => Padding(
       padding: const EdgeInsets.fromLTRB(
         LeviathanSpacing.lg,

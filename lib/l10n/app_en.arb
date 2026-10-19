@@ -338,5 +338,8 @@
   "@resumeEditing": {"placeholders": {"title": {"type": "String", "example": "Exam plan"}}},
   "resume": "Resume",
   "discardEdit": "Discard the changes",
-  "recentlyOpened": "Recently opened"
+  "recentlyOpened": "Recently opened",
+  "tagsAndSources": "Tags and sources",
+  "alphabeticalGroups": "Always in alphabetical order",
+  "alphabeticalGroupsHelp": "In search, Tasks and notes and the task manager filter, tags and sources stay in the same place instead of following how much you use them."
 }

@@ -351,6 +351,15 @@ void main() {
       ]);
     });
 
+    test('in ordine alfabetico senza badare a maiuscole e accenti', () {
+      expect(sortedByName(['zaino', 'Èra', 'anna', 'Bruno']), [
+        'anna',
+        'Bruno',
+        'Èra',
+        'zaino',
+      ]);
+    });
+
     test('il colore di un tag è stabile', () {
       expect(Tags.colorOf('fotografia'), Tags.colorOf('fotografia'));
     });
