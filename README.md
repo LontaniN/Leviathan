@@ -97,6 +97,16 @@ available in English and Italian.
 - A **formatting bar** above the keyboard inserts the syntax; pressing enter
   in a list continues it.
 - **Checklists** `- [ ]` can be checked directly while reading.
+- **Links between notes**: long-press in the body and pick *Link note*,
+  then search the note to link. The link goes where the cursor is; if you
+  had selected some text, that text becomes the link's label, otherwise the
+  note's title does. In the editor the link already shows in the accent
+  color, with the file name small and dimmed; in the reading view it shows
+  only the label, with an arrow, and a tap opens the linked note. A link
+  to a note that no longer exists (e.g. in the trash) is struck through.
+  On disk it's an Obsidian-style wiki link with the file name, which never
+  changes even if you rename the note: `[[20261017-140512-limiti-notevoli|Limiti notevoli]]`.
+  Links written by hand as `[[Title]]` work too.
 
 ### Search
 
@@ -212,10 +222,11 @@ own above it, then tags.
 
 ### 2. Organize
 
-There are no folders and no links between notes: **everything goes through
-tags**. Reusing the tags suggested by autocomplete keeps similar notes in the
-same group, with the same color and close together in the graph. Sources
-help you remember who or where a piece of information came from.
+There are no folders: **tags do the grouping**. Reusing the tags suggested
+by autocomplete keeps similar notes in the same group, with the same color
+and close together in the graph. Sources help you remember who or where a
+piece of information came from. When one note points to a specific other
+note, **link it** from the body (long-press → *Link note*).
 
 Notes you come back to often can be **pinned** to the top.
 

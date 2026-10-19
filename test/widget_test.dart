@@ -1119,6 +1119,70 @@ void main() {
     });
   });
 
+  testWidgets(
+    'connetti nota: dal corpo si collega un\'altra nota e la si apre',
+    (tester) async {
+      tester.view.physicalSize = const Size(1080, 2424);
+      tester.view.devicePixelRatio = 2.625;
+      addTearDown(tester.view.reset);
+
+      await tester.runAsync(() async {
+        await WorkspaceRepository(root).createWorkspace('Studio');
+        await File('${root.path}/Studio/limiti.md')
+            .writeAsString('---\ntitle: "Limiti notevoli"\n---\nTeoria');
+        await File('${root.path}/Studio/esame.md')
+            .writeAsString('---\ntitle: "Esame"\n---\nRipassa ');
+      });
+      await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+      await settle(tester);
+
+      await tester.tap(find.text('Esame').first);
+      await settle(tester);
+      await tester.tap(find.byTooltip('Modifica'));
+      await settle(tester);
+
+      final body = find.byKey(const Key('body-field'));
+      final controller = tester.widget<TextField>(body).controller!;
+      await tester.tap(body);
+      await settle(tester);
+      controller.selection = TextSelection.collapsed(
+        offset: controller.text.length,
+      );
+      await tester.longPress(body);
+      await settle(tester);
+      await tester.tap(find.text('Connetti nota'));
+      await settle(tester);
+
+      // La nota che si sta modificando non si collega a sé stessa.
+      expect(find.byKey(const Key('pick-esame')), findsNothing);
+      await tester.enterText(
+        find.byKey(const Key('note-picker-field')),
+        'limiti',
+      );
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('pick-limiti')));
+      await settle(tester);
+      expect(controller.text, 'Ripassa [[limiti|Limiti notevoli]]');
+
+      FocusManager.instance.primaryFocus?.unfocus();
+      await settle(tester);
+      await tester.tap(find.text('Salva modifiche'));
+      await settle(tester);
+      expect(
+        File('${root.path}/Studio/esame.md').readAsStringSync(),
+        endsWith('Ripassa [[limiti|Limiti notevoli]]'),
+      );
+
+      // Nella lettura il collegamento mostra il titolo e apre la nota.
+      expect(find.textContaining('[[limiti'), findsNothing);
+      final link = find.textContaining('Limiti notevoli', findRichText: true);
+      expect(link, findsOneWidget);
+      await tester.tapOnText(find.textRange.ofSubstring('Limiti notevoli'));
+      await settle(tester);
+      expect(find.text('Teoria'), findsOneWidget);
+    },
+  );
+
   testWidgets('tornando nell\'app mostra le note cambiate da fuori', (
     tester,
   ) async {

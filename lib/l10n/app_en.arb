@@ -341,5 +341,9 @@
   "recentlyOpened": "Recently opened",
   "tagsAndSources": "Tags and sources",
   "alphabeticalGroups": "Always in alphabetical order",
-  "alphabeticalGroupsHelp": "In search, Tasks and notes and the task manager filter, tags and sources stay in the same place instead of following how much you use them."
+  "alphabeticalGroupsHelp": "In search, Tasks and notes and the task manager filter, tags and sources stay in the same place instead of following how much you use them.",
+  "linkNote": "Link note",
+  "pickNoteHint": "Search the note to link",
+  "noNotesToLink": "There are no other notes to link yet",
+  "linkedNoteMissing": "This note no longer exists: it may be in the trash"
 }

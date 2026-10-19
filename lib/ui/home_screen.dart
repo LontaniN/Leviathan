@@ -19,6 +19,7 @@ import 'graph_screen.dart';
 import 'lists_screen.dart';
 import 'note_actions.dart';
 import 'note_editor.dart';
+import 'note_picker_screen.dart';
 import 'note_screen.dart';
 import 'pinned_screen.dart';
 import 'search_screen.dart';
@@ -470,6 +471,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       showTagColorSheet(context, _notes, tag),
                   onSourceLongPress: (source) =>
                       showSourceSheet(context, _notes, source),
+                  onPickNote: () => pickNote(context, _notes),
                   onSave: (draft) => _flash(
                     _notes.create(
                       title: draft.title,

@@ -1735,6 +1735,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'In search, Tasks and notes and the task manager filter, tags and sources stay in the same place instead of following how much you use them.'**
   String get alphabeticalGroupsHelp;
+
+  /// No description provided for @linkNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Link note'**
+  String get linkNote;
+
+  /// No description provided for @pickNoteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search the note to link'**
+  String get pickNoteHint;
+
+  /// No description provided for @noNotesToLink.
+  ///
+  /// In en, this message translates to:
+  /// **'There are no other notes to link yet'**
+  String get noNotesToLink;
+
+  /// No description provided for @linkedNoteMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'This note no longer exists: it may be in the trash'**
+  String get linkedNoteMissing;
 }
 
 class _AppLocalizationsDelegate

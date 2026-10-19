@@ -8,6 +8,7 @@ import '../l10n/l10n.dart';
 import '../model/dates.dart';
 import '../model/markdown.dart';
 import '../model/note.dart';
+import '../model/note_links.dart';
 import '../model/shared_text.dart';
 import 'chip_input.dart';
 import 'theme.dart';
@@ -57,6 +58,11 @@ abstract interface class SharedTextReceiver {
 /// del cursore, finché non si salva o si esce dalla pagina; [resume] riapre
 /// una modifica rimasta a metà, col cursore dove era.
 ///
+/// Con [onPickNote], tenendo premuto nel corpo compare "Connetti nota": si
+/// sceglie una nota e al posto della selezione (o al cursore) entra un
+/// collegamento a lei (vedi [insertNoteLink]). Nel campo il collegamento
+/// si vede già colorato, col nome del file in piccolo.
+///
 /// Accanto al pulsante di salvataggio un calendario sceglie il giorno a cui
 /// si riferisce la nota: serve per riportare note scritte altrove, datate al
 /// giorno in cui sono nate e non a quello in cui entrano nell'app.
@@ -74,6 +80,7 @@ class NoteEditor extends StatefulWidget {
     this.tagsKey,
     this.onTagLongPress,
     this.onSourceLongPress,
+    this.onPickNote,
   });
 
   /// Il nome della pagina che modifica una nota già salvata: arrivando una
@@ -104,6 +111,9 @@ class NoteEditor extends StatefulWidget {
   /// [onTagLongPress].
   final Future<String?> Function(String source)? onSourceLongPress;
 
+  /// Sceglie la nota da collegare nel corpo; null se non si sceglie.
+  final Future<Note?> Function()? onPickNote;
+
   @override
   State<NoteEditor> createState() => _NoteEditorState();
 }
@@ -112,7 +122,7 @@ class _NoteEditorState extends State<NoteEditor>
     with WidgetsBindingObserver
     implements SharedTextReceiver {
   late final _title = TextEditingController(text: widget.initial?.title);
-  late final _body = TextEditingController(text: widget.initial?.body);
+  late final _body = _BodyController(text: widget.initial?.body);
   late final _nextStep = TextEditingController(text: widget.initial?.nextStep);
   final _nextStepFocus = FocusNode();
   final _titleFocus = FocusNode();
@@ -325,6 +335,39 @@ class _NoteEditorState extends State<NoteEditor>
     _scheduleDraft();
   }
 
+  /// "Connetti nota": si sceglie la nota e il collegamento entra dove era
+  /// il cursore, al posto del testo selezionato.
+  Future<void> _linkNote() async {
+    final before = _body.value;
+    final note = await widget.onPickNote?.call();
+    if (note == null || !mounted) return;
+    _body.value = insertNoteLink(
+      TextEditingValue(text: _body.text, selection: before.selection),
+      note,
+      note.displayTitle(context.l10n.untitled),
+    );
+    _bodyFocus.requestFocus();
+  }
+
+  /// Il menu che compare tenendo premuto nel corpo, con "Connetti nota" in
+  /// testa.
+  Widget _bodyMenu(BuildContext context, EditableTextState state) {
+    return AdaptiveTextSelectionToolbar.buttonItems(
+      anchors: state.contextMenuAnchors,
+      buttonItems: [
+        if (widget.onPickNote != null)
+          ContextMenuButtonItem(
+            label: context.l10n.linkNote,
+            onPressed: () {
+              state.hideToolbar();
+              _linkNote();
+            },
+          ),
+        ...state.contextMenuButtonItems,
+      ],
+    );
+  }
+
   void _format(TextEditingValue Function(TextEditingValue) change) {
     _body.value = change(_body.value);
   }
@@ -493,6 +536,7 @@ class _NoteEditorState extends State<NoteEditor>
                 key: const Key('body-field'),
                 controller: _body,
                 focusNode: _bodyFocus,
+                contextMenuBuilder: _bodyMenu,
                 expands: true,
                 minLines: null,
                 maxLines: null,
@@ -655,6 +699,64 @@ class _NoteEditorState extends State<NoteEditor>
         ),
       ],
     );
+  }
+}
+
+/// Il controller del corpo: i collegamenti ad altre note si vedono come
+/// nella lettura, nel colore dell'accento, mentre parentesi e nome del file
+/// restano piccoli e spenti. Il testo resta quello vero, carattere per
+/// carattere: cambia solo come lo si disegna.
+class _BodyController extends TextEditingController {
+  _BodyController({super.text});
+
+  @override
+  TextSpan buildTextSpan({
+    required BuildContext context,
+    TextStyle? style,
+    required bool withComposing,
+  }) {
+    final matches = noteLinkPattern.allMatches(text).toList();
+    if (matches.isEmpty) {
+      return super.buildTextSpan(
+        context: context,
+        style: style,
+        withComposing: withComposing,
+      );
+    }
+    final palette = context.palette;
+    final quiet = (style ?? const TextStyle()).copyWith(
+      color: palette.muted,
+      fontSize: LeviathanText.tiny.fontSize,
+    );
+    final label = (style ?? const TextStyle()).copyWith(
+      color: palette.accent,
+      fontWeight: FontWeight.w600,
+    );
+    final spans = <TextSpan>[];
+    var at = 0;
+    for (final m in matches) {
+      if (m.start > at) spans.add(TextSpan(text: text.substring(at, m.start)));
+      final target = m[1]!;
+      final targetEnd = m.start + 2 + target.length;
+      if (m[2] == null) {
+        spans
+          ..add(TextSpan(text: '[[', style: quiet))
+          ..add(TextSpan(text: target, style: label));
+      } else {
+        spans
+          ..add(
+            TextSpan(
+              text: text.substring(m.start, targetEnd + 1),
+              style: quiet,
+            ),
+          )
+          ..add(TextSpan(text: m[2], style: label));
+      }
+      spans.add(TextSpan(text: ']]', style: quiet));
+      at = m.end;
+    }
+    if (at < text.length) spans.add(TextSpan(text: text.substring(at)));
+    return TextSpan(style: style, children: spans);
   }
 }
 

@@ -1035,4 +1035,17 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get alphabeticalGroupsHelp =>
       'Nella ricerca, in Task e note e nel filtro del task manager tag e fonti restano sempre nello stesso posto, invece di seguire quanto li usi.';
+
+  @override
+  String get linkNote => 'Connetti nota';
+
+  @override
+  String get pickNoteHint => 'Cerca la nota da collegare';
+
+  @override
+  String get noNotesToLink => 'Non ci sono ancora altre note da collegare';
+
+  @override
+  String get linkedNoteMissing =>
+      'Questa nota non c\'è più: forse è nel cestino';
 }

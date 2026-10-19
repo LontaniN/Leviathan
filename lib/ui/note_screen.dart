@@ -13,6 +13,7 @@ import 'lists_screen.dart';
 import 'note_actions.dart';
 import 'note_body.dart';
 import 'note_editor.dart';
+import 'note_picker_screen.dart';
 import 'tag_color_sheet.dart';
 import 'task_check.dart';
 import 'chip_input.dart';
@@ -274,6 +275,15 @@ class _NoteScreenState extends State<NoteScreen> {
                 else
                   NoteBody(
                     note.body,
+                    notes: notes.notes,
+                    onOpenNote: readOnly
+                        ? null
+                        : (linked) => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) =>
+                                  NoteScreen(noteId: linked.id, notes: notes),
+                            ),
+                          ),
                     onChanged: readOnly
                         ? null
                         : (body) => notes.update(note.copyWith(body: body)),
@@ -474,6 +484,7 @@ class _EditNotePage extends StatelessWidget {
           onTagLongPress: (tag) => showTagColorSheet(context, notes, tag),
           onSourceLongPress: (source) =>
               showSourceSheet(context, notes, source),
+          onPickNote: () => pickNote(context, notes, exclude: note.id),
           onSave: (draft) {
             notes.update(
               note.copyWith(

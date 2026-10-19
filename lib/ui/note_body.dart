@@ -1,7 +1,12 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+import 'package:markdown/markdown.dart' as md;
 
+import '../l10n/l10n.dart';
 import '../model/markdown.dart';
+import '../model/note.dart';
+import '../model/note_links.dart';
 import 'theme.dart';
 
 /// Il corpo di una nota formattato come Markdown.
@@ -9,11 +14,23 @@ import 'theme.dart';
 /// Un a capo resta un a capo (come lo si scrive sul telefono). Le caselle
 /// delle checklist si spuntano toccandole se c'è [onChanged], che riceve il
 /// testo aggiornato.
+///
+/// I collegamenti ad altre note (`[[id|testo]]`, vedi [noteLinkPattern]) si
+/// cercano fra [notes] e toccandoli si apre la nota con [onOpenNote]; uno
+/// che non porta a nessuna nota (eliminata, o scritto male) è barrato.
 class NoteBody extends StatelessWidget {
-  const NoteBody(this.body, {super.key, this.onChanged});
+  const NoteBody(
+    this.body, {
+    super.key,
+    this.onChanged,
+    this.notes = const [],
+    this.onOpenNote,
+  });
 
   final String body;
   final ValueChanged<String>? onChanged;
+  final List<Note> notes;
+  final ValueChanged<Note>? onOpenNote;
 
   @override
   Widget build(BuildContext context) {
@@ -32,6 +49,13 @@ class NoteBody extends StatelessWidget {
       fitContent: false,
       styleSheet: markdownStyle(context),
       listItemCrossAxisAlignment: MarkdownListItemCrossAxisAlignment.start,
+      inlineSyntaxes: [_NoteLinkSyntax()],
+      builders: {
+        _NoteLinkSyntax.tag: _NoteLinkBuilder(
+          notes: notes,
+          onOpenNote: onOpenNote,
+        ),
+      },
       checkboxBuilder: (checked) {
         final index = total == 0 ? 0 : next++ % total;
         return _Checkbox(
@@ -41,6 +65,85 @@ class NoteBody extends StatelessWidget {
               : null,
         );
       },
+    );
+  }
+}
+
+/// Riconosce `[[id|testo]]` prima dei link Markdown, che leggerebbero le
+/// quadre a modo loro.
+class _NoteLinkSyntax extends md.InlineSyntax {
+  _NoteLinkSyntax() : super(noteLinkPattern.pattern);
+
+  static const tag = 'note-link';
+
+  @override
+  bool onMatch(md.InlineParser parser, Match match) {
+    parser.addNode(
+      md.Element.text(tag, linkLabel(match[1]!, match[2]))
+        ..attributes['target'] = match[1]!.trim(),
+    );
+    return true;
+  }
+}
+
+/// Disegna un collegamento come testo nel colore dell'accento con la
+/// freccia davanti, dentro la riga: si distingue dal resto e dai link web.
+class _NoteLinkBuilder extends MarkdownElementBuilder {
+  _NoteLinkBuilder({required this.notes, required this.onOpenNote});
+
+  final List<Note> notes;
+  final ValueChanged<Note>? onOpenNote;
+
+  @override
+  Widget? visitElementAfterWithContext(
+    BuildContext context,
+    md.Element element,
+    TextStyle? preferredStyle,
+    TextStyle? parentStyle,
+  ) {
+    final palette = context.palette;
+    final target = resolveNoteLink(notes, element.attributes['target'] ?? '');
+    final base = parentStyle ?? LeviathanText.reading;
+    final style = target == null
+        ? base.copyWith(
+            color: palette.muted,
+            decoration: TextDecoration.lineThrough,
+          )
+        : base.copyWith(
+            color: palette.accent,
+            fontWeight: FontWeight.w600,
+            decoration: TextDecoration.underline,
+            decorationColor: palette.accent.withValues(
+              alpha: LeviathanOpacity.selection,
+            ),
+          );
+    final recognizer = TapGestureRecognizer()
+      ..onTap = target == null
+          ? () => ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+              SnackBar(content: Text(context.l10n.linkedNoteMissing)),
+            )
+          : () => onOpenNote?.call(target);
+    return Text.rich(
+      TextSpan(
+        children: [
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: Padding(
+              padding: const EdgeInsets.only(right: LeviathanSpacing.xxs),
+              child: Icon(
+                Icons.subdirectory_arrow_right,
+                size: LeviathanIconSize.sm,
+                color: style.color,
+              ),
+            ),
+          ),
+          TextSpan(
+            text: element.textContent,
+            style: style,
+            recognizer: recognizer,
+          ),
+        ],
+      ),
     );
   }
 }

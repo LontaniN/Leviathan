@@ -291,5 +291,9 @@
   "recentlyOpened": "Aperte di recente",
   "tagsAndSources": "Tag e fonti",
   "alphabeticalGroups": "Sempre in ordine alfabetico",
-  "alphabeticalGroupsHelp": "Nella ricerca, in Task e note e nel filtro del task manager tag e fonti restano sempre nello stesso posto, invece di seguire quanto li usi."
+  "alphabeticalGroupsHelp": "Nella ricerca, in Task e note e nel filtro del task manager tag e fonti restano sempre nello stesso posto, invece di seguire quanto li usi.",
+  "linkNote": "Connetti nota",
+  "pickNoteHint": "Cerca la nota da collegare",
+  "noNotesToLink": "Non ci sono ancora altre note da collegare",
+  "linkedNoteMissing": "Questa nota non c'è più: forse è nel cestino"
 }

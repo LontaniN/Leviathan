@@ -1046,4 +1046,17 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get alphabeticalGroupsHelp =>
       'In search, Tasks and notes and the task manager filter, tags and sources stay in the same place instead of following how much you use them.';
+
+  @override
+  String get linkNote => 'Link note';
+
+  @override
+  String get pickNoteHint => 'Search the note to link';
+
+  @override
+  String get noNotesToLink => 'There are no other notes to link yet';
+
+  @override
+  String get linkedNoteMissing =>
+      'This note no longer exists: it may be in the trash';
 }
