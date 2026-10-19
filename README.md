@@ -37,6 +37,12 @@ available in English and Italian.
   toast.
 - **Automatic draft**: whatever you're writing is kept aside; if Android
   kills the app, the text is still there when you reopen it.
+- **Resume where you left off**: changes to a saved note are kept aside
+  too, with the cursor position, until you save or leave the page. If
+  Android closes the app halfway through, the home shows "You were editing
+  …": *Resume* reopens the editor with your changes and the cursor where it
+  was, ✕ discards them. Getting back into an interrupted task is costly;
+  a cue to where you were makes it quicker.
 - **Share from other apps**: pick Leviathan in Android's *Share* menu and the
   text lands in the editor as a **quote** (`> `), with the cursor on an empty
   line above it: write what it means to you in your own words, which you'll
@@ -107,8 +113,9 @@ available in English and Italian.
 - Searches title, body, tags and sources, ignoring case and accents. Title
   matches rank higher; ties go to the most recent note.
 - Matching words are highlighted in the snippet.
-- With an empty query it shows the most used tags and sources, which become
-  filters with a tap.
+- With an empty query it shows the notes you **opened recently** (often
+  the very ones you're looking for, one tap away), then the most used tags
+  and sources, which become filters with a tap.
 
 ### Tasks and notes by tag or source
 
@@ -235,7 +242,7 @@ Documents/LeviathanNotes/
 │   ├── 20261017-140512-limiti-notevoli.md
 │   └── …
 ├── Personal/
-└── .leviathan/          ← trash, drafts, graph layout, settings
+└── .leviathan/          ← trash, drafts, graph layout, recent notes, settings
 ```
 
 ```markdown

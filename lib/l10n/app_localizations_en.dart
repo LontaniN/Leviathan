@@ -1022,4 +1022,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get brainDumpDiscard => 'Discard';
+
+  @override
+  String resumeEditing(String title) {
+    return 'You were editing “$title”';
+  }
+
+  @override
+  String get resume => 'Resume';
+
+  @override
+  String get discardEdit => 'Discard the changes';
+
+  @override
+  String get recentlyOpened => 'Recently opened';
 }

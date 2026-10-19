@@ -78,4 +78,39 @@ void main() {
     expect(store.read()!.date, DateTime(2024, 3, 3));
     expect(store.read()!.knowledge, isTrue);
   });
+
+  group('modifica a metà di una nota salvata', () {
+    late EditDraftStore edits;
+
+    setUp(() => edits = EditDraftStore(File('${root.path}/edits/ws.json')));
+
+    test('scrive e rilegge nota, testo e cursore', () {
+      expect(edits.read(), isNull);
+      edits.write('20261020-nota', (
+        title: 'Titolo',
+        body: 'Corpo cambiato',
+        tags: const ['studio'],
+        sources: const [],
+        isTask: true,
+        knowledge: false,
+        nextStep: 'stasera',
+        date: null,
+      ), 5);
+      final edit = edits.read()!;
+      expect(edit.noteId, '20261020-nota');
+      expect(edit.cursor, 5);
+      expect(edit.draft.body, 'Corpo cambiato');
+      expect(edit.draft.tags, ['studio']);
+      expect(edit.draft.nextStep, 'stasera');
+      edits.clear();
+      expect(edits.file.existsSync(), isFalse);
+    });
+
+    test('un file senza nota non vale', () {
+      edits.file
+        ..createSync(recursive: true)
+        ..writeAsStringSync('{"body": "x"}');
+      expect(edits.read(), isNull);
+    });
+  });
 }

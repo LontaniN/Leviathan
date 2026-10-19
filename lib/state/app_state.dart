@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../data/draft_store.dart';
 import '../data/graph_layout_store.dart';
 import '../data/note_repository.dart';
+import '../data/recent_store.dart';
 import '../data/storage_access.dart';
 import '../data/tag_color_store.dart';
 import '../data/workspace_repository.dart';
@@ -134,6 +135,13 @@ class AppState extends ChangeNotifier {
 
   /// Dove si tiene la bozza della home del workspace [name].
   DraftStore draftOf(String name) => DraftStore(repository.draftFile(name));
+
+  /// Dove si tiene la modifica a metà di una nota del workspace [name].
+  EditDraftStore editDraftOf(String name) =>
+      EditDraftStore(repository.editDraftFile(name));
+
+  /// Dove si ricordano le note aperte di recente nel workspace [name].
+  RecentStore recentOf(String name) => RecentStore(repository.recentFile(name));
 
   void _set(AppStatus next) {
     status = next;

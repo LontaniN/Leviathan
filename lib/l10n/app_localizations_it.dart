@@ -1011,4 +1011,18 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get brainDumpDiscard => 'Butta';
+
+  @override
+  String resumeEditing(String title) {
+    return 'Stavi modificando «$title»';
+  }
+
+  @override
+  String get resume => 'Riprendi';
+
+  @override
+  String get discardEdit => 'Butta le modifiche';
+
+  @override
+  String get recentlyOpened => 'Aperte di recente';
 }

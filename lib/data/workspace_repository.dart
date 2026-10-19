@@ -34,6 +34,8 @@ class WorkspaceRepository {
   static const _deletedGraph = 'graph.json';
   static const _deletedDraft = 'draft.json';
   static const _deletedTagColors = 'tag-colors.json';
+  static const _deletedEditDraft = 'edit-draft.json';
+  static const _deletedRecent = 'recent.json';
 
   /// I nomi italiani delle prime versioni, con quelli che li sostituiscono.
   static const _legacyDeletedDirName = 'eliminati';
@@ -107,13 +109,17 @@ class WorkspaceRepository {
       await colors.parent.create(recursive: true);
       await colors.rename(tagColorsFile(name).path);
     }
+    for (final file in [editDraftFile, recentFile]) {
+      final from = file(oldName);
+      if (from.existsSync()) await from.rename(file(name).path);
+    }
     if (await readLastWorkspace() == oldName) await writeLastWorkspace(name);
     return name;
   }
 
   /// Elimina il workspace [name] senza cancellare nulla: note, cestino,
-  /// disposizione del grafo, bozza e colori dei tag finiscono in
-  /// `.leviathan/deleted/<nome> <data>`.
+  /// disposizione del grafo, bozze, colori dei tag e note recenti finiscono
+  /// in `.leviathan/deleted/<nome> <data>`.
   /// Restituisce la cartella in cui sono stati spostati.
   Future<Directory> deleteWorkspace(String name) async {
     final stamp = DateTime.now().toIso8601String().replaceAll(':', '-');
@@ -137,6 +143,14 @@ class WorkspaceRepository {
     final colors = tagColorsFile(name);
     if (colors.existsSync()) {
       await colors.rename(p.join(target.path, _deletedTagColors));
+    }
+    final edit = editDraftFile(name);
+    if (edit.existsSync()) {
+      await edit.rename(p.join(target.path, _deletedEditDraft));
+    }
+    final recent = recentFile(name);
+    if (recent.existsSync()) {
+      await recent.rename(p.join(target.path, _deletedRecent));
     }
     return target;
   }
@@ -211,6 +225,14 @@ class WorkspaceRepository {
   /// La bozza non salvata della home del workspace [name].
   File draftFile(String name) =>
       File(p.join(root.path, _settingsDirName, 'drafts', '$name.json'));
+
+  /// La modifica rimasta a metà di una nota del workspace [name].
+  File editDraftFile(String name) =>
+      File(p.join(root.path, _settingsDirName, 'edit-drafts', '$name.json'));
+
+  /// Le note aperte di recente nel workspace [name].
+  File recentFile(String name) =>
+      File(p.join(root.path, _settingsDirName, 'recent', '$name.json'));
 
   /// Il workspace usato per ultimo, se registrato.
   ///

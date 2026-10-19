@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../data/draft_store.dart';
 import '../l10n/l10n.dart';
 import '../model/dates.dart';
 import '../model/markdown.dart';
@@ -17,11 +18,27 @@ import 'task_check.dart';
 import 'chip_input.dart';
 import 'theme.dart';
 
+/// Apre la modifica di [note]; con [resume] riprende quella rimasta a metà.
+void openNoteEditor(
+  BuildContext context,
+  NotesController notes,
+  Note note, {
+  EditDraft? resume,
+}) {
+  Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      settings: const RouteSettings(name: NoteEditor.editRouteName),
+      builder: (_) => _EditNotePage(note: note, notes: notes, resume: resume),
+    ),
+  );
+}
+
 /// Lettura di una nota a schermo intero, con modifica ed eliminazione.
 /// Un task si spunta da qui; la puntina la fissa in cima alle recenti.
 ///
-/// Sopra il titolo il primo tag fa da occhiello, nel suo colore.
-class NoteScreen extends StatelessWidget {
+/// Sopra il titolo il primo tag fa da occhiello, nel suo colore. Aprendola
+/// la nota entra fra quelle aperte di recente (vedi la ricerca).
+class NoteScreen extends StatefulWidget {
   const NoteScreen({
     super.key,
     required this.noteId,
@@ -35,6 +52,21 @@ class NoteScreen extends StatelessWidget {
   /// Se c'è, si mostra questa nota in sola lettura invece di cercare
   /// [noteId] nel workspace (es. le note di prova del calendario).
   final Note? preview;
+
+  @override
+  State<NoteScreen> createState() => _NoteScreenState();
+}
+
+class _NoteScreenState extends State<NoteScreen> {
+  String get noteId => widget.noteId;
+  NotesController get notes => widget.notes;
+  Note? get preview => widget.preview;
+
+  @override
+  void initState() {
+    super.initState();
+    if (preview == null) notes.markOpened(noteId);
+  }
 
   /// Toccando un tag o una fonte si apre la sua schermata, sui task se la
   /// nota è un task, altrimenti sulle note.
@@ -116,14 +148,7 @@ class NoteScreen extends StatelessWidget {
                 IconButton(
                   tooltip: l.edit,
                   icon: const Icon(Icons.edit_outlined),
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      settings: const RouteSettings(
-                        name: NoteEditor.editRouteName,
-                      ),
-                      builder: (_) => _EditNotePage(note: note, notes: notes),
-                    ),
-                  ),
+                  onPressed: () => openNoteEditor(context, notes, note),
                 ),
                 PopupMenuButton<VoidCallback>(
                   key: const Key('note-menu'),
@@ -426,10 +451,11 @@ class _NextStepDialogState extends State<_NextStepDialog> {
 }
 
 class _EditNotePage extends StatelessWidget {
-  const _EditNotePage({required this.note, required this.notes});
+  const _EditNotePage({required this.note, required this.notes, this.resume});
 
   final Note note;
   final NotesController notes;
+  final EditDraft? resume;
 
   @override
   Widget build(BuildContext context) {
@@ -440,6 +466,8 @@ class _EditNotePage extends StatelessWidget {
         listenable: notes,
         builder: (context, _) => NoteEditor(
           initial: note,
+          editDraft: notes.editDraft,
+          resume: resume,
           tagCounts: notes.tagCounts,
           sourceCounts: notes.sourceCounts,
           saveLabel: context.l10n.saveChanges,

@@ -1693,6 +1693,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Discard'**
   String get brainDumpDiscard;
+
+  /// No description provided for @resumeEditing.
+  ///
+  /// In en, this message translates to:
+  /// **'You were editing “{title}”'**
+  String resumeEditing(String title);
+
+  /// No description provided for @resume.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume'**
+  String get resume;
+
+  /// No description provided for @discardEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard the changes'**
+  String get discardEdit;
+
+  /// No description provided for @recentlyOpened.
+  ///
+  /// In en, this message translates to:
+  /// **'Recently opened'**
+  String get recentlyOpened;
 }
 
 class _AppLocalizationsDelegate

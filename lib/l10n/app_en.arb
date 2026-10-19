@@ -333,5 +333,10 @@
   "brainDumpAdded": "{count, plural, =1{1 task added to To sort} other{{count} tasks added to To sort}}",
   "@brainDumpAdded": {"placeholders": {"count": {"type": "int"}}},
   "brainDumpDiscardTitle": "Discard what you wrote?",
-  "brainDumpDiscard": "Discard"
+  "brainDumpDiscard": "Discard",
+  "resumeEditing": "You were editing “{title}”",
+  "@resumeEditing": {"placeholders": {"title": {"type": "String", "example": "Exam plan"}}},
+  "resume": "Resume",
+  "discardEdit": "Discard the changes",
+  "recentlyOpened": "Recently opened"
 }

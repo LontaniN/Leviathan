@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart' hide Tags;
 import 'package:leviathan/app.dart';
+import 'package:leviathan/data/draft_store.dart';
 import 'package:leviathan/data/storage_access.dart';
 import 'package:leviathan/data/workspace_repository.dart';
 import 'package:leviathan/model/tags.dart';
@@ -968,6 +969,154 @@ void main() {
     await tester.tap(find.text('Salva nota'));
     await settle(tester);
     expect(draft.existsSync(), isFalse);
+  });
+
+  group('riprendere da dove si era', () {
+    Future<void> phone(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1080, 2424);
+      tester.view.devicePixelRatio = 2.625;
+      addTearDown(tester.view.reset);
+    }
+
+    Future<void> noteFile() async {
+      await WorkspaceRepository(root).createWorkspace('Lavoro');
+      await File('${root.path}/Lavoro/nota.md')
+          .writeAsString('---\ntitle: "Da rivedere"\n---\nCorpo');
+    }
+
+    testWidgets('la modifica a metà si tiene da parte e si butta uscendo', (
+      tester,
+    ) async {
+      await phone(tester);
+      await tester.runAsync(noteFile);
+      await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+      await settle(tester);
+      await tester.tap(find.text('Da rivedere').first);
+      await settle(tester);
+      await tester.tap(find.byTooltip('Modifica'));
+      await settle(tester);
+
+      final edit = File('${root.path}/.leviathan/edit-drafts/Lavoro.json');
+      // Solo aprire la modifica non lascia niente da riprendere.
+      await tester.tap(find.byKey(const Key('body-field')));
+      await settle(tester);
+      expect(edit.existsSync(), isFalse);
+
+      await tester.enterText(find.byKey(const Key('body-field')), 'Nuovo');
+      await settle(tester);
+      expect(edit.readAsStringSync(), contains('"note":"nota"'));
+      expect(edit.readAsStringSync(), contains('Nuovo'));
+
+      // Tornando indietro di proposito non resta nulla da riprendere.
+      await tester.tap(find.byType(BackButton));
+      await settle(tester);
+      expect(edit.existsSync(), isFalse);
+    });
+
+    testWidgets('riaprendo l\'app si riprende la modifica col cursore', (
+      tester,
+    ) async {
+      await phone(tester);
+      await tester.runAsync(() async {
+        await noteFile();
+        EditDraftStore(File('${root.path}/.leviathan/edit-drafts/Lavoro.json'))
+            .write('nota', (
+              title: 'Da rivedere',
+              body: 'Corpo cambiato a metà',
+              tags: const [],
+              sources: const [],
+              isTask: false,
+              knowledge: false,
+              nextStep: '',
+              date: null,
+            ), 5);
+      });
+      await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+      await settle(tester);
+
+      expect(find.text('Stavi modificando «Da rivedere»'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('resume-edit')));
+      await settle(tester);
+      expect(find.byKey(const Key('resume-banner')), findsNothing);
+      final body = tester.widget<TextField>(
+        find.byKey(const Key('body-field')),
+      );
+      expect(body.controller!.text, 'Corpo cambiato a metà');
+      expect(body.controller!.selection.baseOffset, 5);
+      expect(body.focusNode!.hasFocus, isTrue);
+
+      FocusManager.instance.primaryFocus?.unfocus();
+      await settle(tester);
+      await tester.tap(find.text('Salva modifiche'));
+      await settle(tester);
+      expect(
+        File('${root.path}/Lavoro/nota.md').readAsStringSync(),
+        endsWith('Corpo cambiato a metà'),
+      );
+      expect(
+        File('${root.path}/.leviathan/edit-drafts/Lavoro.json').existsSync(),
+        isFalse,
+      );
+    });
+
+    testWidgets('la modifica a metà si può buttare dalla home', (tester) async {
+      await phone(tester);
+      final edit = File('${root.path}/.leviathan/edit-drafts/Lavoro.json');
+      await tester.runAsync(() async {
+        await noteFile();
+        EditDraftStore(edit).write('nota', (
+          title: 'Da rivedere',
+          body: 'Altro',
+          tags: const [],
+          sources: const [],
+          isTask: false,
+          knowledge: false,
+          nextStep: '',
+          date: null,
+        ), 0);
+      });
+      await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('resume-dismiss')));
+      await settle(tester);
+      expect(find.byKey(const Key('resume-banner')), findsNothing);
+      expect(edit.existsSync(), isFalse);
+      expect(
+        File('${root.path}/Lavoro/nota.md').readAsStringSync(),
+        endsWith('Corpo'),
+      );
+    });
+
+    testWidgets('la ricerca vuota mostra le note aperte di recente', (
+      tester,
+    ) async {
+      await phone(tester);
+      await tester.runAsync(() async {
+        await noteFile();
+        await File('${root.path}/Lavoro/altra.md')
+            .writeAsString('---\ntitle: "Altra nota"\n---\n');
+      });
+      await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+      await settle(tester);
+
+      await tester.tap(find.byKey(const Key('search-button')));
+      await settle(tester);
+      expect(find.text('APERTE DI RECENTE'), findsNothing);
+      await tester.tap(find.byType(BackButton));
+      await settle(tester);
+
+      await tester.tap(find.text('Da rivedere').first);
+      await settle(tester);
+      await tester.tap(find.byType(BackButton));
+      await settle(tester);
+
+      await tester.tap(find.byKey(const Key('search-button')));
+      await settle(tester);
+      expect(find.text('APERTE DI RECENTE'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('recent-nota')));
+      await settle(tester);
+      expect(find.byTooltip('Modifica'), findsOneWidget);
+    });
   });
 
   testWidgets('tornando nell\'app mostra le note cambiate da fuori', (

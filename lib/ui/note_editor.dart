@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 
 import '../data/draft_store.dart';
@@ -51,6 +52,11 @@ abstract interface class SharedTextReceiver {
 /// modifica (e subito se l'app va in secondo piano): riaprendo l'app la nota
 /// non salvata è ancora lì. Senza [saveLabel] il pulsante dice "Salva nota".
 ///
+/// Modificando una nota già salvata ([initial]) con [editDraft], le
+/// modifiche si tengono da parte allo stesso modo, insieme alla posizione
+/// del cursore, finché non si salva o si esce dalla pagina; [resume] riapre
+/// una modifica rimasta a metà, col cursore dove era.
+///
 /// Accanto al pulsante di salvataggio un calendario sceglie il giorno a cui
 /// si riferisce la nota: serve per riportare note scritte altrove, datate al
 /// giorno in cui sono nate e non a quello in cui entrano nell'app.
@@ -63,6 +69,8 @@ class NoteEditor extends StatefulWidget {
     required this.onSave,
     this.saveLabel,
     this.draft,
+    this.editDraft,
+    this.resume,
     this.tagsKey,
     this.onTagLongPress,
     this.onSourceLongPress,
@@ -78,6 +86,12 @@ class NoteEditor extends StatefulWidget {
   final void Function(NoteDraft draft) onSave;
   final String? saveLabel;
   final DraftStore? draft;
+
+  /// Dove tenere da parte le modifiche di [initial].
+  final EditDraftStore? editDraft;
+
+  /// La modifica di [initial] rimasta a metà, da riprendere.
+  final EditDraft? resume;
 
   /// Chiave del campo dei tag, per illuminarlo nel tour guidato.
   final GlobalKey? tagsKey;
@@ -124,7 +138,19 @@ class _NoteEditorState extends State<NoteEditor>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    if (widget.initial == null) _restoreDraft();
+    if (widget.initial == null) {
+      if (widget.draft?.read() case final draft?) _apply(draft);
+    } else if (widget.resume case final resume?) {
+      _apply(resume.draft);
+      // Si riparte dal punto in cui si era: corpo attivo, cursore lì.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _body.selection = TextSelection.collapsed(
+          offset: resume.cursor.clamp(0, _body.text.length),
+        );
+        _bodyFocus.requestFocus();
+      });
+    }
     _body.addListener(_onBodyChanged);
     _title.addListener(_scheduleDraft);
     _nextStep.addListener(_scheduleDraft);
@@ -133,9 +159,7 @@ class _NoteEditorState extends State<NoteEditor>
     _nextStepFocus.addListener(() => setState(() {}));
   }
 
-  void _restoreDraft() {
-    final draft = widget.draft?.read();
-    if (draft == null) return;
+  void _apply(Draft draft) {
     _title.text = draft.title;
     _body.text = draft.body;
     _lastBody = _body.value;
@@ -163,9 +187,14 @@ class _NoteEditorState extends State<NoteEditor>
     return merged.appended;
   }
 
+  /// Se quello che si scrive va tenuto da parte: la bozza della home o la
+  /// modifica di una nota salvata.
+  bool get _keepsDraft =>
+      widget.initial == null ? widget.draft != null : widget.editDraft != null;
+
   /// La bozza si scrive poco dopo l'ultima modifica, non a ogni lettera.
   void _scheduleDraft() {
-    if (widget.draft == null || widget.initial != null) return;
+    if (!_keepsDraft) return;
     _draftTimer?.cancel();
     _draftTimer = Timer(LeviathanDurations.draftSave, _writeDraft);
   }
@@ -173,7 +202,7 @@ class _NoteEditorState extends State<NoteEditor>
   void _writeDraft() {
     _draftTimer?.cancel();
     _draftTimer = null;
-    widget.draft?.write((
+    final Draft draft = (
       title: _title.text,
       body: _body.text,
       tags: _tags,
@@ -182,8 +211,31 @@ class _NoteEditorState extends State<NoteEditor>
       knowledge: !_isTask && _knowledge,
       nextStep: _isTask ? _nextStep.text : '',
       date: _date,
-    ));
+    );
+    final initial = widget.initial;
+    if (initial == null) {
+      widget.draft?.write(draft);
+    } else if (_sameAs(initial, draft)) {
+      // Spostare il cursore senza cambiare nulla non è una modifica.
+      widget.editDraft?.clear();
+    } else {
+      final cursor = _body.selection.isValid
+          ? _body.selection.baseOffset
+          : _body.text.length;
+      widget.editDraft?.write(initial.id, draft, cursor);
+    }
   }
+
+  /// La nota com'era aperta, senza modifiche.
+  static bool _sameAs(Note note, Draft draft) =>
+      draft.title == note.title &&
+      draft.body == note.body &&
+      listEquals(draft.tags, note.tags) &&
+      listEquals(draft.sources, note.sources) &&
+      draft.isTask == note.isTask &&
+      draft.knowledge == note.knowledge &&
+      draft.nextStep.trim() == note.nextStep &&
+      draft.date == null;
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -279,7 +331,15 @@ class _NoteEditorState extends State<NoteEditor>
 
   @override
   void dispose() {
-    if (_draftTimer != null) _writeDraft();
+    if (widget.initial == null) {
+      if (_draftTimer != null) _writeDraft();
+    } else {
+      // Si esce dalla modifica (salvando o tornando indietro): non c'è più
+      // niente da riprendere. Se invece Android chiude l'app, dispose non
+      // arriva e la modifica resta da parte.
+      _draftTimer?.cancel();
+      widget.editDraft?.clear();
+    }
     _title.dispose();
     _body.dispose();
     _nextStep.dispose();

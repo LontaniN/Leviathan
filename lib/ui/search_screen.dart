@@ -8,6 +8,7 @@ import '../model/tags.dart';
 import '../state/notes_controller.dart';
 import 'chip_input.dart';
 import 'note_screen.dart';
+import 'tag_bar.dart';
 import 'tag_color_sheet.dart';
 import 'task_check.dart';
 import 'theme.dart';
@@ -244,6 +245,8 @@ class _SearchScreenState extends State<SearchScreen> {
                         )
                       : query.isEmpty
                       ? _FilterOptions(
+                          recent: widget.notes.recentlyOpened(),
+                          onOpen: _open,
                           onPick: _insertMarker,
                           tagCounts: widget.notes.tagCounts,
                           sourceCounts: widget.notes.sourceCounts,
@@ -399,10 +402,14 @@ class _SearchBar extends StatelessWidget {
   }
 }
 
-/// Ricerca vuota: i tag e le fonti più usati, che toccati diventano subito
-/// filtri, e sotto la spiegazione dei filtri, che toccati si inseriscono.
+/// Ricerca vuota: in cima le note aperte di recente, che spesso sono
+/// proprio quelle che si cercano; poi i tag e le fonti più usati, che
+/// toccati diventano subito filtri, e sotto la spiegazione dei filtri, che
+/// toccati si inseriscono.
 class _FilterOptions extends StatelessWidget {
   const _FilterOptions({
+    required this.recent,
+    required this.onOpen,
     required this.onPick,
     required this.tagCounts,
     required this.sourceCounts,
@@ -412,6 +419,9 @@ class _FilterOptions extends StatelessWidget {
     required this.onSourceLongPress,
   });
 
+  /// Le note aperte di recente, dalla più recente.
+  final List<Note> recent;
+  final ValueChanged<Note> onOpen;
   final ValueChanged<String> onPick;
   final Map<String, int> tagCounts;
   final Map<String, int> sourceCounts;
@@ -444,6 +454,27 @@ class _FilterOptions extends StatelessWidget {
     return ListView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       children: [
+        if (recent.isNotEmpty) ...[
+          SectionTitle(l.recentlyOpened),
+          for (final note in recent)
+            ListTile(
+              key: Key('recent-${note.id}'),
+              dense: true,
+              leading: TagBar(note: note, height: LeviathanSizes.tagBarCompact),
+              minLeadingWidth: 0,
+              title: Text(
+                note.displayTitle(l.untitled),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: taskTitleStyle(
+                  context,
+                  note,
+                  LeviathanText.title.copyWith(color: context.palette.text),
+                ),
+              ),
+              onTap: () => onOpen(note),
+            ),
+        ],
         if (tags.isNotEmpty) ...[
           SectionTitle(l.frequentTags),
           chips([

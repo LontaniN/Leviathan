@@ -284,5 +284,9 @@
   "brainDumpAddCount": "{count, plural, =0{Aggiungi} =1{Aggiungi 1} other{Aggiungi {count}}}",
   "brainDumpAdded": "{count, plural, =1{1 task aggiunto a Da ordinare} other{{count} task aggiunti a Da ordinare}}",
   "brainDumpDiscardTitle": "Buttare quello che hai scritto?",
-  "brainDumpDiscard": "Butta"
+  "brainDumpDiscard": "Butta",
+  "resumeEditing": "Stavi modificando «{title}»",
+  "resume": "Riprendi",
+  "discardEdit": "Butta le modifiche",
+  "recentlyOpened": "Aperte di recente"
 }
