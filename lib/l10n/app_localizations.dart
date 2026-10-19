@@ -1651,6 +1651,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'One concrete line, e.g. “after lunch, at the library: read chapter 3”.'**
   String get nextStepHelp;
+
+  /// No description provided for @brainDump.
+  ///
+  /// In en, this message translates to:
+  /// **'Empty your head'**
+  String get brainDump;
+
+  /// No description provided for @brainDumpHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Write down everything on your mind, one thing per line. Each line becomes a task in To sort: you\'ll put them in order later.'**
+  String get brainDumpHelp;
+
+  /// No description provided for @brainDumpHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Call the dentist\nReturn the book\nAsk Anna about the exam'**
+  String get brainDumpHint;
+
+  /// No description provided for @brainDumpAddCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{Add} =1{Add 1} other{Add {count}}}'**
+  String brainDumpAddCount(int count);
+
+  /// No description provided for @brainDumpAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 task added to To sort} other{{count} tasks added to To sort}}'**
+  String brainDumpAdded(int count);
+
+  /// No description provided for @brainDumpDiscardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard what you wrote?'**
+  String get brainDumpDiscardTitle;
+
+  /// No description provided for @brainDumpDiscard.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard'**
+  String get brainDumpDiscard;
 }
 
 class _AppLocalizationsDelegate

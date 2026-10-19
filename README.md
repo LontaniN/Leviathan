@@ -125,6 +125,12 @@ available in English and Italian.
   priority is the position, not a label. Now suggests a limit of 3.
 - New tasks land in **To sort**: answer a few "Which comes first?" questions
   and they slot into the right place.
+- **Empty your head**: the button at the top opens a page where you write
+  everything on your mind, one thing per line (list dashes and checkboxes
+  are ignored). Each line becomes a task in To sort, with the tags you pick
+  below; you order them later. Unfinished things keep coming back to mind
+  until they have a place, so getting them all down at once frees your
+  attention.
 - Completed tasks have their own tab, newest first. Each row shows the color
   of its first tag, and open tasks show their next step under the title.
 - The app bar filters by tag or source, showing how many open tasks each one

@@ -982,4 +982,44 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get nextStepHelp =>
       'One concrete line, e.g. “after lunch, at the library: read chapter 3”.';
+
+  @override
+  String get brainDump => 'Empty your head';
+
+  @override
+  String get brainDumpHelp =>
+      'Write down everything on your mind, one thing per line. Each line becomes a task in To sort: you\'ll put them in order later.';
+
+  @override
+  String get brainDumpHint =>
+      'Call the dentist\nReturn the book\nAsk Anna about the exam';
+
+  @override
+  String brainDumpAddCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Add $count',
+      one: 'Add 1',
+      zero: 'Add',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String brainDumpAdded(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count tasks added to To sort',
+      one: '1 task added to To sort',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get brainDumpDiscardTitle => 'Discard what you wrote?';
+
+  @override
+  String get brainDumpDiscard => 'Discard';
 }

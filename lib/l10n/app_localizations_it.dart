@@ -971,4 +971,44 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get nextStepHelp =>
       'Una riga concreta, es. “dopo pranzo, in biblioteca: leggo il cap. 3”.';
+
+  @override
+  String get brainDump => 'Svuota la testa';
+
+  @override
+  String get brainDumpHelp =>
+      'Scrivi tutto quello che hai in testa, una cosa per riga. Ogni riga diventa un task in Da ordinare: l\'ordine lo decidi dopo.';
+
+  @override
+  String get brainDumpHint =>
+      'Chiamare il dentista\nRestituire il libro\nChiedere ad Anna dell\'esame';
+
+  @override
+  String brainDumpAddCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Aggiungi $count',
+      one: 'Aggiungi 1',
+      zero: 'Aggiungi',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String brainDumpAdded(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count task aggiunti a Da ordinare',
+      one: '1 task aggiunto a Da ordinare',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get brainDumpDiscardTitle => 'Buttare quello che hai scritto?';
+
+  @override
+  String get brainDumpDiscard => 'Butta';
 }

@@ -1489,6 +1489,86 @@ void main() {
     expect(file.readAsStringSync(), contains('Domattina in biblioteca'));
   });
 
+  testWidgets('svuota la testa: ogni riga diventa un task da ordinare', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    await tester.runAsync(
+      () => WorkspaceRepository(root).createWorkspace('Lavoro'),
+    );
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('task-manager-button')));
+    await settle(tester);
+
+    await tester.tap(find.byKey(const Key('brain-dump-button')));
+    await settle(tester);
+    expect(find.text('Svuota la testa'), findsOneWidget);
+    // Senza righe non si aggiunge niente.
+    final add = find.byKey(const Key('brain-dump-add'));
+    expect(tester.widget<FilledButton>(add).onPressed, isNull);
+
+    await tester.enterText(
+      find.byKey(const Key('brain-dump-field')),
+      '- Chiamare il dentista\n\nRestituire il libro\nChiedere ad Anna',
+    );
+    await tester.enterText(find.byKey(const Key('brain-dump-tags')), 'casa');
+    await tester.pump();
+    expect(find.text('Aggiungi 3'), findsOneWidget);
+    await tester.tap(add);
+    await settle(tester);
+
+    expect(find.text('3 task aggiunti a Da ordinare'), findsOneWidget);
+    expect(find.text('DA ORDINARE'), findsOneWidget);
+    double y(String t) => tester.getTopLeft(find.text(t)).dy;
+    expect(y('Chiamare il dentista'), lessThan(y('Restituire il libro')));
+    expect(y('Restituire il libro'), lessThan(y('Chiedere ad Anna')));
+    final files = Directory('${root.path}/Lavoro')
+        .listSync()
+        .whereType<File>()
+        .map((f) => f.readAsStringSync())
+        .toList();
+    expect(files, hasLength(3));
+    for (final file in files) {
+      expect(file, contains('type: "task"'));
+      expect(file, contains('tags: ["casa"]'));
+    }
+  });
+
+  testWidgets('svuota la testa: chiudendo con del testo chiede conferma', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    await tester.runAsync(
+      () => WorkspaceRepository(root).createWorkspace('Lavoro'),
+    );
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('task-manager-button')));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('brain-dump-button')));
+    await settle(tester);
+    await tester.enterText(find.byKey(const Key('brain-dump-field')), 'Pane');
+    await tester.pump();
+
+    await tester.tap(find.byType(CloseButton));
+    await settle(tester);
+    expect(find.text('Buttare quello che hai scritto?'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('brain-dump-discard')));
+    await settle(tester);
+    expect(find.text('Svuota la testa'), findsNothing);
+    expect(
+      Directory('${root.path}/Lavoro').listSync().whereType<File>(),
+      isEmpty,
+    );
+  });
+
   testWidgets('task manager: trascina nella fascia e fra le fasce', (
     tester,
   ) async {

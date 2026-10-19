@@ -7,6 +7,7 @@ import '../model/note_groups.dart';
 import '../model/tags.dart';
 import '../model/task_order.dart';
 import '../state/notes_controller.dart';
+import 'brain_dump_screen.dart';
 import 'note_screen.dart';
 import 'task_check.dart';
 import 'tag_bar.dart';
@@ -38,11 +39,38 @@ class TaskManagerScreen extends StatefulWidget {
   State<TaskManagerScreen> createState() => _TaskManagerScreenState();
 }
 
-class _TaskManagerScreenState extends State<TaskManagerScreen> {
+class _TaskManagerScreenState extends State<TaskManagerScreen>
+    with SingleTickerProviderStateMixin {
+  late final _tabs = TabController(length: 2, vsync: this);
+
+  @override
+  void dispose() {
+    _tabs.dispose();
+    super.dispose();
+  }
+
   /// Vuoto: tutti i task.
   Set<GroupFilter> _filter = const {};
 
   NotesController get notes => widget.notes;
+
+  /// Apre "Svuota la testa"; i task scritti finiscono in "Da ordinare".
+  Future<void> _brainDump() async {
+    final added = await Navigator.of(context).push<int>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => BrainDumpScreen(notes: notes),
+      ),
+    );
+    if (added == null || added == 0 || !mounted) return;
+    // I task nuovi stanno in cima a "Da fare": la si mostra.
+    _tabs.animateTo(0);
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text(context.l10n.brainDumpAdded(added))),
+      );
+  }
 
   Future<void> _pickFilter() async {
     final picked = await showModalBottomSheet<Set<GroupFilter>>(
@@ -61,60 +89,65 @@ class _TaskManagerScreenState extends State<TaskManagerScreen> {
     final l = context.l10n;
     final palette = context.palette;
     final filter = _filter;
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          backgroundColor: palette.background,
-          title: Text(l.taskManager),
-          actions: [
-            IconButton(
-              key: const Key('task-manager-filter'),
-              tooltip: l.taskFilterTooltip,
-              icon: Icon(
-                filter.isEmpty ? Icons.filter_list : Icons.filter_list_alt,
-              ),
-              color: filter.isEmpty ? palette.text : palette.accent,
-              onPressed: _pickFilter,
-            ),
-          ],
-          bottom: TabBar(
-            labelColor: palette.text,
-            unselectedLabelColor: palette.muted,
-            indicatorColor: palette.accent,
-            dividerColor: Colors.transparent,
-            tabs: [
-              Tab(text: l.taskManagerOpenTab),
-              Tab(text: l.taskManagerDoneTab),
-            ],
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: palette.background,
+        title: Text(l.taskManager),
+        actions: [
+          IconButton(
+            key: const Key('brain-dump-button'),
+            tooltip: l.brainDump,
+            icon: const Icon(Icons.playlist_add),
+            onPressed: _brainDump,
           ),
+          IconButton(
+            key: const Key('task-manager-filter'),
+            tooltip: l.taskFilterTooltip,
+            icon: Icon(
+              filter.isEmpty ? Icons.filter_list : Icons.filter_list_alt,
+            ),
+            color: filter.isEmpty ? palette.text : palette.accent,
+            onPressed: _pickFilter,
+          ),
+        ],
+        bottom: TabBar(
+          controller: _tabs,
+          labelColor: palette.text,
+          unselectedLabelColor: palette.muted,
+          indicatorColor: palette.accent,
+          dividerColor: Colors.transparent,
+          tabs: [
+            Tab(text: l.taskManagerOpenTab),
+            Tab(text: l.taskManagerDoneTab),
+          ],
         ),
-        body: ListenableBuilder(
-          listenable: notes,
-          builder: (context, _) {
-            if (notes.error != null) {
-              return _Message(icon: Icons.error_outline, text: notes.error!);
-            }
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (filter.isNotEmpty)
-                  _FilterBanner(
-                    filter: filter,
-                    onClear: () => setState(() => _filter = const {}),
-                  ),
-                Expanded(
-                  child: TabBarView(
-                    children: [
-                      _OpenTab(notes: notes, filter: filter),
-                      _DoneTab(notes: notes, filter: filter),
-                    ],
-                  ),
+      ),
+      body: ListenableBuilder(
+        listenable: notes,
+        builder: (context, _) {
+          if (notes.error != null) {
+            return _Message(icon: Icons.error_outline, text: notes.error!);
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (filter.isNotEmpty)
+                _FilterBanner(
+                  filter: filter,
+                  onClear: () => setState(() => _filter = const {}),
                 ),
-              ],
-            );
-          },
-        ),
+              Expanded(
+                child: TabBarView(
+                  controller: _tabs,
+                  children: [
+                    _OpenTab(notes: notes, filter: filter),
+                    _DoneTab(notes: notes, filter: filter),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

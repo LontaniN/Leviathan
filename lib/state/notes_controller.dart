@@ -83,6 +83,30 @@ class NotesController extends ChangeNotifier {
     return note;
   }
 
+  /// Crea un task da ordinare per ogni titolo di [titles], tutti con i tag
+  /// [tags]. Nel task manager "Da ordinare" va dal più recente: ogni task è
+  /// un millisecondo più vecchio del precedente, così compaiono nell'ordine
+  /// in cui sono stati scritti.
+  List<Note> createTasks(List<String> titles, {List<String> tags = const []}) {
+    final now = DateTime.now();
+    final created = [
+      for (var i = 0; i < titles.length; i++)
+        _repo.create(
+          title: titles[i],
+          body: '',
+          tags: tags,
+          sources: const [],
+          isTask: true,
+          now: now.subtract(Duration(milliseconds: i)),
+        ),
+    ];
+    notes = [...created, ...notes]
+      ..sort((a, b) => b.created.compareTo(a.created));
+    _refreshCounts();
+    notifyListeners();
+    return created;
+  }
+
   Note update(Note note) {
     final updated = note.copyWith(updated: DateTime.now());
     _repo.save(updated);

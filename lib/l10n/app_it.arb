@@ -277,5 +277,12 @@
   "nextStepHint": "Prossimo passo: quando, dove, da cosa parti",
   "nextStep": "Prossimo passo",
   "addNextStep": "Aggiungi il prossimo passo",
-  "nextStepHelp": "Una riga concreta, es. “dopo pranzo, in biblioteca: leggo il cap. 3”."
+  "nextStepHelp": "Una riga concreta, es. “dopo pranzo, in biblioteca: leggo il cap. 3”.",
+  "brainDump": "Svuota la testa",
+  "brainDumpHelp": "Scrivi tutto quello che hai in testa, una cosa per riga. Ogni riga diventa un task in Da ordinare: l'ordine lo decidi dopo.",
+  "brainDumpHint": "Chiamare il dentista\nRestituire il libro\nChiedere ad Anna dell'esame",
+  "brainDumpAddCount": "{count, plural, =0{Aggiungi} =1{Aggiungi 1} other{Aggiungi {count}}}",
+  "brainDumpAdded": "{count, plural, =1{1 task aggiunto a Da ordinare} other{{count} task aggiunti a Da ordinare}}",
+  "brainDumpDiscardTitle": "Buttare quello che hai scritto?",
+  "brainDumpDiscard": "Butta"
 }
