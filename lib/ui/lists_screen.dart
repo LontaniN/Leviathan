@@ -356,6 +356,7 @@ class _GroupGrid extends StatelessWidget {
   final bool tasks;
   final TaskFilter filter;
   final ValueChanged<String?> onOpen;
+
   /// Tenendo premuto un gruppo con nome: il foglio del tag o della fonte.
   final ValueChanged<String> onLongPress;
 

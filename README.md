@@ -66,6 +66,11 @@ available in English and Italian.
 - A toggle in the editor turns a note into a **task** to check off; tags and
   sources stay. In the reading view a single button turns a note into a task
   and back.
+- A task can have a **next step**: one concrete line under the title on
+  when, where and how to start ("after lunch, at the library: read chapter
+  3"). Writing down when and where you'll do something makes it more likely
+  to happen and stops it nagging at you. It shows in the task manager and in
+  the reading view, where a tap changes it, and search finds it too.
 - The **light bulb** next to the Note/Task switch marks a note as
   **knowledge**: what you know, not what happened. Knowledge notes have their
   own view in Tasks and notes.
@@ -121,7 +126,7 @@ available in English and Italian.
 - New tasks land in **To sort**: answer a few "Which comes first?" questions
   and they slot into the right place.
 - Completed tasks have their own tab, newest first. Each row shows the color
-  of its first tag.
+  of its first tag, and open tasks show their next step under the title.
 - The app bar filters by tag or source, showing how many open tasks each one
   has. The filtered view keeps the same bands and order but is read-only; a
   banner shows the active filter and lets you clear it.
@@ -235,7 +240,8 @@ Note body in **Markdown**…
 ```
 
 Tasks also have `type: "task"`, `done` and `done_at`, plus `priority`
-(`now`, `next` or `later`) and `rank` once placed in the task manager;
+(`now`, `next` or `later`) and `rank` once placed in the task manager, and
+`next_step` when they have one;
 knowledge notes have `knowledge: true` and pinned notes `pinned: true`. Files can be copied, synced or edited by hand: Leviathan
 also reads files written without a header, understands the YAML lists
 Obsidian writes (`tags:` followed by `  - tag` lines) and keeps any property

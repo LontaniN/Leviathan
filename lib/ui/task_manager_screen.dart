@@ -519,6 +519,36 @@ class _TaskRow extends StatelessWidget {
                           LeviathanText.title.copyWith(color: palette.text),
                         ),
                       ),
+                      // Il prossimo passo dice da dove cominciare: lo si
+                      // vede senza aprire il task.
+                      if (note.isOpenTask && note.nextStep.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            top: LeviathanSpacing.xxs,
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Icons.subdirectory_arrow_right,
+                                size: LeviathanIconSize.sm,
+                                color: palette.accent,
+                              ),
+                              const SizedBox(width: LeviathanSpacing.xs),
+                              Expanded(
+                                child: Text(
+                                  note.nextStep,
+                                  key: Key('next-step-${note.id}'),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: LeviathanText.meta.copyWith(
+                                    color: palette.text,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       if (meta != null)
                         Text(
                           meta!,

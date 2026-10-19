@@ -12,6 +12,9 @@ typedef Draft = ({
   bool isTask,
   bool knowledge,
 
+  /// Il prossimo passo, se è un task.
+  String nextStep,
+
   /// Il giorno a cui si riferisce la nota, se non è oggi.
   DateTime? date,
 });
@@ -37,6 +40,7 @@ class DraftStore {
         sources: list(json['sources']),
         isTask: json['task'] == true,
         knowledge: json['knowledge'] == true,
+        nextStep: '${json['nextStep'] ?? ''}',
         date: DateTime.tryParse('${json['date'] ?? ''}'),
       );
     } on Object {
@@ -58,6 +62,7 @@ class DraftStore {
         'sources': draft.sources,
         'task': draft.isTask,
         'knowledge': draft.knowledge,
+        if (draft.nextStep.isNotEmpty) 'nextStep': draft.nextStep,
         if (draft.date case final date?) 'date': date.toIso8601String(),
       }),
     );
@@ -72,5 +77,6 @@ class DraftStore {
       draft.title.trim().isEmpty &&
       draft.body.trim().isEmpty &&
       draft.tags.isEmpty &&
-      draft.sources.isEmpty;
+      draft.sources.isEmpty &&
+      draft.nextStep.trim().isEmpty;
 }

@@ -273,5 +273,9 @@
   "tagColorAuto": "Colore automatico",
   "renameTagTitle": "Rinomina {tag}",
   "renameSourceTitle": "Rinomina {source}",
-  "renameMerges": "Esiste già: le note verranno unite a {name}"
+  "renameMerges": "Esiste già: le note verranno unite a {name}",
+  "nextStepHint": "Prossimo passo: quando, dove, da cosa parti",
+  "nextStep": "Prossimo passo",
+  "addNextStep": "Aggiungi il prossimo passo",
+  "nextStepHelp": "Una riga concreta, es. “dopo pranzo, in biblioteca: leggo il cap. 3”."
 }

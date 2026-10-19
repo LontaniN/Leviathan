@@ -178,10 +178,9 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   /// Un filtro rinominato resta attivo con il nuovo nome.
-  static List<String> _renamed(List<String> values, String from, String to) =>
-      [
-        ...{for (final v in values) v == from ? to : v},
-      ];
+  static List<String> _renamed(List<String> values, String from, String to) => [
+    ...{for (final v in values) v == from ? to : v},
+  ];
 
   void _open(Note note) {
     Navigator.of(context).push(

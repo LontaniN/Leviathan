@@ -155,6 +155,62 @@ void main() {
       expect(plain.doneAt, isNull);
     });
 
+    test('il prossimo passo di un task: andata e ritorno', () {
+      final task = Note(
+        id: 't',
+        title: 'Ripassare',
+        body: '',
+        tags: [],
+        sources: [],
+        created: date,
+        updated: date,
+        isTask: true,
+        nextStep: 'Dopo pranzo, in biblioteca: "cap. 3"',
+      );
+      final markdown = task.toMarkdown();
+      expect(markdown, contains('next_step: "Dopo pranzo'));
+      final back = Note.fromMarkdown('t', markdown, DateTime(2000));
+      expect(back.nextStep, task.nextStep);
+      expect(back.extraFrontmatter, isEmpty);
+      // Senza prossimo passo il campo non si scrive.
+      expect(
+        task.copyWith(nextStep: '  ').toMarkdown(),
+        isNot(contains('next_step')),
+      );
+    });
+
+    test(
+      'il prossimo passo resta spostando il task e sparisce con il tipo',
+      () {
+        final task = Note(
+          id: 't',
+          title: 'x',
+          body: '',
+          tags: [],
+          sources: [],
+          created: date,
+          updated: date,
+          isTask: true,
+          nextStep: 'stasera',
+        );
+        expect(task.placed(TaskBand.now, 'm').nextStep, 'stasera');
+        expect(task.copyWith(done: true).nextStep, 'stasera');
+        expect(task.copyWith(isTask: false).nextStep, isEmpty);
+        expect(
+          task.copyWith(isTask: false).toMarkdown(),
+          isNot(contains('next_step')),
+        );
+      },
+    );
+
+    test('in una nota normale il prossimo passo scritto a mano resta', () {
+      const content = '---\ntitle: Idea\nnext_step: "domani"\n---\nCorpo';
+      final note = Note.fromMarkdown('i', content, date);
+      expect(note.nextStep, isEmpty);
+      expect(note.extraFrontmatter, 'next_step: "domani"');
+      expect(note.toMarkdown(), contains('next_step: "domani"'));
+    });
+
     test('una nota fissata: andata e ritorno', () {
       final note = Note(
         id: 'x',

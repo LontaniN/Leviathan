@@ -320,5 +320,9 @@
   "renameSourceTitle": "Rename {source}",
   "@renameSourceTitle": {"placeholders": {"source": {"type": "String", "example": "Mario Rossi"}}},
   "renameMerges": "Already exists: notes will be merged into {name}",
-  "@renameMerges": {"placeholders": {"name": {"type": "String", "example": "study"}}}
+  "@renameMerges": {"placeholders": {"name": {"type": "String", "example": "study"}}},
+  "nextStepHint": "Next step: when, where, what first",
+  "nextStep": "Next step",
+  "addNextStep": "Add a next step",
+  "nextStepHelp": "One concrete line, e.g. “after lunch, at the library: read chapter 3”."
 }

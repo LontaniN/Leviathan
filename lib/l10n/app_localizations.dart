@@ -1627,6 +1627,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Already exists: notes will be merged into {name}'**
   String renameMerges(String name);
+
+  /// No description provided for @nextStepHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Next step: when, where, what first'**
+  String get nextStepHint;
+
+  /// No description provided for @nextStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Next step'**
+  String get nextStep;
+
+  /// No description provided for @addNextStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a next step'**
+  String get addNextStep;
+
+  /// No description provided for @nextStepHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'One concrete line, e.g. “after lunch, at the library: read chapter 3”.'**
+  String get nextStepHelp;
 }
 
 class _AppLocalizationsDelegate
