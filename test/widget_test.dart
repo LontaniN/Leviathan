@@ -2112,7 +2112,7 @@ void main() {
     expect(find.byKey(const Key('diary-list')), findsOneWidget);
     expect(colored(), isEmpty);
 
-    // Dal foglio nasce anche un task, col suo prossimo passo.
+    // Dal foglio nasce anche un task.
     await menu(0, 15);
     await tester.tap(find.text('Crea nota'));
     await settle(tester);
@@ -2121,10 +2121,6 @@ void main() {
     await tester.enterText(
       find.byKey(const Key('note-sheet-title')),
       'Tornare al mare',
-    );
-    await tester.enterText(
-      find.byKey(const Key('note-sheet-next-step')),
-      'sabato mattina',
     );
     await tester.tap(find.text('Crea task'));
     await settle(tester);
@@ -2136,7 +2132,6 @@ void main() {
         .single
         .readAsStringSync();
     expect(task, contains('type: "task"'));
-    expect(task, contains('sabato mattina'));
     expect(task, contains('Mattina al mare'));
     expect(colored(), ['Mattina al mare']);
   });

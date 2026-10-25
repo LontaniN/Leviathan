@@ -214,7 +214,6 @@ class _DiaryScreenState extends State<DiaryScreen> with WidgetsBindingObserver {
       sources: choice.sources,
       isTask: choice.isTask,
       knowledge: choice.knowledge,
-      nextStep: choice.nextStep,
       created: sameDay(day, now) ? null : onDay(day, now),
     );
     if (from != null) {
@@ -796,15 +795,11 @@ typedef NoteChoice = ({
 
   /// Una nota di conoscenza (mai un task).
   bool knowledge,
-
-  /// Il prossimo passo del task; vuoto per le note.
-  String nextStep,
 });
 
 /// Il foglio in basso per fare una nota dal testo [text] del diario senza
 /// lasciare la pagina: come nell'editor della home si sceglie se è una nota
-/// o un task (con il prossimo passo) e se è conoscenza, poi titolo, tag e
-/// fonti. Null se lo si chiude.
+/// o un task e se è conoscenza, poi titolo, tag e fonti. Null se lo si chiude.
 Future<NoteChoice?> showNoteSheet(
   BuildContext context,
   NotesController notes, {
@@ -840,7 +835,6 @@ class _NoteSheet extends StatefulWidget {
 
 class _NoteSheetState extends State<_NoteSheet> {
   final _title = TextEditingController();
-  final _nextStep = TextEditingController();
   bool _isTask = false;
   bool _knowledge = false;
   late List<String> _tags = [...widget.tags];
@@ -851,7 +845,6 @@ class _NoteSheetState extends State<_NoteSheet> {
   @override
   void dispose() {
     _title.dispose();
-    _nextStep.dispose();
     _pendingTag.dispose();
     _pendingSource.dispose();
     super.dispose();
@@ -873,7 +866,6 @@ class _NoteSheetState extends State<_NoteSheet> {
       ),
       isTask: _isTask,
       knowledge: !_isTask && _knowledge,
-      nextStep: _isTask ? _nextStep.text.trim() : '',
     ));
   }
 
@@ -962,22 +954,6 @@ class _NoteSheetState extends State<_NoteSheet> {
                   ),
                 ),
               ),
-              // Un task dice anche da dove si comincia: quando, dove, cosa.
-              if (_isTask)
-                TextField(
-                  key: const Key('note-sheet-next-step'),
-                  controller: _nextStep,
-                  textCapitalization: TextCapitalization.sentences,
-                  style: LeviathanText.body.copyWith(color: palette.text),
-                  decoration: InputDecoration(
-                    hintText: l.nextStepHint,
-                    filled: false,
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.only(
-                      bottom: LeviathanSpacing.sm,
-                    ),
-                  ),
-                ),
               // Il testo scelto, come una citazione: è il corpo della nota.
               Container(
                 padding: const EdgeInsets.only(left: LeviathanSpacing.md),
