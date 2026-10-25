@@ -2073,6 +2073,13 @@ void main() {
     expect(saved, contains('un orto sul tetto.'));
     expect(colored(), ['un orto sul tetto.']);
 
+    // Accanto alla casella, la colonna dei tag delle sue note.
+    final tagColumn = find.byKey(ValueKey('diary-tags-$key'));
+    expect(
+      find.descendant(of: tagColumn, matching: find.text('casa')),
+      findsOneWidget,
+    );
+
     // Sul testo colorato il menu apre la nota o toglie il colore.
     await menu(26, 30);
     expect(find.text('Crea nota'), findsNothing);
@@ -2114,6 +2121,10 @@ void main() {
     await settle(tester);
     expect(find.byKey(const Key('diary-list')), findsOneWidget);
     expect(colored(), isEmpty);
+    expect(
+      find.descendant(of: tagColumn, matching: find.text('casa')),
+      findsNothing,
+    );
 
     // Dal foglio nasce anche un task.
     await menu(0, 15);

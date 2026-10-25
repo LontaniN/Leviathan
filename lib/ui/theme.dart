@@ -338,6 +338,10 @@ class LeviathanSizes {
   static const diaryBubbleWidth = 220.0;
   static const diaryBubbleHeight = 64.0;
 
+  /// La colonna a destra delle caselle del diario, con i tag delle note
+  /// nate da quel giorno.
+  static const diaryTagColumn = 60.0;
+
   /// Le righe che una casella del diario mostra anche vuota.
   static const diaryMinLines = 3;
 }
@@ -487,6 +491,9 @@ class LeviathanText {
     letterSpacing: -0.4,
     height: 1.1,
   );
+
+  /// Un tag nella colonna accanto a una casella del diario, nel suo colore.
+  static const diaryTag = TextStyle(fontSize: 13, fontWeight: FontWeight.w600);
 
   /// Il numero del giorno dentro l'icona del calendario.
   static const calendarDigit = TextStyle(

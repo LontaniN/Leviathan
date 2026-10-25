@@ -183,10 +183,23 @@ class _DiaryScreenState extends State<DiaryScreen> with WidgetsBindingObserver {
   void _onNotes() => setState(() {});
 
   /// I pezzi colorati del giorno [key]: solo quelli la cui nota c'è ancora.
+  ///
+  /// Il colore segue i tag che la nota ha adesso, non quelli che aveva
+  /// quando è nata.
   List<DiaryExtract> _extractsOf(String key) => [
     for (final e in _extracts.ofDay(key))
-      if (e.noteId == null || widget.notes.byId(e.noteId!) != null) e,
+      if (e.noteId == null)
+        e
+      else if (widget.notes.byId(e.noteId!) case final note?)
+        e.copyWith(tags: note.tags),
   ];
+
+  /// I tag delle note nate dal giorno [key], senza doppioni, nell'ordine in
+  /// cui le loro frasi stanno nel testo.
+  List<String> _tagsOf(String key, List<DiaryExtract> extracts) => {
+    for (final range in extractRanges(_days?[key] ?? '', extracts))
+      if (range.extract.noteId != null) ...range.extract.tags,
+  }.toList();
 
   /// "Crea nota" sul testo scelto: titolo, tag e fonti dal foglio, e la nota
   /// nasce subito, datata a quel giorno. Il pezzo resta colorato nel diario.
@@ -314,6 +327,7 @@ class _DiaryScreenState extends State<DiaryScreen> with WidgetsBindingObserver {
     Widget dayAt(int index) {
       final day = _dayAt(index);
       final key = DiaryStore.key(day);
+      final extracts = _extractsOf(key);
       return Padding(
         key: ValueKey(key),
         padding: const EdgeInsets.only(bottom: LeviathanSpacing.md),
@@ -321,7 +335,8 @@ class _DiaryScreenState extends State<DiaryScreen> with WidgetsBindingObserver {
           day: day,
           today: index == 0,
           initialText: days[key] ?? '',
-          extracts: _extractsOf(key),
+          extracts: extracts,
+          tags: _tagsOf(key, extracts),
           onChanged: (text) => _changed(day, text),
           onCreateNote: (text, start, from) =>
               _createNote(day, text, start, from: from),
@@ -522,7 +537,8 @@ class _ScrubBubble extends StatelessWidget {
   return (text: text, start: selection.start + raw.indexOf(text));
 }
 
-/// Un giorno del diario: giorno e mese a sinistra, la casella a destra.
+/// Un giorno del diario: giorno e mese a sinistra, la casella in mezzo e a
+/// destra una colonna stretta con i tag delle note nate dalle sue frasi.
 ///
 /// I pezzi diventati note ([extracts]) sono colorati col loro primo tag e
 /// sottolineati come un collegamento: toccandoli si apre la nota. Tenendo
@@ -538,6 +554,7 @@ class _DiaryDay extends StatefulWidget {
     required this.onCreateNote,
     required this.onOpenNote,
     required this.onRemoveExtract,
+    this.tags = const [],
   });
 
   final DateTime day;
@@ -551,6 +568,9 @@ class _DiaryDay extends StatefulWidget {
   final void Function(String text, int start, DiaryExtract? from) onCreateNote;
   final ValueChanged<String> onOpenNote;
   final ValueChanged<DiaryExtract> onRemoveExtract;
+
+  /// I tag delle note nate dalle frasi del giorno, per la colonna a destra.
+  final List<String> tags;
 
   @override
   State<_DiaryDay> createState() => _DiaryDayState();
@@ -732,7 +752,42 @@ class _DiaryDayState extends State<_DiaryDay> {
             ),
           ),
         ),
+        const SizedBox(width: LeviathanSpacing.xs),
+        // La colonna c'è sempre, anche vuota: così le caselle di tutti i
+        // giorni hanno la stessa larghezza.
+        SizedBox(
+          width: LeviathanSizes.diaryTagColumn,
+          child: Padding(
+            padding: const EdgeInsets.only(top: LeviathanSpacing.md),
+            child: Column(
+              key: ValueKey('diary-tags-${DiaryStore.key(widget.day)}'),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [for (final tag in widget.tags) _DiaryTag(tag)],
+            ),
+          ),
+        ),
       ],
+    );
+  }
+}
+
+/// Un tag nella colonna accanto a un giorno: il nome nel colore del tag,
+/// troncato se non ci sta.
+class _DiaryTag extends StatelessWidget {
+  const _DiaryTag(this.tag);
+
+  final String tag;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: LeviathanSpacing.xs),
+      child: Text(
+        tag,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: LeviathanText.diaryTag.copyWith(color: Tags.colorOf(tag)),
+      ),
     );
   }
 }
