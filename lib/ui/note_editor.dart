@@ -24,9 +24,6 @@ typedef NoteDraft = ({
   /// Una nota di conoscenza (mai un task).
   bool knowledge,
 
-  /// Il prossimo passo del task; vuoto per le note.
-  String nextStep,
-
   /// Il giorno scelto col calendario; null se non è stato cambiato (la nota
   /// nuova è di oggi, quella modificata tiene la sua data).
   DateTime? date,
@@ -123,8 +120,6 @@ class _NoteEditorState extends State<NoteEditor>
     implements SharedTextReceiver {
   late final _title = TextEditingController(text: widget.initial?.title);
   late final _body = _BodyController(text: widget.initial?.body);
-  late final _nextStep = TextEditingController(text: widget.initial?.nextStep);
-  final _nextStepFocus = FocusNode();
   final _titleFocus = FocusNode();
   final _bodyFocus = FocusNode();
   late TextEditingValue _lastBody = _body.value;
@@ -163,10 +158,8 @@ class _NoteEditorState extends State<NoteEditor>
     }
     _body.addListener(_onBodyChanged);
     _title.addListener(_scheduleDraft);
-    _nextStep.addListener(_scheduleDraft);
     _titleFocus.addListener(() => setState(() {}));
     _bodyFocus.addListener(() => setState(() {}));
-    _nextStepFocus.addListener(() => setState(() {}));
   }
 
   void _apply(Draft draft) {
@@ -177,7 +170,6 @@ class _NoteEditorState extends State<NoteEditor>
     _sources = [...draft.sources];
     _isTask = draft.isTask;
     _knowledge = draft.knowledge;
-    _nextStep.text = draft.nextStep;
     _date = draft.date;
   }
 
@@ -219,7 +211,6 @@ class _NoteEditorState extends State<NoteEditor>
       sources: _sources,
       isTask: _isTask,
       knowledge: !_isTask && _knowledge,
-      nextStep: _isTask ? _nextStep.text : '',
       date: _date,
     );
     final initial = widget.initial;
@@ -244,7 +235,6 @@ class _NoteEditorState extends State<NoteEditor>
       listEquals(draft.sources, note.sources) &&
       draft.isTask == note.isTask &&
       draft.knowledge == note.knowledge &&
-      draft.nextStep.trim() == note.nextStep &&
       draft.date == null;
 
   @override
@@ -275,10 +265,8 @@ class _NoteEditorState extends State<NoteEditor>
   bool get _writingText =>
       _textFocused && View.of(context).viewInsets.bottom > 0;
 
-  /// Il fuoco è in uno dei campi del riquadro: titolo, prossimo passo o
-  /// corpo.
-  bool get _textFocused =>
-      _titleFocus.hasFocus || _nextStepFocus.hasFocus || _bodyFocus.hasFocus;
+  /// Il fuoco è in uno dei campi del riquadro: titolo o corpo.
+  bool get _textFocused => _titleFocus.hasFocus || _bodyFocus.hasFocus;
 
   /// Il fuoco è su tag o fonti.
   bool _chipsFocused = false;
@@ -304,7 +292,6 @@ class _NoteEditorState extends State<NoteEditor>
       // sparisce la barra di formattazione.
       if (_keyboardWasOpen && !open) {
         _titleFocus.unfocus();
-        _nextStepFocus.unfocus();
         _bodyFocus.unfocus();
       }
       _keyboardWasOpen = open;
@@ -385,10 +372,8 @@ class _NoteEditorState extends State<NoteEditor>
     }
     _title.dispose();
     _body.dispose();
-    _nextStep.dispose();
     _titleFocus.dispose();
     _bodyFocus.dispose();
-    _nextStepFocus.dispose();
     WidgetsBinding.instance.removeObserver(this);
     _pendingTag.dispose();
     _pendingSource.dispose();
@@ -421,7 +406,6 @@ class _NoteEditorState extends State<NoteEditor>
       sources: sources,
       isTask: _isTask,
       knowledge: !_isTask && _knowledge,
-      nextStep: _isTask ? _nextStep.text.trim() : '',
       date: _date,
     ));
     if (widget.initial == null) {
@@ -437,7 +421,6 @@ class _NoteEditorState extends State<NoteEditor>
       }
       _title.clear();
       _body.clear();
-      _nextStep.clear();
       _pendingTag.clear();
       _pendingSource.clear();
       setState(() {
@@ -525,11 +508,6 @@ class _NoteEditorState extends State<NoteEditor>
               ),
             ),
             const Divider(height: 1),
-            // Un task dice anche da dove si comincia: quando, dove, cosa.
-            if (_isTask) ...[
-              _NextStepField(controller: _nextStep, focusNode: _nextStepFocus),
-              const Divider(height: 1),
-            ],
             // Il corpo occupa tutto il riquadro, così lo si tocca ovunque.
             Expanded(
               child: TextField(
@@ -757,44 +735,6 @@ class _BodyController extends TextEditingController {
     }
     if (at < text.length) spans.add(TextSpan(text: text.substring(at)));
     return TextSpan(style: style, children: spans);
-  }
-}
-
-/// Il campo del prossimo passo di un task, su una riga, fra titolo e corpo.
-class _NextStepField extends StatelessWidget {
-  const _NextStepField({required this.controller, required this.focusNode});
-
-  final TextEditingController controller;
-  final FocusNode focusNode;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.palette;
-    return TextField(
-      key: const Key('next-step-field'),
-      controller: controller,
-      focusNode: focusNode,
-      textCapitalization: TextCapitalization.sentences,
-      textInputAction: TextInputAction.next,
-      style: LeviathanText.body.copyWith(color: palette.text),
-      decoration: InputDecoration(
-        hintText: context.l10n.nextStepHint,
-        filled: false,
-        border: InputBorder.none,
-        isDense: true,
-        prefixIcon: Icon(
-          Icons.subdirectory_arrow_right,
-          size: LeviathanIconSize.sm,
-          color: palette.accent,
-        ),
-        prefixIconConstraints: const BoxConstraints(
-          minWidth: LeviathanIconSize.lg,
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          vertical: LeviathanSpacing.md,
-        ),
-      ),
-    );
   }
 }
 

@@ -25,8 +25,7 @@ enum NoteKind { note, task, knowledge }
 /// ```
 ///
 /// Un task ha in più `type: "task"`, `done` e, se fatto, `done_at`; le note
-/// normali non scrivono questi campi. Un task può avere anche un prossimo
-/// passo (`next_step`): una riga su quando, dove e come cominciarlo. Nel task manager un task ha anche una
+/// normali non scrivono questi campi. Nel task manager un task ha anche una
 /// fascia (`priority: "now"`, `"next"` o `"later"`) e una posizione nella
 /// fascia (`rank`, vedi [rankBetween]); senza fascia è "da ordinare". Una nota di conoscenza ha
 /// `knowledge: true`; una fissata in cima alle recenti ha `pinned: true`.
@@ -52,7 +51,6 @@ class Note {
     this.pinned = false,
     this.band,
     this.rank,
-    this.nextStep = '',
     this.extraFrontmatter = '',
   });
 
@@ -89,11 +87,6 @@ class Note {
   /// Solo per i task: la posizione nella fascia (si confronta come testo).
   final String? rank;
 
-  /// Solo per i task: il prossimo passo concreto, es. "dopo pranzo, in
-  /// biblioteca: leggo il cap. 3". Vuoto se non c'è. Scrivere quando e dove
-  /// si farà una cosa aiuta a farla e a smettere di pensarci.
-  final String nextStep;
-
   /// Le righe dell'intestazione che Leviathan non usa (proprietà aggiunte da
   /// Obsidian o a mano), da riscrivere identiche; vuoto se non ce ne sono.
   final String extraFrontmatter;
@@ -108,9 +101,8 @@ class Note {
       : NoteKind.note;
 
   /// Togliendo [isTask] o [done] si perdono anche spunta e data di
-  /// esecuzione, e togliendo [isTask] anche fascia, posizione e prossimo
-  /// passo, così non restano valori senza senso; un task non è mai
-  /// conoscenza.
+  /// esecuzione, e togliendo [isTask] anche fascia e posizione, così non
+  /// restano valori senza senso; un task non è mai conoscenza.
   Note copyWith({
     String? title,
     String? body,
@@ -123,7 +115,6 @@ class Note {
     DateTime? doneAt,
     bool? knowledge,
     bool? pinned,
-    String? nextStep,
   }) {
     final task = isTask ?? this.isTask;
     final isDone = task && (done ?? this.done);
@@ -142,7 +133,6 @@ class Note {
       pinned: pinned ?? this.pinned,
       band: task ? band : null,
       rank: task ? rank : null,
-      nextStep: task ? (nextStep ?? this.nextStep).trim() : '',
       extraFrontmatter: extraFrontmatter,
     );
   }
@@ -164,7 +154,6 @@ class Note {
     pinned: pinned,
     band: isTask ? band : null,
     rank: isTask && band != null ? rank : null,
-    nextStep: nextStep,
     extraFrontmatter: extraFrontmatter,
   );
 
@@ -196,9 +185,6 @@ class Note {
       }
       if (band != null) buffer.writeln('priority: ${jsonEncode(band!.key)}');
       if (rank != null) buffer.writeln('rank: ${jsonEncode(rank)}');
-      if (nextStep.isNotEmpty) {
-        buffer.writeln('next_step: ${jsonEncode(nextStep)}');
-      }
     }
     if (knowledge) buffer.writeln('knowledge: true');
     if (pinned) buffer.writeln('pinned: true');
@@ -223,11 +209,6 @@ class Note {
         final end = close.start;
         final header = end > 4 ? text.substring(4, end) : '';
         (fields, extra) = _parseHeader(header);
-        // Il prossimo passo vale solo per i task: in una nota normale (es.
-        // scritto a mano) resta com'è, fra le proprietà da conservare.
-        if (!_isTaskType(fields['type']) && fields.containsKey('next_step')) {
-          (fields, extra) = _parseHeader(header, ignore: const {'next_step'});
-        }
         body = close.end < text.length ? text.substring(close.end + 1) : '';
       }
     }
@@ -254,7 +235,6 @@ class Note {
       pinned: fields['pinned'] == true || fields['pinned'] == 'true',
       band: band,
       rank: band != null && rank.isNotEmpty ? rank : null,
-      nextStep: isTask ? '${fields['next_step'] ?? ''}'.trim() : '',
       extraFrontmatter: extra,
     );
   }
@@ -276,7 +256,6 @@ class Note {
     'done_at',
     'priority',
     'rank',
-    'next_step',
     'knowledge',
     'pinned',
   };
@@ -293,11 +272,8 @@ class Note {
   /// Le righe rientrate o che cominciano con `-` (liste YAML, testo su più
   /// righe) appartengono alla voce sopra. Un campo noto senza valore seguito
   /// solo da righe `- …` è una lista. Le righe che non stanno sotto nessuna
-  /// voce (es. commenti in cima) si conservano, come i campi in [ignore].
-  static (Map<String, Object?>, String) _parseHeader(
-    String header, {
-    Set<String> ignore = const {},
-  }) {
+  /// voce (es. commenti in cima) si conservano.
+  static (Map<String, Object?>, String) _parseHeader(String header) {
     final entries = <List<String>>[];
     for (final line in header.split('\n')) {
       // Un commento a inizio riga fa voce a sé: sotto un campo noto andrebbe
@@ -315,9 +291,7 @@ class Note {
     for (final [first, ...rest] in entries) {
       final colon = first.indexOf(':');
       final key = colon > 0 ? first.substring(0, colon).trim() : '';
-      if (!_entryStart.hasMatch(first) ||
-          !_knownFields.contains(key) ||
-          ignore.contains(key)) {
+      if (!_entryStart.hasMatch(first) || !_knownFields.contains(key)) {
         extra.addAll([first, ...rest]);
         continue;
       }

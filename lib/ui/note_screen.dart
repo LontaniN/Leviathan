@@ -212,16 +212,6 @@ class _NoteScreenState extends State<NoteScreen> {
                         ? null
                         : (done) => notes.setDone(note, done),
                   ),
-                  // Un task fatto non ha più un prossimo passo da proporre,
-                  // ma quello scritto resta visibile.
-                  if (note.nextStep.isNotEmpty || (!readOnly && !note.done))
-                    _NextStep(
-                      note: note,
-                      onChanged: readOnly
-                          ? null
-                          : (step) =>
-                                notes.update(note.copyWith(nextStep: step)),
-                    ),
                 ],
                 if (note.tags.isNotEmpty || note.sources.isNotEmpty) ...[
                   const SizedBox(height: LeviathanSpacing.lg),
@@ -347,119 +337,6 @@ class _TaskStatus extends StatelessWidget {
   }
 }
 
-/// Il prossimo passo del task sotto la casella; toccandolo lo si cambia.
-/// Se manca, un invito ad aggiungerlo.
-class _NextStep extends StatelessWidget {
-  const _NextStep({required this.note, required this.onChanged});
-
-  final Note note;
-
-  /// Null in sola lettura.
-  final ValueChanged<String>? onChanged;
-
-  Future<void> _edit(BuildContext context) async {
-    final step = await showDialog<String>(
-      context: context,
-      builder: (_) => _NextStepDialog(initial: note.nextStep),
-    );
-    if (step != null && step != note.nextStep) onChanged!(step);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.palette;
-    final empty = note.nextStep.isEmpty;
-    final muted = empty || note.done;
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: InkWell(
-        key: const Key('next-step'),
-        onTap: onChanged == null ? null : () => _edit(context),
-        borderRadius: BorderRadius.circular(LeviathanRadii.md),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: LeviathanSpacing.sm,
-            vertical: LeviathanSpacing.xs,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                empty ? Icons.add : Icons.subdirectory_arrow_right,
-                size: LeviathanIconSize.md,
-                color: muted ? palette.muted : palette.accent,
-              ),
-              const SizedBox(width: LeviathanSpacing.sm),
-              Flexible(
-                child: Text(
-                  empty ? context.l10n.addNextStep : note.nextStep,
-                  style: LeviathanText.reading.copyWith(
-                    color: muted ? palette.muted : palette.text,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Scrive o cambia il prossimo passo; restituisce il testo (vuoto per
-/// toglierlo), null se si annulla.
-class _NextStepDialog extends StatefulWidget {
-  const _NextStepDialog({required this.initial});
-
-  final String initial;
-
-  @override
-  State<_NextStepDialog> createState() => _NextStepDialogState();
-}
-
-class _NextStepDialogState extends State<_NextStepDialog> {
-  late final _controller = TextEditingController(text: widget.initial);
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _done() => Navigator.pop(context, _controller.text.trim());
-
-  @override
-  Widget build(BuildContext context) {
-    final l = context.l10n;
-    return AlertDialog(
-      title: Text(l.nextStep),
-      content: TextField(
-        key: const Key('next-step-input'),
-        controller: _controller,
-        autofocus: true,
-        textCapitalization: TextCapitalization.sentences,
-        textInputAction: TextInputAction.done,
-        onSubmitted: (_) => _done(),
-        decoration: InputDecoration(
-          helperText: l.nextStepHelp,
-          helperMaxLines: 3,
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(l.cancel),
-        ),
-        FilledButton(
-          key: const Key('next-step-save'),
-          onPressed: _done,
-          child: Text(l.apply),
-        ),
-      ],
-    );
-  }
-}
-
 class _EditNotePage extends StatelessWidget {
   const _EditNotePage({required this.note, required this.notes, this.resume});
 
@@ -494,7 +371,6 @@ class _EditNotePage extends StatelessWidget {
                 sources: draft.sources,
                 isTask: draft.isTask,
                 knowledge: draft.knowledge,
-                nextStep: draft.nextStep,
                 created: draft.date == null
                     ? null
                     : onDay(draft.date!, note.created),

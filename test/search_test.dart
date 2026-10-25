@@ -105,22 +105,6 @@ void main() {
     expect(ids(const SearchQuery(text: 'anna')), ['b']);
   });
 
-  test('il testo trova anche il prossimo passo dei task', () {
-    final task = Note(
-      id: 'p',
-      title: 'Tesina',
-      body: '',
-      tags: const [],
-      sources: const [],
-      created: DateTime(2026),
-      updated: DateTime(2026),
-      isTask: true,
-      nextStep: 'In biblioteca dopo pranzo',
-    );
-    final hits = searchNotes([task], const SearchQuery(text: 'biblioteca'));
-    expect(hits.single.note.id, 'p');
-  });
-
   test('anteprima attorno alla parola trovata', () {
     final hit = searchNotes(notes, const SearchQuery(text: 'iso')).single;
     expect(hit.snippet, contains('ISO'));

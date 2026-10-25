@@ -26,7 +26,6 @@ void main() {
       sources: ['Anna'],
       isTask: true,
       knowledge: false,
-      nextStep: 'stasera, alla scrivania',
       date: null,
     ));
     final draft = store.read()!;
@@ -35,7 +34,6 @@ void main() {
     expect(draft.tags, ['studio']);
     expect(draft.sources, ['Anna']);
     expect(draft.isTask, isTrue);
-    expect(draft.nextStep, 'stasera, alla scrivania');
   });
 
   test('una bozza vuota cancella il file', () {
@@ -46,7 +44,6 @@ void main() {
       sources: const [],
       isTask: false,
       knowledge: false,
-      nextStep: '',
       date: null,
     ));
     expect(store.file.existsSync(), isTrue);
@@ -57,7 +54,6 @@ void main() {
       sources: const [],
       isTask: true,
       knowledge: false,
-      nextStep: '',
       date: null,
     ));
     expect(store.file.existsSync(), isFalse);
@@ -72,7 +68,6 @@ void main() {
       sources: const [],
       isTask: false,
       knowledge: true,
-      nextStep: '',
       date: DateTime(2024, 3, 3),
     ));
     expect(store.read()!.date, DateTime(2024, 3, 3));
@@ -93,7 +88,6 @@ void main() {
         sources: const [],
         isTask: true,
         knowledge: false,
-        nextStep: 'stasera',
         date: null,
       ), 5);
       final edit = edits.read()!;
@@ -101,7 +95,6 @@ void main() {
       expect(edit.cursor, 5);
       expect(edit.draft.body, 'Corpo cambiato');
       expect(edit.draft.tags, ['studio']);
-      expect(edit.draft.nextStep, 'stasera');
       edits.clear();
       expect(edits.file.existsSync(), isFalse);
     });

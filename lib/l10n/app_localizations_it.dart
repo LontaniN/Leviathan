@@ -960,19 +960,6 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
-  String get nextStepHint => 'Prossimo passo: quando, dove, da cosa parti';
-
-  @override
-  String get nextStep => 'Prossimo passo';
-
-  @override
-  String get addNextStep => 'Aggiungi il prossimo passo';
-
-  @override
-  String get nextStepHelp =>
-      'Una riga concreta, es. “dopo pranzo, in biblioteca: leggo il cap. 3”.';
-
-  @override
   String get brainDump => 'Svuota la testa';
 
   @override

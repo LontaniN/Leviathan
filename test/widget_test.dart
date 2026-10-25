@@ -1036,7 +1036,6 @@ void main() {
               sources: const [],
               isTask: false,
               knowledge: false,
-              nextStep: '',
               date: null,
             ), 5);
       });
@@ -1080,7 +1079,6 @@ void main() {
           sources: const [],
           isTask: false,
           knowledge: false,
-          nextStep: '',
           date: null,
         ), 0);
       });
@@ -1782,60 +1780,6 @@ void main() {
     await settle(tester);
     expect(find.text('Primo'), findsOneWidget);
     expect(find.text('OGGI'), findsOneWidget);
-  });
-
-  testWidgets('prossimo passo: si scrive nel task e si vede nel task manager', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(1080, 2424);
-    tester.view.devicePixelRatio = 2.625;
-    addTearDown(tester.view.reset);
-
-    await tester.runAsync(
-      () => WorkspaceRepository(root).createWorkspace('Studio'),
-    );
-    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
-    await settle(tester);
-
-    // Il campo c'è solo per i task.
-    expect(find.byKey(const Key('next-step-field')), findsNothing);
-    await tester.tap(find.text('Task'));
-    await tester.pump();
-    await tester.enterText(find.byKey(const Key('title-field')), 'Tesina');
-    await tester.enterText(
-      find.byKey(const Key('next-step-field')),
-      'Stasera alla scrivania',
-    );
-    await tester.ensureVisible(find.text('Salva task'));
-    await tester.tap(find.text('Salva task'));
-    await settle(tester);
-
-    final file = Directory('${root.path}/Studio')
-        .listSync()
-        .whereType<File>()
-        .singleWhere((f) => f.path.contains('tesina'));
-    expect(
-      file.readAsStringSync(),
-      contains('next_step: "Stasera alla scrivania"'),
-    );
-
-    await tester.tap(find.byKey(const Key('task-manager-button')));
-    await settle(tester);
-    expect(find.text('Stasera alla scrivania'), findsOneWidget);
-
-    // Dalla lettura del task lo si cambia.
-    await tester.tap(find.text('Tesina'));
-    await settle(tester);
-    await tester.tap(find.byKey(const Key('next-step')));
-    await settle(tester);
-    await tester.enterText(
-      find.byKey(const Key('next-step-input')),
-      'Domattina in biblioteca',
-    );
-    await tester.tap(find.byKey(const Key('next-step-save')));
-    await settle(tester);
-    expect(find.text('Domattina in biblioteca'), findsOneWidget);
-    expect(file.readAsStringSync(), contains('Domattina in biblioteca'));
   });
 
   testWidgets('svuota la testa: ogni riga diventa un task da ordinare', (
