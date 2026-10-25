@@ -1135,4 +1135,50 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get taskManagerFilteredDueEmpty =>
       'Nessun task di queste liste ha una scadenza.';
+
+  @override
+  String get home => 'Home';
+
+  @override
+  String get homeButtons => 'Pulsanti in alto';
+
+  @override
+  String homeButtonsCount(int shown, int total) {
+    return '$shown di $total visibili';
+  }
+
+  @override
+  String get homeButtonsHelp =>
+      'Scegli quali pulsanti restano in alto nella home e trascinali dalla maniglia per cambiarne l\'ordine.';
+
+  @override
+  String get homeButtonsReset => 'Ripristina';
+
+  @override
+  String get homeButtonPinnedHelp =>
+      'Le note fissate in cima, sempre a portata di mano.';
+
+  @override
+  String get homeButtonGraphHelp =>
+      'Le note come una mappa: quelle con tag in comune stanno vicine.';
+
+  @override
+  String get homeButtonListsHelp =>
+      'Task e note raggruppati per tag e per fonte.';
+
+  @override
+  String get homeButtonCalendarHelp =>
+      'Le note giorno per giorno, per ritrovare cosa è successo e quando.';
+
+  @override
+  String get homeButtonDiaryHelp =>
+      'Una casella al giorno per scrivere la giornata e farne note.';
+
+  @override
+  String get homeButtonTaskManagerHelp =>
+      'I task da fare in ordine di priorità, con le scadenze.';
+
+  @override
+  String get homeButtonSettingsHelp =>
+      'Sempre in fondo, così puoi sempre tornare qui.';
 }

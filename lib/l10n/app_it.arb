@@ -316,5 +316,17 @@
   "dueIn": "{count, plural, =0{oggi} =1{domani} other{tra {count} giorni}}",
   "dueOverdueBy": "{count, plural, =1{scaduto ieri} other{scaduto da {count} giorni}}",
   "taskManagerDueEmpty": "Nessun task ha una scadenza. Aggiungila sotto il titolo di un task.",
-  "taskManagerFilteredDueEmpty": "Nessun task di queste liste ha una scadenza."
+  "taskManagerFilteredDueEmpty": "Nessun task di queste liste ha una scadenza.",
+  "home": "Home",
+  "homeButtons": "Pulsanti in alto",
+  "homeButtonsCount": "{shown} di {total} visibili",
+  "homeButtonsHelp": "Scegli quali pulsanti restano in alto nella home e trascinali dalla maniglia per cambiarne l'ordine.",
+  "homeButtonsReset": "Ripristina",
+  "homeButtonPinnedHelp": "Le note fissate in cima, sempre a portata di mano.",
+  "homeButtonGraphHelp": "Le note come una mappa: quelle con tag in comune stanno vicine.",
+  "homeButtonListsHelp": "Task e note raggruppati per tag e per fonte.",
+  "homeButtonCalendarHelp": "Le note giorno per giorno, per ritrovare cosa è successo e quando.",
+  "homeButtonDiaryHelp": "Una casella al giorno per scrivere la giornata e farne note.",
+  "homeButtonTaskManagerHelp": "I task da fare in ordine di priorità, con le scadenze.",
+  "homeButtonSettingsHelp": "Sempre in fondo, così puoi sempre tornare qui."
 }

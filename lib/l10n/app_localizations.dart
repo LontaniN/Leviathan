@@ -1885,6 +1885,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No task of these lists has a due date.'**
   String get taskManagerFilteredDueEmpty;
+
+  /// No description provided for @home.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get home;
+
+  /// No description provided for @homeButtons.
+  ///
+  /// In en, this message translates to:
+  /// **'Buttons at the top'**
+  String get homeButtons;
+
+  /// No description provided for @homeButtonsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{shown} of {total} shown'**
+  String homeButtonsCount(int shown, int total);
+
+  /// No description provided for @homeButtonsHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose which buttons stay at the top of the home and drag them by the handle to change their order.'**
+  String get homeButtonsHelp;
+
+  /// No description provided for @homeButtonsReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get homeButtonsReset;
+
+  /// No description provided for @homeButtonPinnedHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'The notes pinned at the top, always within reach.'**
+  String get homeButtonPinnedHelp;
+
+  /// No description provided for @homeButtonGraphHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Your notes as a map: notes sharing tags sit close together.'**
+  String get homeButtonGraphHelp;
+
+  /// No description provided for @homeButtonListsHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Tasks and notes grouped by tag and by source.'**
+  String get homeButtonListsHelp;
+
+  /// No description provided for @homeButtonCalendarHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes day by day, to find what happened and when.'**
+  String get homeButtonCalendarHelp;
+
+  /// No description provided for @homeButtonDiaryHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'One box per day to write about your day and turn it into notes.'**
+  String get homeButtonDiaryHelp;
+
+  /// No description provided for @homeButtonTaskManagerHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Open tasks in order of priority, with their due dates.'**
+  String get homeButtonTaskManagerHelp;
+
+  /// No description provided for @homeButtonSettingsHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Always last, so you can always come back here.'**
+  String get homeButtonSettingsHelp;
 }
 
 class _AppLocalizationsDelegate

@@ -2366,4 +2366,72 @@ void main() {
     await settle(tester);
     expect(find.text('Dentista'), findsNothing);
   });
+
+  testWidgets('dalle impostazioni si scelgono e ordinano i pulsanti in alto', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+    await tester.runAsync(
+      () => WorkspaceRepository(root).createWorkspace('Lavoro'),
+    );
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+    await settle(tester);
+
+    await tester.tap(find.byKey(const Key('settings-button')));
+    await settle(tester);
+    expect(find.text('6 di 6 visibili'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('home-buttons')));
+    await settle(tester);
+    // Ogni pulsante spiega a cosa serve; le impostazioni restano sempre.
+    expect(find.textContaining('come una mappa'), findsOneWidget);
+
+    // Via grafo e calendario.
+    await tester.tap(find.byKey(const Key('home-button-graph')));
+    await tester.tap(find.byKey(const Key('home-button-calendar')));
+    await tester.pump();
+
+    // Il diario in cima: lo si trascina dalla maniglia sopra "Fissate".
+    final drag = find.byKey(const Key('home-button-drag-diary'));
+    final target = tester.getCenter(
+      find.byKey(const Key('home-button-drag-pinned')),
+    );
+    final gesture = await tester.startGesture(tester.getCenter(drag));
+    await tester.pump();
+    final start = tester.getCenter(drag);
+    for (var i = 1; i <= 10; i++) {
+      await gesture.moveTo(
+        Offset.lerp(start, target - const Offset(0, 30), i / 10)!,
+      );
+      await tester.pump(const Duration(milliseconds: 30));
+    }
+    await tester.pump(const Duration(milliseconds: 300));
+    await gesture.up();
+    await settle(tester);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('home-button-settings')),
+      200,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const Key('home-buttons-list')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    expect(find.byKey(const Key('home-button-settings')), findsOneWidget);
+
+    await tester.tap(find.byType(BackButton));
+    await settle(tester);
+    expect(find.text('4 di 6 visibili'), findsOneWidget);
+    await tester.tap(find.byType(BackButton));
+    await settle(tester);
+
+    expect(find.byKey(const Key('graph-button')), findsNothing);
+    expect(find.byKey(const Key('calendar-button')), findsNothing);
+    double x(String key) => tester.getCenter(find.byKey(Key(key))).dx;
+    expect(x('diary-button'), lessThan(x('pinned-button')));
+    expect(x('pinned-button'), lessThan(x('lists-button')));
+    expect(x('task-manager-button'), lessThan(x('settings-button')));
+  });
 }

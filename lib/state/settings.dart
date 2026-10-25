@@ -1,15 +1,17 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/widgets.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../data/atomic_write.dart';
+import '../model/home_buttons.dart';
 import '../ui/theme.dart';
 
 /// Preferenze dell'app: lingua dell'interfaccia, palette, ordine di tag e
-/// fonti, tour già visto.
+/// fonti, pulsanti in alto nella home, tour già visto.
 ///
 /// Stanno nella memoria privata dell'app, non nella cartella delle note:
 /// così si leggono prima di avere il permesso di archiviazione e l'app parte
@@ -22,6 +24,7 @@ class Settings extends ChangeNotifier {
     this.language,
     this.tourSeen = false,
     this.alphabeticalGroups = false,
+    this.homeButtons = HomeButton.defaults,
   });
 
   final File? file;
@@ -40,6 +43,10 @@ class Settings extends ChangeNotifier {
   /// nello stesso posto, e la mano impara dove trovarli.
   bool alphabeticalGroups;
 
+  /// I pulsanti visibili in alto nella home, in ordine; le impostazioni
+  /// vengono sempre dopo.
+  List<HomeButton> homeButtons;
+
   static Future<Settings> load() async {
     final dir = await getApplicationSupportDirectory();
     final file = File(p.join(dir.path, 'preferences.json'));
@@ -47,12 +54,14 @@ class Settings extends ChangeNotifier {
     String? language;
     var tourSeen = false;
     var alphabetical = false;
+    var homeButtons = HomeButton.defaults;
     try {
       final json = jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
       paletteId = json['palette'] as String?;
       language = json['language'] as String?;
       tourSeen = json['tourSeen'] as bool? ?? false;
       alphabetical = json['groupOrder'] == 'alphabetical';
+      homeButtons = HomeButton.parse(json['homeButtons']);
     } on Object {
       // Primo avvio o file illeggibile: valori predefiniti.
     }
@@ -62,6 +71,7 @@ class Settings extends ChangeNotifier {
       language: language,
       tourSeen: tourSeen,
       alphabeticalGroups: alphabetical,
+      homeButtons: homeButtons,
     );
   }
 
@@ -86,6 +96,13 @@ class Settings extends ChangeNotifier {
     _save();
   }
 
+  void setHomeButtons(List<HomeButton> next) {
+    if (listEquals(next, homeButtons)) return;
+    homeButtons = List.unmodifiable(next);
+    notifyListeners();
+    _save();
+  }
+
   void markTourSeen() {
     if (tourSeen) return;
     tourSeen = true;
@@ -102,6 +119,8 @@ class Settings extends ChangeNotifier {
         'language': ?language,
         'tourSeen': tourSeen,
         if (alphabeticalGroups) 'groupOrder': 'alphabetical',
+        if (!listEquals(homeButtons, HomeButton.defaults))
+          'homeButtons': [for (final b in homeButtons) b.name],
       }),
     );
   }

@@ -371,5 +371,18 @@
   "dueOverdueBy": "{count, plural, =1{overdue since yesterday} other{overdue by {count} days}}",
   "@dueOverdueBy": {"placeholders": {"count": {"type": "int"}}},
   "taskManagerDueEmpty": "No task has a due date. Add one under the title of a task.",
-  "taskManagerFilteredDueEmpty": "No task of these lists has a due date."
+  "taskManagerFilteredDueEmpty": "No task of these lists has a due date.",
+  "home": "Home",
+  "homeButtons": "Buttons at the top",
+  "homeButtonsCount": "{shown} of {total} shown",
+  "@homeButtonsCount": {"placeholders": {"shown": {"type": "int"}, "total": {"type": "int"}}},
+  "homeButtonsHelp": "Choose which buttons stay at the top of the home and drag them by the handle to change their order.",
+  "homeButtonsReset": "Reset",
+  "homeButtonPinnedHelp": "The notes pinned at the top, always within reach.",
+  "homeButtonGraphHelp": "Your notes as a map: notes sharing tags sit close together.",
+  "homeButtonListsHelp": "Tasks and notes grouped by tag and by source.",
+  "homeButtonCalendarHelp": "Notes day by day, to find what happened and when.",
+  "homeButtonDiaryHelp": "One box per day to write about your day and turn it into notes.",
+  "homeButtonTaskManagerHelp": "Open tasks in order of priority, with their due dates.",
+  "homeButtonSettingsHelp": "Always last, so you can always come back here."
 }

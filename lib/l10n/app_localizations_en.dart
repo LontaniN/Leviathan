@@ -1146,4 +1146,50 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get taskManagerFilteredDueEmpty =>
       'No task of these lists has a due date.';
+
+  @override
+  String get home => 'Home';
+
+  @override
+  String get homeButtons => 'Buttons at the top';
+
+  @override
+  String homeButtonsCount(int shown, int total) {
+    return '$shown of $total shown';
+  }
+
+  @override
+  String get homeButtonsHelp =>
+      'Choose which buttons stay at the top of the home and drag them by the handle to change their order.';
+
+  @override
+  String get homeButtonsReset => 'Reset';
+
+  @override
+  String get homeButtonPinnedHelp =>
+      'The notes pinned at the top, always within reach.';
+
+  @override
+  String get homeButtonGraphHelp =>
+      'Your notes as a map: notes sharing tags sit close together.';
+
+  @override
+  String get homeButtonListsHelp =>
+      'Tasks and notes grouped by tag and by source.';
+
+  @override
+  String get homeButtonCalendarHelp =>
+      'Notes day by day, to find what happened and when.';
+
+  @override
+  String get homeButtonDiaryHelp =>
+      'One box per day to write about your day and turn it into notes.';
+
+  @override
+  String get homeButtonTaskManagerHelp =>
+      'Open tasks in order of priority, with their due dates.';
+
+  @override
+  String get homeButtonSettingsHelp =>
+      'Always last, so you can always come back here.';
 }

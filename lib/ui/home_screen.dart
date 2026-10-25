@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../data/draft_store.dart';
 import '../l10n/l10n.dart';
 import '../model/dates.dart';
+import '../model/home_buttons.dart';
 import '../model/markdown.dart';
 import '../model/note.dart';
 import '../model/shared_text.dart';
@@ -17,6 +18,7 @@ import 'calendar_screen.dart';
 import 'chip_input.dart';
 import 'diary_screen.dart';
 import 'graph_screen.dart';
+import 'home_buttons_screen.dart';
 import 'lists_screen.dart';
 import 'note_actions.dart';
 import 'note_editor.dart';
@@ -294,11 +296,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     (target: _tagsKey, title: l.tourTagsTitle, body: l.tourTagsBody),
     (target: _listKey, title: l.tourListTitle, body: l.tourListBody),
     (target: _searchKey, title: l.tourSearchTitle, body: l.tourSearchBody),
-    (
-      target: _taskManagerKey,
-      title: l.tourTaskManagerTitle,
-      body: l.tourTaskManagerBody,
-    ),
+    // Tolto dalla fila in alto, il task manager non ha niente da illuminare.
+    if (widget.settings.homeButtons.contains(HomeButton.taskManager))
+      (
+        target: _taskManagerKey,
+        title: l.tourTaskManagerTitle,
+        body: l.tourTaskManagerBody,
+      ),
     (target: _viewsKey, title: l.tourViewsTitle, body: l.tourViewsBody),
   ];
 
@@ -325,6 +329,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       store: widget.state.graphLayoutOf(widget.state.currentWorkspace!),
     ),
   );
+
+  void _openView(HomeButton button) => switch (button) {
+    HomeButton.pinned => _push(PinnedScreen(notes: _notes)),
+    HomeButton.graph => _openGraph(),
+    HomeButton.lists => _push(ListsScreen(notes: _notes)),
+    HomeButton.calendar => _push(CalendarScreen(notes: _notes)),
+    HomeButton.diary => _push(
+      DiaryScreen(
+        store: widget.state.diaryOf(widget.state.currentWorkspace!),
+        notes: _notes,
+      ),
+    ),
+    HomeButton.taskManager => _push(TaskManagerScreen(notes: _notes)),
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -366,27 +384,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Widget _scaffold(bool writing) {
     return Scaffold(
       body: SafeArea(
+        // Cambiando i pulsanti dalle impostazioni la fila in alto si rifà.
         child: ListenableBuilder(
-          listenable: _notes,
+          listenable: Listenable.merge([_notes, widget.settings]),
           builder: (context, _) => Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _Header(
                 state: widget.state,
                 notes: _notes.notes,
+                buttons: widget.settings.homeButtons,
                 viewsKey: _viewsKey,
                 taskManagerKey: _taskManagerKey,
-                onPinned: () => _push(PinnedScreen(notes: _notes)),
-                onGraph: _openGraph,
-                onLists: () => _push(ListsScreen(notes: _notes)),
-                onCalendar: () => _push(CalendarScreen(notes: _notes)),
-                onDiary: () => _push(
-                  DiaryScreen(
-                    store: widget.state.diaryOf(widget.state.currentWorkspace!),
-                    notes: _notes,
-                  ),
-                ),
-                onTaskManager: () => _push(TaskManagerScreen(notes: _notes)),
+                onOpen: _openView,
                 onSettings: () => _push(
                   SettingsScreen(
                     settings: widget.settings,
@@ -573,30 +583,25 @@ class _Header extends StatelessWidget {
   const _Header({
     required this.state,
     required this.notes,
+    required this.buttons,
     required this.viewsKey,
     required this.taskManagerKey,
-    required this.onPinned,
-    required this.onGraph,
-    required this.onLists,
-    required this.onCalendar,
-    required this.onDiary,
-    required this.onTaskManager,
+    required this.onOpen,
     required this.onSettings,
   });
 
   final AppState state;
   final List<Note> notes;
 
+  /// I pulsanti scelti nelle impostazioni, in ordine; le impostazioni
+  /// vengono sempre dopo.
+  final List<HomeButton> buttons;
+
   /// Chiavi del gruppo di icone delle altre viste e del pulsante del task
   /// manager, per il tour.
   final GlobalKey viewsKey;
   final GlobalKey taskManagerKey;
-  final VoidCallback onPinned;
-  final VoidCallback onGraph;
-  final VoidCallback onLists;
-  final VoidCallback onCalendar;
-  final VoidCallback onDiary;
-  final VoidCallback onTaskManager;
+  final ValueChanged<HomeButton> onOpen;
   final VoidCallback onSettings;
 
   @override
@@ -645,45 +650,18 @@ class _Header extends StatelessWidget {
             child: _ScrollingIcons(
               key: viewsKey,
               children: [
-                IconButton(
-                  key: const Key('pinned-button'),
-                  tooltip: l.pinned,
-                  icon: const Icon(Icons.push_pin_outlined),
-                  onPressed: onPinned,
-                ),
-                IconButton(
-                  key: const Key('graph-button'),
-                  tooltip: l.graph,
-                  icon: const Icon(Icons.hub_outlined),
-                  onPressed: onGraph,
-                ),
-                IconButton(
-                  key: const Key('lists-button'),
-                  tooltip: l.tasksAndNotes,
-                  icon: const Icon(Icons.checklist),
-                  onPressed: onLists,
-                ),
-                IconButton(
-                  key: const Key('calendar-button'),
-                  tooltip: l.calendar,
-                  icon: const Icon(Icons.calendar_month_outlined),
-                  onPressed: onCalendar,
-                ),
-                IconButton(
-                  key: const Key('diary-button'),
-                  tooltip: l.diary,
-                  icon: const Icon(Icons.menu_book_outlined),
-                  onPressed: onDiary,
-                ),
-                KeyedSubtree(
-                  key: taskManagerKey,
-                  child: IconButton(
-                    key: const Key('task-manager-button'),
-                    tooltip: l.taskManager,
-                    icon: const Icon(Icons.low_priority),
-                    onPressed: onTaskManager,
+                for (final button in buttons)
+                  KeyedSubtree(
+                    key: button == HomeButton.taskManager
+                        ? taskManagerKey
+                        : ValueKey(button),
+                    child: IconButton(
+                      key: button.homeKey,
+                      tooltip: button.label(l),
+                      icon: Icon(button.icon),
+                      onPressed: () => onOpen(button),
+                    ),
                   ),
-                ),
                 IconButton(
                   key: const Key('settings-button'),
                   tooltip: l.settings,
