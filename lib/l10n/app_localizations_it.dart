@@ -816,7 +816,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get tourViewsBody =>
-      'Le note fissate, il grafo delle note unite dai tag, gli elenchi di task e note, il calendario e le impostazioni, dove puoi rivedere questo tour.';
+      'Le note fissate, il grafo delle note unite dai tag, gli elenchi di task e note, il calendario, il diario e le impostazioni, dove puoi rivedere questo tour.';
 
   @override
   String get guide => 'Guida';
@@ -1048,4 +1048,44 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get linkedNoteMissing =>
       'Questa nota non c\'è più: forse è nel cestino';
+
+  @override
+  String get diary => 'Diario';
+
+  @override
+  String get diaryTodayHint => 'Cosa è successo oggi?';
+
+  @override
+  String get diaryCreateNote => 'Crea nota';
+
+  @override
+  String diaryLoadError(String message) {
+    return 'Impossibile leggere il diario: $message';
+  }
+
+  @override
+  String diarySaveError(String message) {
+    return 'Impossibile salvare il diario: $message';
+  }
+
+  @override
+  String get noteCreated => 'Nota creata';
+
+  @override
+  String get diaryNothingWritten => 'Niente di scritto';
+
+  @override
+  String get diaryOpenNote => 'Apri nota';
+
+  @override
+  String get diaryExtractRemove => 'Togli colore';
+
+  @override
+  String get diaryExtractRemoved => 'Colore tolto: la nota resta';
+
+  @override
+  String get diaryCreateTask => 'Crea task';
+
+  @override
+  String get taskCreated => 'Task creato';
 }

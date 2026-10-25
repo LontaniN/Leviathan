@@ -828,7 +828,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tourViewsBody =>
-      'Pinned notes, the graph of notes linked by tags, task and note lists, the calendar and the settings, where you can replay this tour.';
+      'Pinned notes, the graph of notes linked by tags, task and note lists, the calendar, the diary and the settings, where you can replay this tour.';
 
   @override
   String get guide => 'Guide';
@@ -1059,4 +1059,44 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get linkedNoteMissing =>
       'This note no longer exists: it may be in the trash';
+
+  @override
+  String get diary => 'Diary';
+
+  @override
+  String get diaryTodayHint => 'What happened today?';
+
+  @override
+  String get diaryCreateNote => 'Create note';
+
+  @override
+  String diaryLoadError(String message) {
+    return 'Couldn\'t read the diary: $message';
+  }
+
+  @override
+  String diarySaveError(String message) {
+    return 'Couldn\'t save the diary: $message';
+  }
+
+  @override
+  String get noteCreated => 'Note created';
+
+  @override
+  String get diaryNothingWritten => 'Nothing written';
+
+  @override
+  String get diaryOpenNote => 'Open note';
+
+  @override
+  String get diaryExtractRemove => 'Remove color';
+
+  @override
+  String get diaryExtractRemoved => 'Color removed: the note stays';
+
+  @override
+  String get diaryCreateTask => 'Create task';
+
+  @override
+  String get taskCreated => 'Task created';
 }

@@ -235,7 +235,7 @@
   "tourTaskManagerTitle": "Metti in ordine i task",
   "tourTaskManagerBody": "Il task manager divide i task aperti in Ora, Prossimo e Più avanti: la loro posizione è la loro priorità. Tieni premuto un task e trascinalo per spostarlo. I task nuovi aspettano in Da ordinare: rispondi a qualche \"Quale viene prima?\" per sistemarli. Quelli spuntati finiscono in Completati.",
   "tourViewsTitle": "Le altre viste",
-  "tourViewsBody": "Le note fissate, il grafo delle note unite dai tag, gli elenchi di task e note, il calendario e le impostazioni, dove puoi rivedere questo tour.",
+  "tourViewsBody": "Le note fissate, il grafo delle note unite dai tag, gli elenchi di task e note, il calendario, il diario e le impostazioni, dove puoi rivedere questo tour.",
   "guide": "Guida",
   "replayTour": "Rivedi il tour",
   "taskManager": "Task manager",
@@ -295,5 +295,17 @@
   "linkNote": "Connetti nota",
   "pickNoteHint": "Cerca la nota da collegare",
   "noNotesToLink": "Non ci sono ancora altre note da collegare",
-  "linkedNoteMissing": "Questa nota non c'è più: forse è nel cestino"
+  "linkedNoteMissing": "Questa nota non c'è più: forse è nel cestino",
+  "diary": "Diario",
+  "diaryTodayHint": "Cosa è successo oggi?",
+  "diaryCreateNote": "Crea nota",
+  "diaryLoadError": "Impossibile leggere il diario: {message}",
+  "diarySaveError": "Impossibile salvare il diario: {message}",
+  "noteCreated": "Nota creata",
+  "diaryNothingWritten": "Niente di scritto",
+  "diaryOpenNote": "Apri nota",
+  "diaryExtractRemove": "Togli colore",
+  "diaryExtractRemoved": "Colore tolto: la nota resta",
+  "diaryCreateTask": "Crea task",
+  "taskCreated": "Task creato"
 }

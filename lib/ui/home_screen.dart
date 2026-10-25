@@ -15,6 +15,7 @@ import '../state/share_inbox.dart';
 import 'app_tour.dart';
 import 'calendar_screen.dart';
 import 'chip_input.dart';
+import 'diary_screen.dart';
 import 'graph_screen.dart';
 import 'lists_screen.dart';
 import 'note_actions.dart';
@@ -379,6 +380,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 onGraph: _openGraph,
                 onLists: () => _push(ListsScreen(notes: _notes)),
                 onCalendar: () => _push(CalendarScreen(notes: _notes)),
+                onDiary: () => _push(
+                  DiaryScreen(
+                    store: widget.state.diaryOf(widget.state.currentWorkspace!),
+                    notes: _notes,
+                  ),
+                ),
                 onTaskManager: () => _push(TaskManagerScreen(notes: _notes)),
                 onSettings: () => _push(
                   SettingsScreen(
@@ -572,6 +579,7 @@ class _Header extends StatelessWidget {
     required this.onGraph,
     required this.onLists,
     required this.onCalendar,
+    required this.onDiary,
     required this.onTaskManager,
     required this.onSettings,
   });
@@ -587,6 +595,7 @@ class _Header extends StatelessWidget {
   final VoidCallback onGraph;
   final VoidCallback onLists;
   final VoidCallback onCalendar;
+  final VoidCallback onDiary;
   final VoidCallback onTaskManager;
   final VoidCallback onSettings;
 
@@ -607,9 +616,14 @@ class _Header extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Tutto lo spazio libero va al nome, che va a capo solo se davvero
-          // non ci sta.
-          Expanded(
+          // Il nome prende lo spazio che gli serve, fino a metà riga; il
+          // resto va alle icone, che scorrono se non ci stanno tutte.
+          ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth:
+                  MediaQuery.sizeOf(context).width *
+                  LeviathanSizes.headerNameFraction,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -627,52 +641,135 @@ class _Header extends StatelessWidget {
               ],
             ),
           ),
-          Row(
-            key: viewsKey,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                key: const Key('pinned-button'),
-                tooltip: l.pinned,
-                icon: const Icon(Icons.push_pin_outlined),
-                onPressed: onPinned,
-              ),
-              IconButton(
-                key: const Key('graph-button'),
-                tooltip: l.graph,
-                icon: const Icon(Icons.hub_outlined),
-                onPressed: onGraph,
-              ),
-              IconButton(
-                key: const Key('lists-button'),
-                tooltip: l.tasksAndNotes,
-                icon: const Icon(Icons.checklist),
-                onPressed: onLists,
-              ),
-              IconButton(
-                key: const Key('calendar-button'),
-                tooltip: l.calendar,
-                icon: const Icon(Icons.calendar_month_outlined),
-                onPressed: onCalendar,
-              ),
-              KeyedSubtree(
-                key: taskManagerKey,
-                child: IconButton(
-                  key: const Key('task-manager-button'),
-                  tooltip: l.taskManager,
-                  icon: const Icon(Icons.low_priority),
-                  onPressed: onTaskManager,
+          Expanded(
+            child: _ScrollingIcons(
+              key: viewsKey,
+              children: [
+                IconButton(
+                  key: const Key('pinned-button'),
+                  tooltip: l.pinned,
+                  icon: const Icon(Icons.push_pin_outlined),
+                  onPressed: onPinned,
                 ),
-              ),
-              IconButton(
-                key: const Key('settings-button'),
-                tooltip: l.settings,
-                icon: const Icon(Icons.settings_outlined),
-                onPressed: onSettings,
-              ),
-            ],
+                IconButton(
+                  key: const Key('graph-button'),
+                  tooltip: l.graph,
+                  icon: const Icon(Icons.hub_outlined),
+                  onPressed: onGraph,
+                ),
+                IconButton(
+                  key: const Key('lists-button'),
+                  tooltip: l.tasksAndNotes,
+                  icon: const Icon(Icons.checklist),
+                  onPressed: onLists,
+                ),
+                IconButton(
+                  key: const Key('calendar-button'),
+                  tooltip: l.calendar,
+                  icon: const Icon(Icons.calendar_month_outlined),
+                  onPressed: onCalendar,
+                ),
+                IconButton(
+                  key: const Key('diary-button'),
+                  tooltip: l.diary,
+                  icon: const Icon(Icons.menu_book_outlined),
+                  onPressed: onDiary,
+                ),
+                KeyedSubtree(
+                  key: taskManagerKey,
+                  child: IconButton(
+                    key: const Key('task-manager-button'),
+                    tooltip: l.taskManager,
+                    icon: const Icon(Icons.low_priority),
+                    onPressed: onTaskManager,
+                  ),
+                ),
+                IconButton(
+                  key: const Key('settings-button'),
+                  tooltip: l.settings,
+                  icon: const Icon(Icons.settings_outlined),
+                  onPressed: onSettings,
+                ),
+              ],
+            ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Le icone delle viste in cima alla home: se non ci stanno tutte scorrono
+/// in orizzontale. Partono allineate a destra, con le ultime (task manager,
+/// impostazioni) in vista; dal lato dove ce ne sono altre nascoste sfumano,
+/// così si capisce che si può scorrere.
+class _ScrollingIcons extends StatefulWidget {
+  const _ScrollingIcons({super.key, required this.children});
+
+  final List<Widget> children;
+
+  @override
+  State<_ScrollingIcons> createState() => _ScrollingIconsState();
+}
+
+class _ScrollingIconsState extends State<_ScrollingIcons> {
+  final _scroll = ScrollController();
+
+  /// Ci sono icone nascoste a sinistra o a destra.
+  bool _hiddenLeft = false;
+  bool _hiddenRight = false;
+
+  bool _update(ScrollMetrics metrics) {
+    // La lista è rovesciata: "dopo" è a sinistra.
+    final left = metrics.extentAfter > 0;
+    final right = metrics.extentBefore > 0;
+    if (left != _hiddenLeft || right != _hiddenRight) {
+      setState(() {
+        _hiddenLeft = left;
+        _hiddenRight = right;
+      });
+    }
+    return false;
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const fade = LeviathanSizes.headerFade;
+    return NotificationListener<ScrollMetricsNotification>(
+      onNotification: (n) => _update(n.metrics),
+      child: NotificationListener<ScrollNotification>(
+        onNotification: (n) => _update(n.metrics),
+        child: ShaderMask(
+          blendMode: BlendMode.dstIn,
+          // È una maschera, non un colore: conta solo quanto è opaca.
+          shaderCallback: (bounds) {
+            final edge = bounds.width == 0 ? 0.0 : fade / bounds.width;
+            return LinearGradient(
+              colors: [
+                _hiddenLeft ? Colors.transparent : Colors.black,
+                Colors.black,
+                Colors.black,
+                _hiddenRight ? Colors.transparent : Colors.black,
+              ],
+              stops: [0, edge, 1 - edge, 1],
+            ).createShader(bounds);
+          },
+          child: SingleChildScrollView(
+            controller: _scroll,
+            scrollDirection: Axis.horizontal,
+            reverse: true,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: widget.children,
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -1397,7 +1397,7 @@ abstract class AppLocalizations {
   /// No description provided for @tourViewsBody.
   ///
   /// In en, this message translates to:
-  /// **'Pinned notes, the graph of notes linked by tags, task and note lists, the calendar and the settings, where you can replay this tour.'**
+  /// **'Pinned notes, the graph of notes linked by tags, task and note lists, the calendar, the diary and the settings, where you can replay this tour.'**
   String get tourViewsBody;
 
   /// No description provided for @guide.
@@ -1759,6 +1759,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This note no longer exists: it may be in the trash'**
   String get linkedNoteMissing;
+
+  /// No description provided for @diary.
+  ///
+  /// In en, this message translates to:
+  /// **'Diary'**
+  String get diary;
+
+  /// No description provided for @diaryTodayHint.
+  ///
+  /// In en, this message translates to:
+  /// **'What happened today?'**
+  String get diaryTodayHint;
+
+  /// No description provided for @diaryCreateNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Create note'**
+  String get diaryCreateNote;
+
+  /// No description provided for @diaryLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t read the diary: {message}'**
+  String diaryLoadError(String message);
+
+  /// No description provided for @diarySaveError.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the diary: {message}'**
+  String diarySaveError(String message);
+
+  /// No description provided for @noteCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Note created'**
+  String get noteCreated;
+
+  /// No description provided for @diaryNothingWritten.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing written'**
+  String get diaryNothingWritten;
+
+  /// No description provided for @diaryOpenNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Open note'**
+  String get diaryOpenNote;
+
+  /// No description provided for @diaryExtractRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove color'**
+  String get diaryExtractRemove;
+
+  /// No description provided for @diaryExtractRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Color removed: the note stays'**
+  String get diaryExtractRemoved;
+
+  /// No description provided for @diaryCreateTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Create task'**
+  String get diaryCreateTask;
+
+  /// No description provided for @taskCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Task created'**
+  String get taskCreated;
 }
 
 class _AppLocalizationsDelegate
