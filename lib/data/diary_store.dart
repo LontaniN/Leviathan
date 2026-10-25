@@ -14,7 +14,8 @@ import 'atomic_write.dart';
 /// in cima alla cartella) non la scambia per note.
 ///
 /// I pezzi scelti per diventare note (vedi [DiaryExtract]) stanno accanto,
-/// in `<workspace>/diary/extracts.json`.
+/// in `<workspace>/diary/extracts.json`; le note già portate nel diario
+/// (vedi `DiarySync`) in `<workspace>/diary/synced.json`.
 class DiaryStore {
   DiaryStore(this.dir);
 
@@ -42,6 +43,12 @@ class DiaryStore {
       }
     }
     return days;
+  }
+
+  /// Il testo di [day]; vuoto se non è scritto.
+  String read(DateTime day) {
+    final file = File(p.join(dir.path, '${key(day)}.md'));
+    return file.existsSync() ? file.readAsStringSync() : '';
   }
 
   /// Scrive il testo di [day]; un testo vuoto cancella il file.
@@ -76,5 +83,24 @@ class DiaryStore {
       _extractsFile,
       jsonEncode([for (final e in extracts) e.toJson()]),
     );
+  }
+
+  File get _syncedFile => File(p.join(dir.path, 'synced.json'));
+
+  /// Gli id delle note già portate nel diario; null se non è mai stato
+  /// fatto (il primo allineamento le prende tutte).
+  Set<String>? readSynced() {
+    try {
+      final json = jsonDecode(_syncedFile.readAsStringSync());
+      return {if (json is List) ...json.whereType<String>()};
+    } on FileSystemException {
+      return null;
+    } on FormatException {
+      return null;
+    }
+  }
+
+  void writeSynced(Set<String> ids) {
+    writeFileAtomic(_syncedFile, jsonEncode([...ids]..sort()));
   }
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -10,6 +11,8 @@ import '../model/markdown.dart';
 import '../model/note.dart';
 import '../model/shared_text.dart';
 import '../state/app_state.dart';
+import '../state/diary_extracts.dart';
+import '../state/diary_sync.dart';
 import '../state/notes_controller.dart';
 import '../state/settings.dart';
 import '../state/share_inbox.dart';
@@ -48,6 +51,9 @@ import 'workspace_name_form.dart';
 ///
 /// Il testo condiviso da altre app ([shares]) finisce nella bozza
 /// dell'editor: con più workspace si sceglie prima in quale.
+///
+/// Ogni nota nuova entra anche nel diario, come riga col suo titolo nel
+/// giorno della nota (vedi [DiarySync]).
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
     super.key,
@@ -73,6 +79,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     editDraft: widget.state.editDraftOf(widget.state.currentWorkspace!),
     recent: widget.state.recentOf(widget.state.currentWorkspace!),
   );
+
+  /// Il diario del workspace, con i suoi pezzi colorati: la home ci porta
+  /// ogni nota nuova (vedi [DiarySync]) e li passa al diario quando lo apre.
+  late final _diaryStore = widget.state.diaryOf(widget.state.currentWorkspace!);
+  late final _diaryExtracts = DiaryExtracts(_diaryStore);
+  late final _diarySync = DiarySync(_diaryStore, _diaryExtracts, _notes);
+  bool _diarySyncQueued = false;
 
   /// La modifica di una nota rimasta a metà quando Android ha chiuso l'app:
   /// la home propone di riprenderla.
@@ -102,6 +115,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _resume = _pendingEdit();
+    // Le note che ci sono già e non sono nel diario ci entrano subito.
+    _diarySync.run();
+    _notes.addListener(_queueDiarySync);
     widget.shares.addListener(_onShare);
     // Aperta da una condivisione, o arrivata mentre la home non c'era.
     WidgetsBinding.instance.addPostFrameCallback((_) => _onShare());
@@ -114,8 +130,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void dispose() {
     widget.shares.removeListener(_onShare);
     WidgetsBinding.instance.removeObserver(this);
+    _notes.removeListener(_queueDiarySync);
+    _diaryExtracts.dispose();
     _notes.dispose();
     super.dispose();
+  }
+
+  /// Le note sono cambiate: quelle nuove vanno nel diario. Si aspetta la
+  /// fine del lavoro in corso, così una nota creata dal diario ha già il suo
+  /// pezzo colorato e non entra una seconda volta.
+  void _queueDiarySync() {
+    if (_diarySyncQueued) return;
+    _diarySyncQueued = true;
+    scheduleMicrotask(() {
+      _diarySyncQueued = false;
+      if (mounted) _diarySync.run();
+    });
   }
 
   @override
@@ -336,10 +366,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     HomeButton.lists => _push(ListsScreen(notes: _notes)),
     HomeButton.calendar => _push(CalendarScreen(notes: _notes)),
     HomeButton.diary => _push(
-      DiaryScreen(
-        store: widget.state.diaryOf(widget.state.currentWorkspace!),
-        notes: _notes,
-      ),
+      DiaryScreen(store: _diaryStore, extracts: _diaryExtracts, notes: _notes),
     ),
     HomeButton.taskManager => _push(TaskManagerScreen(notes: _notes)),
   };

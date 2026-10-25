@@ -11,6 +11,7 @@ import '../model/diary_extract.dart';
 import '../model/diary_scrub.dart';
 import '../model/tags.dart';
 import '../state/diary_extracts.dart';
+import '../state/diary_sync.dart';
 import '../state/notes_controller.dart';
 import 'chip_input.dart';
 import 'due_date_row.dart';
@@ -36,9 +37,18 @@ import 'theme.dart';
 /// Il testo si salva poco dopo ogni modifica (e subito se l'app va in
 /// secondo piano), un file per giorno (vedi [DiaryStore]).
 class DiaryScreen extends StatefulWidget {
-  const DiaryScreen({super.key, required this.store, required this.notes});
+  const DiaryScreen({
+    super.key,
+    required this.store,
+    required this.extracts,
+    required this.notes,
+  });
 
   final DiaryStore store;
+
+  /// I pezzi colorati, gli stessi che la home usa per portare nel diario le
+  /// note nate altrove (vedi [DiarySync]).
+  final DiaryExtracts extracts;
   final NotesController notes;
 
   @override
@@ -59,22 +69,18 @@ class _DiaryScreenState extends State<DiaryScreen> with WidgetsBindingObserver {
   final _today = DateTime.now();
 
   /// I pezzi del diario diventati note.
-  late final _extracts = _loadExtracts();
-
-  /// Le note cancellate da quando si è aperto il diario l'ultima volta si
-  /// portano via il loro colore. Se le note non si sono potute leggere non
-  /// si tocca nulla: sembrerebbero cancellate tutte.
-  DiaryExtracts _loadExtracts() {
-    final extracts = DiaryExtracts(widget.store);
-    if (widget.notes.error == null) extracts.removeOrphans(widget.notes.byId);
-    return extracts..addListener(_onExtracts);
-  }
+  DiaryExtracts get _extracts => widget.extracts;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     widget.notes.addListener(_onNotes);
+    // Le note cancellate da quando si è aperto il diario l'ultima volta si
+    // portano via il loro colore. Se le note non si sono potute leggere non
+    // si tocca nulla: sembrerebbero cancellate tutte.
+    if (widget.notes.error == null) _extracts.removeOrphans(widget.notes.byId);
+    _extracts.addListener(_onExtracts);
     try {
       _days = widget.store.readAll();
     } on FileSystemException catch (e) {
@@ -86,7 +92,7 @@ class _DiaryScreenState extends State<DiaryScreen> with WidgetsBindingObserver {
   void dispose() {
     _save();
     _scroll.dispose();
-    _extracts.dispose();
+    _extracts.removeListener(_onExtracts);
     widget.notes.removeListener(_onNotes);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();

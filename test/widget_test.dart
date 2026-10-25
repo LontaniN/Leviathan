@@ -2434,4 +2434,67 @@ void main() {
     expect(x('pinned-button'), lessThan(x('lists-button')));
     expect(x('task-manager-button'), lessThan(x('settings-button')));
   });
+
+  testWidgets('una nota creata nella home entra nel diario', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+    await tester.runAsync(() async {
+      await WorkspaceRepository(root).createWorkspace('Lavoro');
+      // Una nota che c'era già, di un altro giorno.
+      File('${root.path}/Lavoro/vecchia.md').writeAsStringSync(
+        '---\ntitle: "Vecchia idea"\ncreated: "2026-03-07T10:00:00.000"\n'
+        '---\n',
+      );
+    });
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+    await settle(tester);
+    expect(
+      File('${root.path}/Lavoro/diary/2026-03-07.md').readAsStringSync(),
+      'Vecchia idea',
+    );
+
+    await tester.enterText(find.byKey(const Key('title-field')), 'Orto');
+    FocusManager.instance.primaryFocus?.unfocus();
+    await settle(tester);
+    await tester.tap(find.text('Salva nota'));
+    await settle(tester);
+
+    final now = DateTime.now();
+    String two(int n) => n.toString().padLeft(2, '0');
+    final key = '${now.year}-${two(now.month)}-${two(now.day)}';
+    expect(
+      File('${root.path}/Lavoro/diary/$key.md').readAsStringSync(),
+      'Orto',
+    );
+
+    // Nel diario la riga è colorata e porta alla nota.
+    final button = find.byKey(const Key('diary-button'));
+    await tester.ensureVisible(button);
+    await tester.tap(button);
+    await settle(tester);
+    final field = find.byKey(ValueKey('diary-field-$key'));
+    final editable = tester.state<EditableTextState>(
+      find.descendant(of: field, matching: find.byType(EditableText)),
+    );
+    final span = editable.widget.controller.buildTextSpan(
+      context: tester.element(field),
+      withComposing: false,
+    );
+    expect(
+      [
+        for (final s in span.children?.whereType<TextSpan>() ?? <TextSpan>[])
+          if (s.style?.backgroundColor != null) s.text,
+      ],
+      ['Orto'],
+    );
+    final caret = editable.renderEditable.getLocalRectForCaret(
+      const TextPosition(offset: 1),
+    );
+    await tester.tapAt(
+      editable.renderEditable.localToGlobal(caret.center + const Offset(2, 0)),
+    );
+    await settle(tester);
+    expect(find.byKey(const Key('note-menu')), findsOneWidget);
+  });
 }
