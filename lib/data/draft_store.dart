@@ -14,6 +14,9 @@ typedef Draft = ({
 
   /// Il giorno a cui si riferisce la nota, se non è oggi.
   DateTime? date,
+
+  /// La scadenza, se è un task e ne ha una.
+  DateTime? due,
 });
 
 /// La modifica di una nota già salvata rimasta a metà: la nota, il testo e
@@ -105,6 +108,7 @@ Map<String, Object?> _encode(Draft draft) => {
   'task': draft.isTask,
   'knowledge': draft.knowledge,
   if (draft.date case final date?) 'date': date.toIso8601String(),
+  if (draft.due case final due?) 'due': due.toIso8601String(),
 };
 
 Draft _decode(Map<dynamic, dynamic> json) {
@@ -117,5 +121,6 @@ Draft _decode(Map<dynamic, dynamic> json) {
     isTask: json['task'] == true,
     knowledge: json['knowledge'] == true,
     date: DateTime.tryParse('${json['date'] ?? ''}'),
+    due: DateTime.tryParse('${json['due'] ?? ''}'),
   );
 }

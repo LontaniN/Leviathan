@@ -13,6 +13,7 @@ import '../model/tags.dart';
 import '../state/diary_extracts.dart';
 import '../state/notes_controller.dart';
 import 'chip_input.dart';
+import 'due_date_row.dart';
 import 'note_screen.dart';
 import 'theme.dart';
 
@@ -214,6 +215,7 @@ class _DiaryScreenState extends State<DiaryScreen> with WidgetsBindingObserver {
       sources: choice.sources,
       isTask: choice.isTask,
       knowledge: choice.knowledge,
+      due: choice.due,
       created: sameDay(day, now) ? null : onDay(day, now),
     );
     if (from != null) {
@@ -795,11 +797,15 @@ typedef NoteChoice = ({
 
   /// Una nota di conoscenza (mai un task).
   bool knowledge,
+
+  /// La scadenza del task; null se non ne ha.
+  DateTime? due,
 });
 
 /// Il foglio in basso per fare una nota dal testo [text] del diario senza
 /// lasciare la pagina: come nell'editor della home si sceglie se è una nota
-/// o un task e se è conoscenza, poi titolo, tag e fonti. Null se lo si chiude.
+/// o un task (con la sua scadenza) e se è conoscenza, poi titolo, tag e
+/// fonti. Null se lo si chiude.
 Future<NoteChoice?> showNoteSheet(
   BuildContext context,
   NotesController notes, {
@@ -837,6 +843,7 @@ class _NoteSheetState extends State<_NoteSheet> {
   final _title = TextEditingController();
   bool _isTask = false;
   bool _knowledge = false;
+  DateTime? _due;
   late List<String> _tags = [...widget.tags];
   late List<String> _sources = [...widget.sources];
   final _pendingTag = TextEditingController();
@@ -866,6 +873,7 @@ class _NoteSheetState extends State<_NoteSheet> {
       ),
       isTask: _isTask,
       knowledge: !_isTask && _knowledge,
+      due: _isTask ? _due : null,
     ));
   }
 
@@ -954,6 +962,12 @@ class _NoteSheetState extends State<_NoteSheet> {
                   ),
                 ),
               ),
+              // Un task può avere una scadenza, scelta dal calendario.
+              if (_isTask)
+                DueDateRow(
+                  due: _due,
+                  onChanged: (due) => setState(() => _due = due),
+                ),
               // Il testo scelto, come una citazione: è il corpo della nota.
               Container(
                 padding: const EdgeInsets.only(left: LeviathanSpacing.md),

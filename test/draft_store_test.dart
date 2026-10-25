@@ -27,6 +27,7 @@ void main() {
       isTask: true,
       knowledge: false,
       date: null,
+      due: null,
     ));
     final draft = store.read()!;
     expect(draft.title, 'Idea');
@@ -45,6 +46,7 @@ void main() {
       isTask: false,
       knowledge: false,
       date: null,
+      due: null,
     ));
     expect(store.file.existsSync(), isTrue);
     store.write((
@@ -55,6 +57,7 @@ void main() {
       isTask: true,
       knowledge: false,
       date: null,
+      due: null,
     ));
     expect(store.file.existsSync(), isFalse);
     expect(store.read(), isNull);
@@ -69,6 +72,7 @@ void main() {
       isTask: false,
       knowledge: true,
       date: DateTime(2024, 3, 3),
+      due: null,
     ));
     expect(store.read()!.date, DateTime(2024, 3, 3));
     expect(store.read()!.knowledge, isTrue);
@@ -89,6 +93,7 @@ void main() {
         isTask: true,
         knowledge: false,
         date: null,
+        due: null,
       ), 5);
       final edit = edits.read()!;
       expect(edit.noteId, '20261020-nota');

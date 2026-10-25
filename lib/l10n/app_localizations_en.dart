@@ -1086,4 +1086,64 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get taskCreated => 'Task created';
+
+  @override
+  String get dueDateAdd => 'Add a due date';
+
+  @override
+  String dueOn(String date) {
+    return 'Due $date';
+  }
+
+  @override
+  String get dueDateClear => 'Remove due date';
+
+  @override
+  String get dueDateTitle => 'Task due date';
+
+  @override
+  String get taskManagerDueTab => 'Due dates';
+
+  @override
+  String get dueSectionOverdue => 'Overdue';
+
+  @override
+  String get dueSectionTomorrow => 'Tomorrow';
+
+  @override
+  String get dueSectionWeek => 'Next 7 days';
+
+  @override
+  String get dueSectionLater => 'Later';
+
+  @override
+  String dueIn(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'in $count days',
+      one: 'tomorrow',
+      zero: 'today',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dueOverdueBy(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'overdue by $count days',
+      one: 'overdue since yesterday',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get taskManagerDueEmpty =>
+      'No task has a due date. Add one under the title of a task.';
+
+  @override
+  String get taskManagerFilteredDueEmpty =>
+      'No task of these lists has a due date.';
 }

@@ -236,6 +236,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       isTask: draft?.isTask ?? false,
       knowledge: draft?.knowledge ?? false,
       date: draft?.date,
+      due: draft?.due,
     ));
     return merged.appended;
   }
@@ -486,6 +487,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       sources: draft.sources,
                       isTask: draft.isTask,
                       knowledge: draft.knowledge,
+                      due: draft.due,
                       created: draft.date == null
                           ? null
                           : onDay(draft.date!, DateTime.now()),

@@ -57,6 +57,7 @@ class NoteRepository {
     required List<String> sources,
     bool isTask = false,
     bool knowledge = false,
+    DateTime? due,
     DateTime? now,
   }) {
     final time = now ?? DateTime.now();
@@ -70,6 +71,9 @@ class NoteRepository {
       updated: time,
       isTask: isTask,
       knowledge: !isTask && knowledge,
+      due: isTask && due != null
+          ? DateTime(due.year, due.month, due.day)
+          : null,
     );
     save(note);
     return note;

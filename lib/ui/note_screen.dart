@@ -204,6 +204,10 @@ class _NoteScreenState extends State<NoteScreen> {
                   meta,
                   style: LeviathanText.meta.copyWith(color: palette.muted),
                 ),
+                if (note.isTask && note.due != null) ...[
+                  const SizedBox(height: LeviathanSpacing.xs),
+                  _DueLine(note: note),
+                ],
                 if (note.isTask) ...[
                   const SizedBox(height: LeviathanSpacing.md),
                   _TaskStatus(
@@ -371,6 +375,8 @@ class _EditNotePage extends StatelessWidget {
                 sources: draft.sources,
                 isTask: draft.isTask,
                 knowledge: draft.knowledge,
+                due: draft.due,
+                clearDue: draft.due == null,
                 created: draft.date == null
                     ? null
                     : onDay(draft.date!, note.created),
@@ -380,6 +386,39 @@ class _EditNotePage extends StatelessWidget {
           },
         ),
       ),
+    );
+  }
+}
+
+/// La scadenza di un task sotto il titolo; nel colore d'accento se è
+/// passata e il task è ancora da fare.
+class _DueLine extends StatelessWidget {
+  const _DueLine({required this.note});
+
+  final Note note;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    final palette = context.palette;
+    final due = note.due!;
+    final now = DateTime.now();
+    final late =
+        note.isOpenTask && due.isBefore(DateTime(now.year, now.month, now.day));
+    final color = late ? palette.accent : palette.muted;
+    return Row(
+      key: const Key('note-due'),
+      children: [
+        Icon(Icons.event_outlined, size: LeviathanIconSize.sm, color: color),
+        const SizedBox(width: LeviathanSpacing.xs),
+        Text(
+          l.dueOn(formatDate(l, due)),
+          style: LeviathanText.meta.copyWith(
+            color: color,
+            fontWeight: late ? FontWeight.w700 : null,
+          ),
+        ),
+      ],
     );
   }
 }

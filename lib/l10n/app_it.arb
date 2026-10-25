@@ -303,5 +303,18 @@
   "diaryExtractRemove": "Togli colore",
   "diaryExtractRemoved": "Colore tolto: la nota resta",
   "diaryCreateTask": "Crea task",
-  "taskCreated": "Task creato"
+  "taskCreated": "Task creato",
+  "dueDateAdd": "Aggiungi scadenza",
+  "dueOn": "Scadenza: {date}",
+  "dueDateClear": "Togli scadenza",
+  "dueDateTitle": "Scadenza del task",
+  "taskManagerDueTab": "Scadenze",
+  "dueSectionOverdue": "Scaduti",
+  "dueSectionTomorrow": "Domani",
+  "dueSectionWeek": "Prossimi 7 giorni",
+  "dueSectionLater": "Più avanti",
+  "dueIn": "{count, plural, =0{oggi} =1{domani} other{tra {count} giorni}}",
+  "dueOverdueBy": "{count, plural, =1{scaduto ieri} other{scaduto da {count} giorni}}",
+  "taskManagerDueEmpty": "Nessun task ha una scadenza. Aggiungila sotto il titolo di un task.",
+  "taskManagerFilteredDueEmpty": "Nessun task di queste liste ha una scadenza."
 }

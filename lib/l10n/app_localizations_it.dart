@@ -1075,4 +1075,64 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get taskCreated => 'Task creato';
+
+  @override
+  String get dueDateAdd => 'Aggiungi scadenza';
+
+  @override
+  String dueOn(String date) {
+    return 'Scadenza: $date';
+  }
+
+  @override
+  String get dueDateClear => 'Togli scadenza';
+
+  @override
+  String get dueDateTitle => 'Scadenza del task';
+
+  @override
+  String get taskManagerDueTab => 'Scadenze';
+
+  @override
+  String get dueSectionOverdue => 'Scaduti';
+
+  @override
+  String get dueSectionTomorrow => 'Domani';
+
+  @override
+  String get dueSectionWeek => 'Prossimi 7 giorni';
+
+  @override
+  String get dueSectionLater => 'Più avanti';
+
+  @override
+  String dueIn(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'tra $count giorni',
+      one: 'domani',
+      zero: 'oggi',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dueOverdueBy(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'scaduto da $count giorni',
+      one: 'scaduto ieri',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get taskManagerDueEmpty =>
+      'Nessun task ha una scadenza. Aggiungila sotto il titolo di un task.';
+
+  @override
+  String get taskManagerFilteredDueEmpty =>
+      'Nessun task di queste liste ha una scadenza.';
 }

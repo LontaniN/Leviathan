@@ -13,6 +13,7 @@ import 'package:leviathan/state/share_inbox.dart';
 import 'package:leviathan/ui/app_tour.dart';
 import 'package:leviathan/ui/graph_screen.dart';
 import 'package:leviathan/ui/search_screen.dart';
+import 'package:leviathan/ui/task_check.dart';
 import 'package:leviathan/ui/theme.dart';
 
 class _FakeStorage implements StorageAccess {
@@ -1037,6 +1038,7 @@ void main() {
               isTask: false,
               knowledge: false,
               date: null,
+              due: null,
             ), 5);
       });
       await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
@@ -1080,6 +1082,7 @@ void main() {
           isTask: false,
           knowledge: false,
           date: null,
+          due: null,
         ), 0);
       });
       await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
@@ -2122,6 +2125,12 @@ void main() {
       find.byKey(const Key('note-sheet-title')),
       'Tornare al mare',
     );
+    FocusManager.instance.primaryFocus?.unfocus();
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('due-date-row')));
+    await settle(tester);
+    await tester.tap(find.text('OK'));
+    await settle(tester);
     await tester.tap(find.text('Crea task'));
     await settle(tester);
     expect(find.text('Task creato'), findsOneWidget);
@@ -2133,6 +2142,7 @@ void main() {
         .readAsStringSync();
     expect(task, contains('type: "task"'));
     expect(task, contains('Mattina al mare'));
+    expect(task, contains('due: "$key"'));
     expect(colored(), ['Mattina al mare']);
   });
 
@@ -2223,5 +2233,126 @@ void main() {
     await gesture.up();
     await tester.pump();
     expect(find.byKey(ValueKey('diary-field-$key')), findsOneWidget);
+  });
+
+  testWidgets('sotto il titolo di un task si sceglie la scadenza', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+    await tester.runAsync(
+      () => WorkspaceRepository(root).createWorkspace('Lavoro'),
+    );
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+    await settle(tester);
+
+    // Le note normali non hanno la riga della scadenza.
+    expect(find.byKey(const Key('due-date-row')), findsNothing);
+    await tester.tap(find.text('Task'));
+    await tester.pump();
+    expect(find.text('Aggiungi scadenza'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const Key('title-field')), 'Dentista');
+    FocusManager.instance.primaryFocus?.unfocus();
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('due-date-row')));
+    await settle(tester);
+    // Il calendario parte da oggi: si conferma.
+    await tester.tap(find.text('OK'));
+    await settle(tester);
+    expect(find.textContaining('Scadenza:'), findsOneWidget);
+
+    // La croce la toglie, e si rimette.
+    await tester.tap(find.byKey(const Key('due-date-clear')));
+    await tester.pump();
+    expect(find.text('Aggiungi scadenza'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('due-date-row')));
+    await settle(tester);
+    await tester.tap(find.text('OK'));
+    await settle(tester);
+
+    await tester.tap(find.text('Salva task'));
+    await settle(tester);
+    final now = DateTime.now();
+    String two(int n) => n.toString().padLeft(2, '0');
+    final saved = Directory('${root.path}/Lavoro')
+        .listSync()
+        .whereType<File>()
+        .single
+        .readAsStringSync();
+    expect(
+      saved,
+      contains('due: "${now.year}-${two(now.month)}-${two(now.day)}"'),
+    );
+
+    // Aprendo il task la scadenza si legge sotto il titolo.
+    await tester.tap(find.text('Dentista'));
+    await settle(tester);
+    expect(find.byKey(const Key('note-due')), findsOneWidget);
+  });
+
+  testWidgets('task manager: la scheda Scadenze ordina per scadenza', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+    final now = DateTime.now();
+    String two(int n) => n.toString().padLeft(2, '0');
+    String day(int offset) {
+      final d = DateTime(now.year, now.month, now.day + offset);
+      return '${d.year}-${two(d.month)}-${two(d.day)}';
+    }
+
+    await tester.runAsync(() async {
+      await WorkspaceRepository(root).createWorkspace('Lavoro');
+      final dir = '${root.path}/Lavoro';
+      void write(String id, String title, String? due, {bool done = false}) =>
+          File('$dir/$id.md').writeAsStringSync(
+            '---\ntitle: "$title"\ncreated: "2026-01-01T00:00:00.000"\n'
+            'type: "task"\ndone: $done\n'
+            '${due == null ? '' : 'due: "$due"\n'}---\n',
+          );
+      write('a', 'Bollette', day(-3));
+      write('b', 'Dentista', day(1));
+      write('c', 'Passaporto', day(40));
+      write('d', 'Senza data', null);
+      write('e', 'Già fatto', day(2), done: true);
+    });
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+    await settle(tester);
+    await tester.ensureVisible(find.byKey(const Key('task-manager-button')));
+    await tester.tap(find.byKey(const Key('task-manager-button')));
+    await settle(tester);
+
+    // Si apre ancora su "Da fare"; "Scadenze" sta a sinistra.
+    expect(find.byKey(const Key('task-manager-due')), findsNothing);
+    final tabs = tester.getCenter(find.text('Scadenze'));
+    expect(tabs.dx, lessThan(tester.getCenter(find.text('Da fare')).dx));
+    await tester.tap(find.text('Scadenze'));
+    await settle(tester);
+
+    double y(String text) => tester.getCenter(find.text(text)).dy;
+    expect(find.text('SCADUTI'), findsOneWidget);
+    expect(find.text('DOMANI'), findsOneWidget);
+    expect(find.text('PIÙ AVANTI'), findsOneWidget);
+    expect(y('Bollette'), lessThan(y('Dentista')));
+    expect(y('Dentista'), lessThan(y('Passaporto')));
+    expect(find.text('Senza data'), findsNothing);
+    expect(find.text('Già fatto'), findsNothing);
+    expect(find.textContaining('scaduto da 3 giorni'), findsOneWidget);
+    expect(find.textContaining('domani'), findsOneWidget);
+    expect(find.textContaining('tra 40 giorni'), findsOneWidget);
+
+    // Spuntato, va fra i completati.
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const ValueKey('b')),
+        matching: find.byType(TaskCheck),
+      ),
+    );
+    await settle(tester);
+    expect(find.text('Dentista'), findsNothing);
   });
 }

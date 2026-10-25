@@ -11,6 +11,7 @@ import '../model/note.dart';
 import '../model/note_links.dart';
 import '../model/shared_text.dart';
 import 'chip_input.dart';
+import 'due_date_row.dart';
 import 'theme.dart';
 
 /// Quello che l'editor consegna quando si salva.
@@ -27,6 +28,9 @@ typedef NoteDraft = ({
   /// Il giorno scelto col calendario; null se non è stato cambiato (la nota
   /// nuova è di oggi, quella modificata tiene la sua data).
   DateTime? date,
+
+  /// La scadenza del task; null se non ne ha (o non è un task).
+  DateTime? due,
 });
 
 /// Un editor che accetta testo condiviso da un'altra app (vedi
@@ -130,6 +134,9 @@ class _NoteEditorState extends State<NoteEditor>
   late bool _isTask = widget.initial?.isTask ?? false;
   late bool _knowledge = widget.initial?.knowledge ?? false;
 
+  /// La scadenza, se è un task.
+  late DateTime? _due = widget.initial?.due;
+
   /// Il giorno scelto col calendario, null finché non lo si cambia.
   DateTime? _date;
 
@@ -171,6 +178,7 @@ class _NoteEditorState extends State<NoteEditor>
     _isTask = draft.isTask;
     _knowledge = draft.knowledge;
     _date = draft.date;
+    _due = draft.due;
   }
 
   /// Il testo condiviso entra come citazione e il cursore va dove si
@@ -212,6 +220,7 @@ class _NoteEditorState extends State<NoteEditor>
       isTask: _isTask,
       knowledge: !_isTask && _knowledge,
       date: _date,
+      due: _isTask ? _due : null,
     );
     final initial = widget.initial;
     if (initial == null) {
@@ -235,7 +244,8 @@ class _NoteEditorState extends State<NoteEditor>
       listEquals(draft.sources, note.sources) &&
       draft.isTask == note.isTask &&
       draft.knowledge == note.knowledge &&
-      draft.date == null;
+      draft.date == null &&
+      draft.due == (note.isTask ? note.due : null);
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -407,6 +417,7 @@ class _NoteEditorState extends State<NoteEditor>
       isTask: _isTask,
       knowledge: !_isTask && _knowledge,
       date: _date,
+      due: _isTask ? _due : null,
     ));
     if (widget.initial == null) {
       // Datata a un altro giorno la nota non compare in cima: lo si dice.
@@ -429,6 +440,7 @@ class _NoteEditorState extends State<NoteEditor>
         _isTask = false;
         _knowledge = false;
         _date = null;
+        _due = null;
       });
       _draftTimer?.cancel();
       _draftTimer = null;
@@ -508,6 +520,17 @@ class _NoteEditorState extends State<NoteEditor>
               ),
             ),
             const Divider(height: 1),
+            // Un task può avere una scadenza, scelta dal calendario.
+            if (_isTask) ...[
+              DueDateRow(
+                due: _due,
+                onChanged: (due) {
+                  setState(() => _due = due);
+                  _scheduleDraft();
+                },
+              ),
+              const Divider(height: 1),
+            ],
             // Il corpo occupa tutto il riquadro, così lo si tocca ovunque.
             Expanded(
               child: TextField(

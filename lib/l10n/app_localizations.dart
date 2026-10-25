@@ -1807,6 +1807,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Task created'**
   String get taskCreated;
+
+  /// No description provided for @dueDateAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a due date'**
+  String get dueDateAdd;
+
+  /// No description provided for @dueOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Due {date}'**
+  String dueOn(String date);
+
+  /// No description provided for @dueDateClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove due date'**
+  String get dueDateClear;
+
+  /// No description provided for @dueDateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Task due date'**
+  String get dueDateTitle;
+
+  /// No description provided for @taskManagerDueTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Due dates'**
+  String get taskManagerDueTab;
+
+  /// No description provided for @dueSectionOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue'**
+  String get dueSectionOverdue;
+
+  /// No description provided for @dueSectionTomorrow.
+  ///
+  /// In en, this message translates to:
+  /// **'Tomorrow'**
+  String get dueSectionTomorrow;
+
+  /// No description provided for @dueSectionWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Next 7 days'**
+  String get dueSectionWeek;
+
+  /// No description provided for @dueSectionLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get dueSectionLater;
+
+  /// No description provided for @dueIn.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{today} =1{tomorrow} other{in {count} days}}'**
+  String dueIn(int count);
+
+  /// No description provided for @dueOverdueBy.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{overdue since yesterday} other{overdue by {count} days}}'**
+  String dueOverdueBy(int count);
+
+  /// No description provided for @taskManagerDueEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No task has a due date. Add one under the title of a task.'**
+  String get taskManagerDueEmpty;
+
+  /// No description provided for @taskManagerFilteredDueEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No task of these lists has a due date.'**
+  String get taskManagerFilteredDueEmpty;
 }
 
 class _AppLocalizationsDelegate

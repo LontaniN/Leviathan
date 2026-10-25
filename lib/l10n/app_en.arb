@@ -355,5 +355,21 @@
   "diaryExtractRemove": "Remove color",
   "diaryExtractRemoved": "Color removed: the note stays",
   "diaryCreateTask": "Create task",
-  "taskCreated": "Task created"
+  "taskCreated": "Task created",
+  "dueDateAdd": "Add a due date",
+  "dueOn": "Due {date}",
+  "@dueOn": {"placeholders": {"date": {"type": "String", "example": "Oct 30, 2026"}}},
+  "dueDateClear": "Remove due date",
+  "dueDateTitle": "Task due date",
+  "taskManagerDueTab": "Due dates",
+  "dueSectionOverdue": "Overdue",
+  "dueSectionTomorrow": "Tomorrow",
+  "dueSectionWeek": "Next 7 days",
+  "dueSectionLater": "Later",
+  "dueIn": "{count, plural, =0{today} =1{tomorrow} other{in {count} days}}",
+  "@dueIn": {"placeholders": {"count": {"type": "int"}}},
+  "dueOverdueBy": "{count, plural, =1{overdue since yesterday} other{overdue by {count} days}}",
+  "@dueOverdueBy": {"placeholders": {"count": {"type": "int"}}},
+  "taskManagerDueEmpty": "No task has a due date. Add one under the title of a task.",
+  "taskManagerFilteredDueEmpty": "No task of these lists has a due date."
 }

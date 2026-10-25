@@ -25,7 +25,8 @@ enum NoteKind { note, task, knowledge }
 /// ```
 ///
 /// Un task ha in più `type: "task"`, `done` e, se fatto, `done_at`; le note
-/// normali non scrivono questi campi. Nel task manager un task ha anche una
+/// normali non scrivono questi campi. Un task può avere una scadenza
+/// (`due: "2026-10-30"`, solo il giorno). Nel task manager un task ha anche una
 /// fascia (`priority: "now"`, `"next"` o `"later"`) e una posizione nella
 /// fascia (`rank`, vedi [rankBetween]); senza fascia è "da ordinare". Una nota di conoscenza ha
 /// `knowledge: true`; una fissata in cima alle recenti ha `pinned: true`.
@@ -47,6 +48,7 @@ class Note {
     this.isTask = false,
     this.done = false,
     this.doneAt,
+    this.due,
     this.knowledge = false,
     this.pinned = false,
     this.band,
@@ -75,6 +77,10 @@ class Note {
   /// Quando il task è stato spuntato (se lo si sa).
   final DateTime? doneAt;
 
+  /// Solo per i task: il giorno entro cui va fatto (senza ora); null se non
+  /// ha scadenza.
+  final DateTime? due;
+
   /// Solo per le note: dice cosa si sa, non cosa è successo.
   final bool knowledge;
 
@@ -101,8 +107,9 @@ class Note {
       : NoteKind.note;
 
   /// Togliendo [isTask] o [done] si perdono anche spunta e data di
-  /// esecuzione, e togliendo [isTask] anche fascia e posizione, così non
-  /// restano valori senza senso; un task non è mai conoscenza.
+  /// esecuzione, e togliendo [isTask] anche fascia, posizione e scadenza,
+  /// così non restano valori senza senso; un task non è mai conoscenza.
+  /// [clearDue] toglie la scadenza ([due] null vuol dire "lasciala").
   Note copyWith({
     String? title,
     String? body,
@@ -113,6 +120,8 @@ class Note {
     bool? isTask,
     bool? done,
     DateTime? doneAt,
+    DateTime? due,
+    bool clearDue = false,
     bool? knowledge,
     bool? pinned,
   }) {
@@ -129,6 +138,7 @@ class Note {
       isTask: task,
       done: isDone,
       doneAt: isDone ? (doneAt ?? this.doneAt) : null,
+      due: task && !clearDue ? _day(due ?? this.due) : null,
       knowledge: !task && (knowledge ?? this.knowledge),
       pinned: pinned ?? this.pinned,
       band: task ? band : null,
@@ -150,6 +160,7 @@ class Note {
     isTask: isTask,
     done: done,
     doneAt: doneAt,
+    due: due,
     knowledge: knowledge,
     pinned: pinned,
     band: isTask ? band : null,
@@ -183,6 +194,9 @@ class Note {
       if (doneAt != null) {
         buffer.writeln('done_at: ${jsonEncode(doneAt!.toIso8601String())}');
       }
+      if (due case final due?) {
+        buffer.writeln('due: ${jsonEncode(dayKey(due))}');
+      }
       if (band != null) buffer.writeln('priority: ${jsonEncode(band!.key)}');
       if (rank != null) buffer.writeln('rank: ${jsonEncode(rank)}');
     }
@@ -209,6 +223,11 @@ class Note {
         final end = close.start;
         final header = end > 4 ? text.substring(4, end) : '';
         (fields, extra) = _parseHeader(header);
+        // La scadenza vale solo per i task: in una nota normale (es. scritta
+        // a mano) resta com'è, fra le proprietà da conservare.
+        if (!_isTaskType(fields['type']) && fields.containsKey('due')) {
+          (fields, extra) = _parseHeader(header, ignore: const {'due'});
+        }
         body = close.end < text.length ? text.substring(close.end + 1) : '';
       }
     }
@@ -231,6 +250,7 @@ class Note {
       isTask: isTask,
       done: done,
       doneAt: done ? _parseDate(fields['done_at']) : null,
+      due: isTask ? _day(_parseDate(fields['due'])) : null,
       knowledge: !isTask && _isTrue(fields['knowledge']),
       pinned: fields['pinned'] == true || fields['pinned'] == 'true',
       band: band,
@@ -254,6 +274,7 @@ class Note {
     'type',
     'done',
     'done_at',
+    'due',
     'priority',
     'rank',
     'knowledge',
@@ -272,8 +293,11 @@ class Note {
   /// Le righe rientrate o che cominciano con `-` (liste YAML, testo su più
   /// righe) appartengono alla voce sopra. Un campo noto senza valore seguito
   /// solo da righe `- …` è una lista. Le righe che non stanno sotto nessuna
-  /// voce (es. commenti in cima) si conservano.
-  static (Map<String, Object?>, String) _parseHeader(String header) {
+  /// voce (es. commenti in cima) si conservano, come i campi in [ignore].
+  static (Map<String, Object?>, String) _parseHeader(
+    String header, {
+    Set<String> ignore = const {},
+  }) {
     final entries = <List<String>>[];
     for (final line in header.split('\n')) {
       // Un commento a inizio riga fa voce a sé: sotto un campo noto andrebbe
@@ -291,7 +315,9 @@ class Note {
     for (final [first, ...rest] in entries) {
       final colon = first.indexOf(':');
       final key = colon > 0 ? first.substring(0, colon).trim() : '';
-      if (!_entryStart.hasMatch(first) || !_knownFields.contains(key)) {
+      if (!_entryStart.hasMatch(first) ||
+          !_knownFields.contains(key) ||
+          ignore.contains(key)) {
         extra.addAll([first, ...rest]);
         continue;
       }
@@ -344,6 +370,16 @@ class Note {
       }
       return raw.replaceAll(RegExp(r'''^["']|["']$'''), '');
     }
+  }
+
+  /// Solo il giorno di [date], senza ora.
+  static DateTime? _day(DateTime? date) =>
+      date == null ? null : DateTime(date.year, date.month, date.day);
+
+  /// Il giorno come lo si scrive nell'intestazione: "2026-10-30".
+  static String dayKey(DateTime day) {
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${day.year}-${two(day.month)}-${two(day.day)}';
   }
 
   static DateTime? _parseDate(Object? value) =>
