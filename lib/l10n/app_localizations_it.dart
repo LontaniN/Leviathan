@@ -816,7 +816,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get tourViewsBody =>
-      'Le note fissate, il grafo delle note unite dai tag, gli elenchi di task e note, il calendario e le impostazioni, dove puoi rivedere questo tour.';
+      'Le note fissate, il grafo delle note unite dai tag, gli elenchi di task e note, il calendario, il diario e le impostazioni, dove puoi rivedere questo tour.';
 
   @override
   String get guide => 'Guida';
@@ -960,19 +960,6 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
-  String get nextStepHint => 'Prossimo passo: quando, dove, da cosa parti';
-
-  @override
-  String get nextStep => 'Prossimo passo';
-
-  @override
-  String get addNextStep => 'Aggiungi il prossimo passo';
-
-  @override
-  String get nextStepHelp =>
-      'Una riga concreta, es. “dopo pranzo, in biblioteca: leggo il cap. 3”.';
-
-  @override
   String get brainDump => 'Svuota la testa';
 
   @override
@@ -1048,4 +1035,162 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get linkedNoteMissing =>
       'Questa nota non c\'è più: forse è nel cestino';
+
+  @override
+  String get diary => 'Diario';
+
+  @override
+  String get diaryTodayHint => 'Cosa è successo oggi?';
+
+  @override
+  String get diaryCreateNote => 'Crea nota';
+
+  @override
+  String diaryLoadError(String message) {
+    return 'Impossibile leggere il diario: $message';
+  }
+
+  @override
+  String diarySaveError(String message) {
+    return 'Impossibile salvare il diario: $message';
+  }
+
+  @override
+  String get noteCreated => 'Nota creata';
+
+  @override
+  String get diaryNothingWritten => 'Niente di scritto';
+
+  @override
+  String get diaryExpandAll => 'Apri tutti i giorni';
+
+  @override
+  String get diaryCollapseAll => 'Chiudi tutti i giorni';
+
+  @override
+  String get diaryExpandDay => 'Apri questo giorno';
+
+  @override
+  String get diaryCollapseDay => 'Chiudi questo giorno';
+
+  @override
+  String get diaryOpenNote => 'Apri nota';
+
+  @override
+  String get diaryExtractRemove => 'Togli colore';
+
+  @override
+  String get diaryExtractRemoved => 'Colore tolto: la nota resta';
+
+  @override
+  String get diaryCreateTask => 'Crea task';
+
+  @override
+  String get taskCreated => 'Task creato';
+
+  @override
+  String get dueDateAdd => 'Aggiungi scadenza';
+
+  @override
+  String dueOn(String date) {
+    return 'Scadenza: $date';
+  }
+
+  @override
+  String get dueDateClear => 'Togli scadenza';
+
+  @override
+  String get dueDateTitle => 'Scadenza del task';
+
+  @override
+  String get taskManagerDueTab => 'Scadenze';
+
+  @override
+  String get dueSectionOverdue => 'Scaduti';
+
+  @override
+  String get dueSectionTomorrow => 'Domani';
+
+  @override
+  String get dueSectionWeek => 'Prossimi 7 giorni';
+
+  @override
+  String get dueSectionLater => 'Più avanti';
+
+  @override
+  String dueIn(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'tra $count giorni',
+      one: 'domani',
+      zero: 'oggi',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dueOverdueBy(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'scaduto da $count giorni',
+      one: 'scaduto ieri',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get taskManagerDueEmpty =>
+      'Nessun task ha una scadenza. Aggiungila sotto il titolo di un task.';
+
+  @override
+  String get taskManagerFilteredDueEmpty =>
+      'Nessun task di queste liste ha una scadenza.';
+
+  @override
+  String get home => 'Home';
+
+  @override
+  String get homeButtons => 'Pulsanti in alto';
+
+  @override
+  String homeButtonsCount(int shown, int total) {
+    return '$shown di $total visibili';
+  }
+
+  @override
+  String get homeButtonsHelp =>
+      'Scegli quali pulsanti restano in alto nella home e trascinali dalla maniglia per cambiarne l\'ordine.';
+
+  @override
+  String get homeButtonsReset => 'Ripristina';
+
+  @override
+  String get homeButtonPinnedHelp =>
+      'Le note fissate in cima, sempre a portata di mano.';
+
+  @override
+  String get homeButtonGraphHelp =>
+      'Le note come una mappa: quelle con tag in comune stanno vicine.';
+
+  @override
+  String get homeButtonListsHelp =>
+      'Task e note raggruppati per tag e per fonte.';
+
+  @override
+  String get homeButtonCalendarHelp =>
+      'Le note giorno per giorno, per ritrovare cosa è successo e quando.';
+
+  @override
+  String get homeButtonDiaryHelp =>
+      'Una casella al giorno per scrivere la giornata e farne note.';
+
+  @override
+  String get homeButtonTaskManagerHelp =>
+      'I task da fare in ordine di priorità, con le scadenze.';
+
+  @override
+  String get homeButtonSettingsHelp =>
+      'Sempre in fondo, così puoi sempre tornare qui.';
 }

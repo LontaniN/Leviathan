@@ -84,12 +84,10 @@ class SearchHit {
   late final String snippet = _makeSnippet();
 }
 
-/// Titolo, corpo, prossimo passo, etichette e fonti di una nota già passati
-/// da [foldText].
+/// Titolo, corpo, etichette e fonti di una nota già passati da [foldText].
 typedef _FoldedNote = ({
   String title,
   String body,
-  String nextStep,
   String labels,
   Set<String> sources,
 });
@@ -102,15 +100,14 @@ final _foldedCache = Expando<_FoldedNote>('foldedNote');
 _FoldedNote _folded(Note note) => _foldedCache[note] ??= (
   title: foldText(note.title),
   body: foldText(note.body),
-  nextStep: foldText(note.nextStep),
   labels: foldText([...note.tags, ...note.sources].join(' ')),
   sources: note.sources.map(foldText).toSet(),
 );
 
 /// Cerca nelle note; risultati dai più pertinenti, poi dai più recenti.
 ///
-/// Le parole si cercano in titolo, corpo, prossimo passo, tag e fonti; un
-/// risultato nel titolo pesa più di uno nel corpo.
+/// Le parole si cercano in titolo, corpo, tag e fonti; un risultato nel
+/// titolo pesa più di uno nel corpo.
 List<SearchHit> searchNotes(List<Note> notes, SearchQuery query) {
   if (query.isEmpty) return const [];
   final terms = query.terms;
@@ -122,7 +119,7 @@ List<SearchHit> searchNotes(List<Note> notes, SearchQuery query) {
     final folded = _folded(note);
     if (!wantedSources.every(folded.sources.contains)) continue;
 
-    final (:title, :body, :nextStep, :labels, sources: _) = folded;
+    final (:title, :body, :labels, sources: _) = folded;
     var score = 0;
     var matchesAll = true;
     for (final term in terms) {
@@ -130,7 +127,7 @@ List<SearchHit> searchNotes(List<Note> notes, SearchQuery query) {
         score += title.startsWith(term) ? 6 : 4;
       } else if (labels.contains(term)) {
         score += 2;
-      } else if (body.contains(term) || nextStep.contains(term)) {
+      } else if (body.contains(term)) {
         score += 1;
       } else {
         matchesAll = false;

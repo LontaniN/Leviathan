@@ -56,6 +56,13 @@ int _daysBetween(DateTime from, DateTime to) => DateTime.utc(
 String monthName(AppLocalizations l, int month) =>
     _in(_monthNames, l)[month - 1];
 
+/// Il mese (1-12) corto: "ott", "Oct".
+String shortMonth(AppLocalizations l, int month) => _in(_months, l)[month - 1];
+
+/// Il giorno della settimana (1 lunedì, 7 domenica) corto: "lun", "Mon".
+String weekdayName(AppLocalizations l, int weekday) =>
+    _in(_weekdays, l)[weekday - 1];
+
 /// Le iniziali dei giorni della settimana, da lunedì.
 List<String> weekdayInitials(AppLocalizations l) => _in(_weekdayInitials, l);
 

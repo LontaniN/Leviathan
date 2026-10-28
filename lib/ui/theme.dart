@@ -312,6 +312,41 @@ class LeviathanSizes {
 
   /// Ombra della scheda del tour sopra il velo.
   static const tourCardElevation = 8.0;
+
+  /// La parte della larghezza dello schermo che il nome del workspace può
+  /// prendere in cima alla home; il resto va alle icone.
+  static const headerNameFraction = 0.5;
+
+  /// Quanto sfumano le icone in cima alla home dal lato dove ce ne sono
+  /// altre nascoste.
+  static const headerFade = 24.0;
+
+  /// La colonna a sinistra delle caselle del diario, con giorno e mese.
+  static const diaryDateColumn = 48.0;
+
+  /// Quanto vicino a un giorno scritto il dito ci si aggancia, scorrendo
+  /// la colonna delle date del diario.
+  static const diaryScrubSnap = 14.0;
+
+  /// I puntini dei giorni scritti e il segno del dito sulla barra del
+  /// tempo del diario (raggi).
+  static const diaryTrackDot = 2.5;
+  static const diaryTrackThumb = 6.0;
+
+  /// La bolla con la data accanto al dito: larghezza, e l'altezza più o
+  /// meno, per centrarla sul dito.
+  static const diaryBubbleWidth = 220.0;
+  static const diaryBubbleHeight = 64.0;
+
+  /// La colonna a destra delle caselle del diario, con i tag delle note
+  /// nate da quel giorno.
+  static const diaryTagColumn = 60.0;
+
+  /// Le righe che una casella del diario mostra anche vuota.
+  static const diaryMinLines = 3;
+
+  /// Le righe che mostra una casella del diario chiusa.
+  static const diaryCollapsedLines = 3;
 }
 
 /// Durate delle animazioni.
@@ -337,6 +372,9 @@ class LeviathanDurations {
 
 /// Opacità dei colori usati come velo sopra il fondo.
 class LeviathanOpacity {
+  /// Il fondo di un pezzo del diario diventato nota, nel colore del tag.
+  static const extract = 0.38;
+
   /// Picco del bagliore della voce appena salvata, nel colore della nota.
   static const saveFlash = 0.35;
 
@@ -448,6 +486,17 @@ class LeviathanText {
 
   /// Etichette minime: chip compatti, nodi del grafo.
   static const tiny = TextStyle(fontSize: 11);
+
+  /// Il numero del giorno accanto a una casella del diario.
+  static const diaryDay = TextStyle(
+    fontSize: 22,
+    fontWeight: FontWeight.w700,
+    letterSpacing: -0.4,
+    height: 1.1,
+  );
+
+  /// Un tag nella colonna accanto a una casella del diario, nel suo colore.
+  static const diaryTag = TextStyle(fontSize: 13, fontWeight: FontWeight.w600);
 
   /// Il numero del giorno dentro l'icona del calendario.
   static const calendarDigit = TextStyle(

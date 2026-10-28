@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
 import '../model/dates.dart';
+import '../model/due.dart';
 import '../model/note.dart';
 import '../model/note_groups.dart';
 import '../model/tags.dart';
@@ -27,7 +28,12 @@ import 'theme.dart';
 ///
 /// La scheda "Completati" mostra i task fatti, dal più recente.
 ///
-/// Il filtro in alto restringe entrambe le schede ai task di uno o più tag e
+/// La scheda "Scadenze", a sinistra, mostra i task da fare che hanno una
+/// scadenza, dalla più vicina, sotto "Scadute", "Oggi", "Domani", "Prossimi
+/// 7 giorni" e "Più avanti", ognuno con la sua data e quanto manca. Il task
+/// manager si apre comunque su "Da fare".
+///
+/// Il filtro in alto restringe tutte le schede ai task di uno o più tag e
 /// fonti (basta averne uno), con le stesse fasce e lo stesso ordine: serve a
 /// vedere le priorità di una o più liste. Filtrata, la vista è in sola lettura: l'ordine vale per
 /// tutti i task, e spostarne uno fra pochi lo metterebbe a caso fra gli altri.
@@ -42,7 +48,15 @@ class TaskManagerScreen extends StatefulWidget {
 
 class _TaskManagerScreenState extends State<TaskManagerScreen>
     with SingleTickerProviderStateMixin {
-  late final _tabs = TabController(length: 2, vsync: this);
+  /// La posizione della scheda "Da fare", dove il task manager si apre:
+  /// "Scadenze" le sta a sinistra.
+  static const _openTab = 1;
+
+  late final _tabs = TabController(
+    length: 3,
+    initialIndex: _openTab,
+    vsync: this,
+  );
 
   @override
   void dispose() {
@@ -65,7 +79,7 @@ class _TaskManagerScreenState extends State<TaskManagerScreen>
     );
     if (added == null || added == 0 || !mounted) return;
     // I task nuovi stanno in cima a "Da fare": la si mostra.
-    _tabs.animateTo(0);
+    _tabs.animateTo(_openTab);
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
@@ -118,6 +132,7 @@ class _TaskManagerScreenState extends State<TaskManagerScreen>
           indicatorColor: palette.accent,
           dividerColor: Colors.transparent,
           tabs: [
+            Tab(text: l.taskManagerDueTab),
             Tab(text: l.taskManagerOpenTab),
             Tab(text: l.taskManagerDoneTab),
           ],
@@ -141,6 +156,7 @@ class _TaskManagerScreenState extends State<TaskManagerScreen>
                 child: TabBarView(
                   controller: _tabs,
                   children: [
+                    _DueTab(notes: notes, filter: filter),
                     _OpenTab(notes: notes, filter: filter),
                     _DoneTab(notes: notes, filter: filter),
                   ],
@@ -507,6 +523,7 @@ class _TaskRow extends StatelessWidget {
     required this.onTap,
     required this.onDone,
     this.meta,
+    this.lateMeta = false,
     this.trailing,
   });
 
@@ -514,6 +531,9 @@ class _TaskRow extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onDone;
   final String? meta;
+
+  /// [meta] dice qualcosa di scaduto: si scrive nel colore d'accento.
+  final bool lateMeta;
   final Widget? trailing;
 
   @override
@@ -553,41 +573,12 @@ class _TaskRow extends StatelessWidget {
                           LeviathanText.title.copyWith(color: palette.text),
                         ),
                       ),
-                      // Il prossimo passo dice da dove cominciare: lo si
-                      // vede senza aprire il task.
-                      if (note.isOpenTask && note.nextStep.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(
-                            top: LeviathanSpacing.xxs,
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Icon(
-                                Icons.subdirectory_arrow_right,
-                                size: LeviathanIconSize.sm,
-                                color: palette.accent,
-                              ),
-                              const SizedBox(width: LeviathanSpacing.xs),
-                              Expanded(
-                                child: Text(
-                                  note.nextStep,
-                                  key: Key('next-step-${note.id}'),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: LeviathanText.meta.copyWith(
-                                    color: palette.text,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
                       if (meta != null)
                         Text(
                           meta!,
                           style: LeviathanText.meta.copyWith(
-                            color: palette.muted,
+                            color: lateMeta ? palette.accent : palette.muted,
+                            fontWeight: lateMeta ? FontWeight.w700 : null,
                           ),
                         ),
                     ],
@@ -658,6 +649,88 @@ class _DoneTab extends StatelessWidget {
           onTap: () => _openNote(context, notes, note),
           // Tolta la spunta torna nella sua fascia, al suo posto.
           onDone: () => notes.setDone(note, false),
+        ),
+        _ => const SizedBox.shrink(),
+      },
+    );
+  }
+}
+
+/// La scheda "Scadenze": i task da fare con una scadenza, dalla più vicina,
+/// sotto intestazioni che dicono quanto è urgente.
+class _DueTab extends StatelessWidget {
+  const _DueTab({required this.notes, required this.filter});
+
+  final NotesController notes;
+  final Set<GroupFilter> filter;
+
+  static String _sectionTitle(AppLocalizations l, DueSection section) =>
+      switch (section) {
+        DueSection.overdue => l.dueSectionOverdue,
+        DueSection.today => l.today,
+        DueSection.tomorrow => l.dueSectionTomorrow,
+        DueSection.week => l.dueSectionWeek,
+        DueSection.later => l.dueSectionLater,
+      };
+
+  /// La data e quanto manca: "ven 30 ott 2026 · tra 5 giorni".
+  static String _meta(AppLocalizations l, DateTime due, int days) {
+    final when = days < 0 ? l.dueOverdueBy(-days) : l.dueIn(days);
+    return '${weekdayName(l, due.weekday)} ${formatDate(l, due)} · $when';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    final palette = context.palette;
+    final tasks = tasksByDue(notes.notes.where((n) => inAnyGroup(n, filter)));
+    if (tasks.isEmpty) {
+      return _Message(
+        icon: Icons.event_outlined,
+        text: filter.isEmpty
+            ? l.taskManagerDueEmpty
+            : l.taskManagerFilteredDueEmpty,
+      );
+    }
+    final now = DateTime.now();
+    final items = <Object>[];
+    DueSection? section;
+    for (final note in tasks) {
+      final s = dueSection(daysUntil(note.due!, now));
+      if (s != section) items.add(section = s);
+      items.add(note);
+    }
+    return ListView.builder(
+      key: const Key('task-manager-due'),
+      padding: const EdgeInsets.only(bottom: LeviathanSpacing.xxxl),
+      itemCount: items.length,
+      itemBuilder: (context, i) => switch (items[i]) {
+        final DueSection section => Padding(
+          key: ValueKey('due-section-${section.name}'),
+          padding: const EdgeInsets.fromLTRB(
+            LeviathanSpacing.lg,
+            LeviathanSpacing.lg,
+            LeviathanSpacing.lg,
+            LeviathanSpacing.xs,
+          ),
+          child: Text(
+            _sectionTitle(l, section).toUpperCase(),
+            style: LeviathanText.caption.copyWith(
+              // Le scadute si notano.
+              color: section == DueSection.overdue
+                  ? palette.accent
+                  : palette.muted,
+            ),
+          ),
+        ),
+        final Note note => _TaskRow(
+          key: ValueKey(note.id),
+          note: note,
+          meta: _meta(l, note.due!, daysUntil(note.due!, now)),
+          lateMeta: daysUntil(note.due!, now) < 0,
+          onTap: () => _openNote(context, notes, note),
+          // Spuntato va fra i completati e sparisce da qui.
+          onDone: () => notes.setDone(note, true),
         ),
         _ => const SizedBox.shrink(),
       },

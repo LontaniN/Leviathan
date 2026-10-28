@@ -12,11 +12,11 @@ typedef Draft = ({
   bool isTask,
   bool knowledge,
 
-  /// Il prossimo passo, se è un task.
-  String nextStep,
-
   /// Il giorno a cui si riferisce la nota, se non è oggi.
   DateTime? date,
+
+  /// La scadenza, se è un task e ne ha una.
+  DateTime? due,
 });
 
 /// La modifica di una nota già salvata rimasta a metà: la nota, il testo e
@@ -58,8 +58,7 @@ class DraftStore {
       draft.title.trim().isEmpty &&
       draft.body.trim().isEmpty &&
       draft.tags.isEmpty &&
-      draft.sources.isEmpty &&
-      draft.nextStep.trim().isEmpty;
+      draft.sources.isEmpty;
 }
 
 /// Tiene da parte la modifica di una nota già salvata, finché non la si
@@ -108,8 +107,8 @@ Map<String, Object?> _encode(Draft draft) => {
   'sources': draft.sources,
   'task': draft.isTask,
   'knowledge': draft.knowledge,
-  if (draft.nextStep.isNotEmpty) 'nextStep': draft.nextStep,
   if (draft.date case final date?) 'date': date.toIso8601String(),
+  if (draft.due case final due?) 'due': due.toIso8601String(),
 };
 
 Draft _decode(Map<dynamic, dynamic> json) {
@@ -121,7 +120,7 @@ Draft _decode(Map<dynamic, dynamic> json) {
     sources: list(json['sources']),
     isTask: json['task'] == true,
     knowledge: json['knowledge'] == true,
-    nextStep: '${json['nextStep'] ?? ''}',
     date: DateTime.tryParse('${json['date'] ?? ''}'),
+    due: DateTime.tryParse('${json['due'] ?? ''}'),
   );
 }

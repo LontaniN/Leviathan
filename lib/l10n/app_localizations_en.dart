@@ -828,7 +828,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tourViewsBody =>
-      'Pinned notes, the graph of notes linked by tags, task and note lists, the calendar and the settings, where you can replay this tour.';
+      'Pinned notes, the graph of notes linked by tags, task and note lists, the calendar, the diary and the settings, where you can replay this tour.';
 
   @override
   String get guide => 'Guide';
@@ -971,19 +971,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get nextStepHint => 'Next step: when, where, what first';
-
-  @override
-  String get nextStep => 'Next step';
-
-  @override
-  String get addNextStep => 'Add a next step';
-
-  @override
-  String get nextStepHelp =>
-      'One concrete line, e.g. “after lunch, at the library: read chapter 3”.';
-
-  @override
   String get brainDump => 'Empty your head';
 
   @override
@@ -1059,4 +1046,162 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get linkedNoteMissing =>
       'This note no longer exists: it may be in the trash';
+
+  @override
+  String get diary => 'Diary';
+
+  @override
+  String get diaryTodayHint => 'What happened today?';
+
+  @override
+  String get diaryCreateNote => 'Create note';
+
+  @override
+  String diaryLoadError(String message) {
+    return 'Couldn\'t read the diary: $message';
+  }
+
+  @override
+  String diarySaveError(String message) {
+    return 'Couldn\'t save the diary: $message';
+  }
+
+  @override
+  String get noteCreated => 'Note created';
+
+  @override
+  String get diaryNothingWritten => 'Nothing written';
+
+  @override
+  String get diaryExpandAll => 'Expand all days';
+
+  @override
+  String get diaryCollapseAll => 'Collapse all days';
+
+  @override
+  String get diaryExpandDay => 'Expand this day';
+
+  @override
+  String get diaryCollapseDay => 'Collapse this day';
+
+  @override
+  String get diaryOpenNote => 'Open note';
+
+  @override
+  String get diaryExtractRemove => 'Remove color';
+
+  @override
+  String get diaryExtractRemoved => 'Color removed: the note stays';
+
+  @override
+  String get diaryCreateTask => 'Create task';
+
+  @override
+  String get taskCreated => 'Task created';
+
+  @override
+  String get dueDateAdd => 'Add a due date';
+
+  @override
+  String dueOn(String date) {
+    return 'Due $date';
+  }
+
+  @override
+  String get dueDateClear => 'Remove due date';
+
+  @override
+  String get dueDateTitle => 'Task due date';
+
+  @override
+  String get taskManagerDueTab => 'Due dates';
+
+  @override
+  String get dueSectionOverdue => 'Overdue';
+
+  @override
+  String get dueSectionTomorrow => 'Tomorrow';
+
+  @override
+  String get dueSectionWeek => 'Next 7 days';
+
+  @override
+  String get dueSectionLater => 'Later';
+
+  @override
+  String dueIn(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'in $count days',
+      one: 'tomorrow',
+      zero: 'today',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dueOverdueBy(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'overdue by $count days',
+      one: 'overdue since yesterday',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get taskManagerDueEmpty =>
+      'No task has a due date. Add one under the title of a task.';
+
+  @override
+  String get taskManagerFilteredDueEmpty =>
+      'No task of these lists has a due date.';
+
+  @override
+  String get home => 'Home';
+
+  @override
+  String get homeButtons => 'Buttons at the top';
+
+  @override
+  String homeButtonsCount(int shown, int total) {
+    return '$shown of $total shown';
+  }
+
+  @override
+  String get homeButtonsHelp =>
+      'Choose which buttons stay at the top of the home and drag them by the handle to change their order.';
+
+  @override
+  String get homeButtonsReset => 'Reset';
+
+  @override
+  String get homeButtonPinnedHelp =>
+      'The notes pinned at the top, always within reach.';
+
+  @override
+  String get homeButtonGraphHelp =>
+      'Your notes as a map: notes sharing tags sit close together.';
+
+  @override
+  String get homeButtonListsHelp =>
+      'Tasks and notes grouped by tag and by source.';
+
+  @override
+  String get homeButtonCalendarHelp =>
+      'Notes day by day, to find what happened and when.';
+
+  @override
+  String get homeButtonDiaryHelp =>
+      'One box per day to write about your day and turn it into notes.';
+
+  @override
+  String get homeButtonTaskManagerHelp =>
+      'Open tasks in order of priority, with their due dates.';
+
+  @override
+  String get homeButtonSettingsHelp =>
+      'Always last, so you can always come back here.';
 }

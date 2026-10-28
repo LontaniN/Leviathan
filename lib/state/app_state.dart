@@ -1,7 +1,9 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:path/path.dart' as p;
 
+import '../data/diary_store.dart';
 import '../data/draft_store.dart';
 import '../data/graph_layout_store.dart';
 import '../data/note_repository.dart';
@@ -142,6 +144,11 @@ class AppState extends ChangeNotifier {
 
   /// Dove si ricordano le note aperte di recente nel workspace [name].
   RecentStore recentOf(String name) => RecentStore(repository.recentFile(name));
+
+  /// Il diario del workspace [name], un file per giorno.
+  DiaryStore diaryOf(String name) => DiaryStore(
+    Directory(p.join(repository.workspaceDir(name).path, DiaryStore.dirName)),
+  );
 
   void _set(AppStatus next) {
     status = next;

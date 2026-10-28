@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -5,17 +6,22 @@ import 'package:flutter/material.dart';
 import '../data/draft_store.dart';
 import '../l10n/l10n.dart';
 import '../model/dates.dart';
+import '../model/home_buttons.dart';
 import '../model/markdown.dart';
 import '../model/note.dart';
 import '../model/shared_text.dart';
 import '../state/app_state.dart';
+import '../state/diary_extracts.dart';
+import '../state/diary_sync.dart';
 import '../state/notes_controller.dart';
 import '../state/settings.dart';
 import '../state/share_inbox.dart';
 import 'app_tour.dart';
 import 'calendar_screen.dart';
 import 'chip_input.dart';
+import 'diary_screen.dart';
 import 'graph_screen.dart';
+import 'home_buttons_screen.dart';
 import 'lists_screen.dart';
 import 'note_actions.dart';
 import 'note_editor.dart';
@@ -45,6 +51,9 @@ import 'workspace_name_form.dart';
 ///
 /// Il testo condiviso da altre app ([shares]) finisce nella bozza
 /// dell'editor: con più workspace si sceglie prima in quale.
+///
+/// Ogni nota nuova entra anche nel diario, come riga col suo titolo nel
+/// giorno della nota (vedi [DiarySync]).
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
     super.key,
@@ -70,6 +79,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     editDraft: widget.state.editDraftOf(widget.state.currentWorkspace!),
     recent: widget.state.recentOf(widget.state.currentWorkspace!),
   );
+
+  /// Il diario del workspace, con i suoi pezzi colorati: la home ci porta
+  /// ogni nota nuova (vedi [DiarySync]) e li passa al diario quando lo apre.
+  late final _diaryStore = widget.state.diaryOf(widget.state.currentWorkspace!);
+  late final _diaryExtracts = DiaryExtracts(_diaryStore);
+  late final _diarySync = DiarySync(_diaryStore, _diaryExtracts, _notes);
+  bool _diarySyncQueued = false;
 
   /// La modifica di una nota rimasta a metà quando Android ha chiuso l'app:
   /// la home propone di riprenderla.
@@ -99,6 +115,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _resume = _pendingEdit();
+    // Le note che ci sono già e non sono nel diario ci entrano subito.
+    _diarySync.run();
+    _notes.addListener(_queueDiarySync);
     widget.shares.addListener(_onShare);
     // Aperta da una condivisione, o arrivata mentre la home non c'era.
     WidgetsBinding.instance.addPostFrameCallback((_) => _onShare());
@@ -111,8 +130,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void dispose() {
     widget.shares.removeListener(_onShare);
     WidgetsBinding.instance.removeObserver(this);
+    _notes.removeListener(_queueDiarySync);
+    _diaryExtracts.dispose();
     _notes.dispose();
     super.dispose();
+  }
+
+  /// Le note sono cambiate: quelle nuove vanno nel diario. Si aspetta la
+  /// fine del lavoro in corso, così una nota creata dal diario ha già il suo
+  /// pezzo colorato e non entra una seconda volta.
+  void _queueDiarySync() {
+    if (_diarySyncQueued) return;
+    _diarySyncQueued = true;
+    scheduleMicrotask(() {
+      _diarySyncQueued = false;
+      if (mounted) _diarySync.run();
+    });
   }
 
   @override
@@ -234,8 +267,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       sources: draft?.sources ?? const [],
       isTask: draft?.isTask ?? false,
       knowledge: draft?.knowledge ?? false,
-      nextStep: draft?.nextStep ?? '',
       date: draft?.date,
+      due: draft?.due,
     ));
     return merged.appended;
   }
@@ -293,11 +326,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     (target: _tagsKey, title: l.tourTagsTitle, body: l.tourTagsBody),
     (target: _listKey, title: l.tourListTitle, body: l.tourListBody),
     (target: _searchKey, title: l.tourSearchTitle, body: l.tourSearchBody),
-    (
-      target: _taskManagerKey,
-      title: l.tourTaskManagerTitle,
-      body: l.tourTaskManagerBody,
-    ),
+    // Tolto dalla fila in alto, il task manager non ha niente da illuminare.
+    if (widget.settings.homeButtons.contains(HomeButton.taskManager))
+      (
+        target: _taskManagerKey,
+        title: l.tourTaskManagerTitle,
+        body: l.tourTaskManagerBody,
+      ),
     (target: _viewsKey, title: l.tourViewsTitle, body: l.tourViewsBody),
   ];
 
@@ -324,6 +359,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       store: widget.state.graphLayoutOf(widget.state.currentWorkspace!),
     ),
   );
+
+  void _openView(HomeButton button) => switch (button) {
+    HomeButton.pinned => _push(PinnedScreen(notes: _notes)),
+    HomeButton.graph => _openGraph(),
+    HomeButton.lists => _push(ListsScreen(notes: _notes)),
+    HomeButton.calendar => _push(CalendarScreen(notes: _notes)),
+    HomeButton.diary => _push(
+      DiaryScreen(store: _diaryStore, extracts: _diaryExtracts, notes: _notes),
+    ),
+    HomeButton.taskManager => _push(TaskManagerScreen(notes: _notes)),
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -365,21 +411,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Widget _scaffold(bool writing) {
     return Scaffold(
       body: SafeArea(
+        // Cambiando i pulsanti dalle impostazioni la fila in alto si rifà.
         child: ListenableBuilder(
-          listenable: _notes,
+          listenable: Listenable.merge([_notes, widget.settings]),
           builder: (context, _) => Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _Header(
                 state: widget.state,
                 notes: _notes.notes,
+                buttons: widget.settings.homeButtons,
                 viewsKey: _viewsKey,
                 taskManagerKey: _taskManagerKey,
-                onPinned: () => _push(PinnedScreen(notes: _notes)),
-                onGraph: _openGraph,
-                onLists: () => _push(ListsScreen(notes: _notes)),
-                onCalendar: () => _push(CalendarScreen(notes: _notes)),
-                onTaskManager: () => _push(TaskManagerScreen(notes: _notes)),
+                onOpen: _openView,
                 onSettings: () => _push(
                   SettingsScreen(
                     settings: widget.settings,
@@ -480,7 +524,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       sources: draft.sources,
                       isTask: draft.isTask,
                       knowledge: draft.knowledge,
-                      nextStep: draft.nextStep,
+                      due: draft.due,
                       created: draft.date == null
                           ? null
                           : onDay(draft.date!, DateTime.now()),
@@ -566,28 +610,25 @@ class _Header extends StatelessWidget {
   const _Header({
     required this.state,
     required this.notes,
+    required this.buttons,
     required this.viewsKey,
     required this.taskManagerKey,
-    required this.onPinned,
-    required this.onGraph,
-    required this.onLists,
-    required this.onCalendar,
-    required this.onTaskManager,
+    required this.onOpen,
     required this.onSettings,
   });
 
   final AppState state;
   final List<Note> notes;
 
+  /// I pulsanti scelti nelle impostazioni, in ordine; le impostazioni
+  /// vengono sempre dopo.
+  final List<HomeButton> buttons;
+
   /// Chiavi del gruppo di icone delle altre viste e del pulsante del task
   /// manager, per il tour.
   final GlobalKey viewsKey;
   final GlobalKey taskManagerKey;
-  final VoidCallback onPinned;
-  final VoidCallback onGraph;
-  final VoidCallback onLists;
-  final VoidCallback onCalendar;
-  final VoidCallback onTaskManager;
+  final ValueChanged<HomeButton> onOpen;
   final VoidCallback onSettings;
 
   @override
@@ -607,9 +648,14 @@ class _Header extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Tutto lo spazio libero va al nome, che va a capo solo se davvero
-          // non ci sta.
-          Expanded(
+          // Il nome prende lo spazio che gli serve, fino a metà riga; il
+          // resto va alle icone, che scorrono se non ci stanno tutte.
+          ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth:
+                  MediaQuery.sizeOf(context).width *
+                  LeviathanSizes.headerNameFraction,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -627,52 +673,108 @@ class _Header extends StatelessWidget {
               ],
             ),
           ),
-          Row(
-            key: viewsKey,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                key: const Key('pinned-button'),
-                tooltip: l.pinned,
-                icon: const Icon(Icons.push_pin_outlined),
-                onPressed: onPinned,
-              ),
-              IconButton(
-                key: const Key('graph-button'),
-                tooltip: l.graph,
-                icon: const Icon(Icons.hub_outlined),
-                onPressed: onGraph,
-              ),
-              IconButton(
-                key: const Key('lists-button'),
-                tooltip: l.tasksAndNotes,
-                icon: const Icon(Icons.checklist),
-                onPressed: onLists,
-              ),
-              IconButton(
-                key: const Key('calendar-button'),
-                tooltip: l.calendar,
-                icon: const Icon(Icons.calendar_month_outlined),
-                onPressed: onCalendar,
-              ),
-              KeyedSubtree(
-                key: taskManagerKey,
-                child: IconButton(
-                  key: const Key('task-manager-button'),
-                  tooltip: l.taskManager,
-                  icon: const Icon(Icons.low_priority),
-                  onPressed: onTaskManager,
+          Expanded(
+            child: _ScrollingIcons(
+              key: viewsKey,
+              children: [
+                for (final button in buttons)
+                  KeyedSubtree(
+                    key: button == HomeButton.taskManager
+                        ? taskManagerKey
+                        : ValueKey(button),
+                    child: IconButton(
+                      key: button.homeKey,
+                      tooltip: button.label(l),
+                      icon: Icon(button.icon),
+                      onPressed: () => onOpen(button),
+                    ),
+                  ),
+                IconButton(
+                  key: const Key('settings-button'),
+                  tooltip: l.settings,
+                  icon: const Icon(Icons.settings_outlined),
+                  onPressed: onSettings,
                 ),
-              ),
-              IconButton(
-                key: const Key('settings-button'),
-                tooltip: l.settings,
-                icon: const Icon(Icons.settings_outlined),
-                onPressed: onSettings,
-              ),
-            ],
+              ],
+            ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Le icone delle viste in cima alla home: se non ci stanno tutte scorrono
+/// in orizzontale. Partono allineate a destra, con le ultime (task manager,
+/// impostazioni) in vista; dal lato dove ce ne sono altre nascoste sfumano,
+/// così si capisce che si può scorrere.
+class _ScrollingIcons extends StatefulWidget {
+  const _ScrollingIcons({super.key, required this.children});
+
+  final List<Widget> children;
+
+  @override
+  State<_ScrollingIcons> createState() => _ScrollingIconsState();
+}
+
+class _ScrollingIconsState extends State<_ScrollingIcons> {
+  final _scroll = ScrollController();
+
+  /// Ci sono icone nascoste a sinistra o a destra.
+  bool _hiddenLeft = false;
+  bool _hiddenRight = false;
+
+  bool _update(ScrollMetrics metrics) {
+    // La lista è rovesciata: "dopo" è a sinistra.
+    final left = metrics.extentAfter > 0;
+    final right = metrics.extentBefore > 0;
+    if (left != _hiddenLeft || right != _hiddenRight) {
+      setState(() {
+        _hiddenLeft = left;
+        _hiddenRight = right;
+      });
+    }
+    return false;
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const fade = LeviathanSizes.headerFade;
+    return NotificationListener<ScrollMetricsNotification>(
+      onNotification: (n) => _update(n.metrics),
+      child: NotificationListener<ScrollNotification>(
+        onNotification: (n) => _update(n.metrics),
+        child: ShaderMask(
+          blendMode: BlendMode.dstIn,
+          // È una maschera, non un colore: conta solo quanto è opaca.
+          shaderCallback: (bounds) {
+            final edge = bounds.width == 0 ? 0.0 : fade / bounds.width;
+            return LinearGradient(
+              colors: [
+                _hiddenLeft ? Colors.transparent : Colors.black,
+                Colors.black,
+                Colors.black,
+                _hiddenRight ? Colors.transparent : Colors.black,
+              ],
+              stops: [0, edge, 1 - edge, 1],
+            ).createShader(bounds);
+          },
+          child: SingleChildScrollView(
+            controller: _scroll,
+            scrollDirection: Axis.horizontal,
+            reverse: true,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: widget.children,
+            ),
+          ),
+        ),
       ),
     );
   }

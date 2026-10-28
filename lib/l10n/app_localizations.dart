@@ -1397,7 +1397,7 @@ abstract class AppLocalizations {
   /// No description provided for @tourViewsBody.
   ///
   /// In en, this message translates to:
-  /// **'Pinned notes, the graph of notes linked by tags, task and note lists, the calendar and the settings, where you can replay this tour.'**
+  /// **'Pinned notes, the graph of notes linked by tags, task and note lists, the calendar, the diary and the settings, where you can replay this tour.'**
   String get tourViewsBody;
 
   /// No description provided for @guide.
@@ -1628,30 +1628,6 @@ abstract class AppLocalizations {
   /// **'Already exists: notes will be merged into {name}'**
   String renameMerges(String name);
 
-  /// No description provided for @nextStepHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Next step: when, where, what first'**
-  String get nextStepHint;
-
-  /// No description provided for @nextStep.
-  ///
-  /// In en, this message translates to:
-  /// **'Next step'**
-  String get nextStep;
-
-  /// No description provided for @addNextStep.
-  ///
-  /// In en, this message translates to:
-  /// **'Add a next step'**
-  String get addNextStep;
-
-  /// No description provided for @nextStepHelp.
-  ///
-  /// In en, this message translates to:
-  /// **'One concrete line, e.g. “after lunch, at the library: read chapter 3”.'**
-  String get nextStepHelp;
-
   /// No description provided for @brainDump.
   ///
   /// In en, this message translates to:
@@ -1759,6 +1735,252 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This note no longer exists: it may be in the trash'**
   String get linkedNoteMissing;
+
+  /// No description provided for @diary.
+  ///
+  /// In en, this message translates to:
+  /// **'Diary'**
+  String get diary;
+
+  /// No description provided for @diaryTodayHint.
+  ///
+  /// In en, this message translates to:
+  /// **'What happened today?'**
+  String get diaryTodayHint;
+
+  /// No description provided for @diaryCreateNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Create note'**
+  String get diaryCreateNote;
+
+  /// No description provided for @diaryLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t read the diary: {message}'**
+  String diaryLoadError(String message);
+
+  /// No description provided for @diarySaveError.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the diary: {message}'**
+  String diarySaveError(String message);
+
+  /// No description provided for @noteCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Note created'**
+  String get noteCreated;
+
+  /// No description provided for @diaryNothingWritten.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing written'**
+  String get diaryNothingWritten;
+
+  /// No description provided for @diaryExpandAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Expand all days'**
+  String get diaryExpandAll;
+
+  /// No description provided for @diaryCollapseAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse all days'**
+  String get diaryCollapseAll;
+
+  /// No description provided for @diaryExpandDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Expand this day'**
+  String get diaryExpandDay;
+
+  /// No description provided for @diaryCollapseDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse this day'**
+  String get diaryCollapseDay;
+
+  /// No description provided for @diaryOpenNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Open note'**
+  String get diaryOpenNote;
+
+  /// No description provided for @diaryExtractRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove color'**
+  String get diaryExtractRemove;
+
+  /// No description provided for @diaryExtractRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Color removed: the note stays'**
+  String get diaryExtractRemoved;
+
+  /// No description provided for @diaryCreateTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Create task'**
+  String get diaryCreateTask;
+
+  /// No description provided for @taskCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Task created'**
+  String get taskCreated;
+
+  /// No description provided for @dueDateAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a due date'**
+  String get dueDateAdd;
+
+  /// No description provided for @dueOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Due {date}'**
+  String dueOn(String date);
+
+  /// No description provided for @dueDateClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove due date'**
+  String get dueDateClear;
+
+  /// No description provided for @dueDateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Task due date'**
+  String get dueDateTitle;
+
+  /// No description provided for @taskManagerDueTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Due dates'**
+  String get taskManagerDueTab;
+
+  /// No description provided for @dueSectionOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue'**
+  String get dueSectionOverdue;
+
+  /// No description provided for @dueSectionTomorrow.
+  ///
+  /// In en, this message translates to:
+  /// **'Tomorrow'**
+  String get dueSectionTomorrow;
+
+  /// No description provided for @dueSectionWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Next 7 days'**
+  String get dueSectionWeek;
+
+  /// No description provided for @dueSectionLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get dueSectionLater;
+
+  /// No description provided for @dueIn.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{today} =1{tomorrow} other{in {count} days}}'**
+  String dueIn(int count);
+
+  /// No description provided for @dueOverdueBy.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{overdue since yesterday} other{overdue by {count} days}}'**
+  String dueOverdueBy(int count);
+
+  /// No description provided for @taskManagerDueEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No task has a due date. Add one under the title of a task.'**
+  String get taskManagerDueEmpty;
+
+  /// No description provided for @taskManagerFilteredDueEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No task of these lists has a due date.'**
+  String get taskManagerFilteredDueEmpty;
+
+  /// No description provided for @home.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get home;
+
+  /// No description provided for @homeButtons.
+  ///
+  /// In en, this message translates to:
+  /// **'Buttons at the top'**
+  String get homeButtons;
+
+  /// No description provided for @homeButtonsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{shown} of {total} shown'**
+  String homeButtonsCount(int shown, int total);
+
+  /// No description provided for @homeButtonsHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose which buttons stay at the top of the home and drag them by the handle to change their order.'**
+  String get homeButtonsHelp;
+
+  /// No description provided for @homeButtonsReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get homeButtonsReset;
+
+  /// No description provided for @homeButtonPinnedHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'The notes pinned at the top, always within reach.'**
+  String get homeButtonPinnedHelp;
+
+  /// No description provided for @homeButtonGraphHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Your notes as a map: notes sharing tags sit close together.'**
+  String get homeButtonGraphHelp;
+
+  /// No description provided for @homeButtonListsHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Tasks and notes grouped by tag and by source.'**
+  String get homeButtonListsHelp;
+
+  /// No description provided for @homeButtonCalendarHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes day by day, to find what happened and when.'**
+  String get homeButtonCalendarHelp;
+
+  /// No description provided for @homeButtonDiaryHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'One box per day to write about your day and turn it into notes.'**
+  String get homeButtonDiaryHelp;
+
+  /// No description provided for @homeButtonTaskManagerHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Open tasks in order of priority, with their due dates.'**
+  String get homeButtonTaskManagerHelp;
+
+  /// No description provided for @homeButtonSettingsHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Always last, so you can always come back here.'**
+  String get homeButtonSettingsHelp;
 }
 
 class _AppLocalizationsDelegate

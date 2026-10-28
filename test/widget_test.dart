@@ -13,6 +13,7 @@ import 'package:leviathan/state/share_inbox.dart';
 import 'package:leviathan/ui/app_tour.dart';
 import 'package:leviathan/ui/graph_screen.dart';
 import 'package:leviathan/ui/search_screen.dart';
+import 'package:leviathan/ui/task_check.dart';
 import 'package:leviathan/ui/theme.dart';
 
 class _FakeStorage implements StorageAccess {
@@ -369,6 +370,7 @@ void main() {
     await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
     await settle(tester);
 
+    await tester.ensureVisible(find.byKey(const Key('lists-button')));
     await tester.tap(find.byKey(const Key('lists-button')));
     await settle(tester);
     // Si apre sul filtro "Da fare".
@@ -433,6 +435,7 @@ void main() {
         .singleWhere((f) => f.path.contains('teorema'));
     expect(saved.readAsStringSync(), contains('knowledge: true'));
 
+    await tester.ensureVisible(find.byKey(const Key('lists-button')));
     await tester.tap(find.byKey(const Key('lists-button')));
     await settle(tester);
     await tester.tap(find.text('Conoscenza'));
@@ -464,6 +467,7 @@ void main() {
     await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
     await settle(tester);
 
+    await tester.ensureVisible(find.byKey(const Key('lists-button')));
     await tester.tap(find.byKey(const Key('lists-button')));
     await settle(tester);
     await tester.tap(find.text('Conoscenza'));
@@ -594,6 +598,7 @@ void main() {
 
     await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
     await settle(tester);
+    await tester.ensureVisible(find.byKey(const Key('graph-button')));
     await tester.tap(find.byKey(const Key('graph-button')));
     await settle(tester);
 
@@ -647,6 +652,7 @@ void main() {
 
     await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
     await settle(tester);
+    await tester.ensureVisible(find.byKey(const Key('lists-button')));
     await tester.tap(find.byKey(const Key('lists-button')));
     await settle(tester);
     await tester.tap(find.text('Note'));
@@ -746,6 +752,7 @@ void main() {
 
     await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
     await settle(tester);
+    await tester.ensureVisible(find.byKey(const Key('calendar-button')));
     await tester.tap(find.byKey(const Key('calendar-button')));
     await settle(tester);
 
@@ -826,6 +833,7 @@ void main() {
     await settle(tester);
 
     // Senza fissate la schermata lo spiega.
+    await tester.ensureVisible(find.byKey(const Key('pinned-button')));
     await tester.tap(find.byKey(const Key('pinned-button')));
     await settle(tester);
     expect(find.textContaining('Nessuna nota fissata'), findsOneWidget);
@@ -833,6 +841,7 @@ void main() {
     await settle(tester);
 
     // Dal riquadro del tag, la puntina accanto alla nota la fissa.
+    await tester.ensureVisible(find.byKey(const Key('lists-button')));
     await tester.tap(find.byKey(const Key('lists-button')));
     await settle(tester);
     await tester.tap(find.text('Note'));
@@ -848,6 +857,7 @@ void main() {
       await settle(tester);
     }
 
+    await tester.ensureVisible(find.byKey(const Key('pinned-button')));
     await tester.tap(find.byKey(const Key('pinned-button')));
     await settle(tester);
     expect(find.text('1 NOTA FISSATA'), findsOneWidget);
@@ -1027,8 +1037,8 @@ void main() {
               sources: const [],
               isTask: false,
               knowledge: false,
-              nextStep: '',
               date: null,
+              due: null,
             ), 5);
       });
       await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
@@ -1071,8 +1081,8 @@ void main() {
           sources: const [],
           isTask: false,
           knowledge: false,
-          nextStep: '',
           date: null,
+          due: null,
         ), 0);
       });
       await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
@@ -1775,60 +1785,6 @@ void main() {
     expect(find.text('OGGI'), findsOneWidget);
   });
 
-  testWidgets('prossimo passo: si scrive nel task e si vede nel task manager', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(1080, 2424);
-    tester.view.devicePixelRatio = 2.625;
-    addTearDown(tester.view.reset);
-
-    await tester.runAsync(
-      () => WorkspaceRepository(root).createWorkspace('Studio'),
-    );
-    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
-    await settle(tester);
-
-    // Il campo c'è solo per i task.
-    expect(find.byKey(const Key('next-step-field')), findsNothing);
-    await tester.tap(find.text('Task'));
-    await tester.pump();
-    await tester.enterText(find.byKey(const Key('title-field')), 'Tesina');
-    await tester.enterText(
-      find.byKey(const Key('next-step-field')),
-      'Stasera alla scrivania',
-    );
-    await tester.ensureVisible(find.text('Salva task'));
-    await tester.tap(find.text('Salva task'));
-    await settle(tester);
-
-    final file = Directory('${root.path}/Studio')
-        .listSync()
-        .whereType<File>()
-        .singleWhere((f) => f.path.contains('tesina'));
-    expect(
-      file.readAsStringSync(),
-      contains('next_step: "Stasera alla scrivania"'),
-    );
-
-    await tester.tap(find.byKey(const Key('task-manager-button')));
-    await settle(tester);
-    expect(find.text('Stasera alla scrivania'), findsOneWidget);
-
-    // Dalla lettura del task lo si cambia.
-    await tester.tap(find.text('Tesina'));
-    await settle(tester);
-    await tester.tap(find.byKey(const Key('next-step')));
-    await settle(tester);
-    await tester.enterText(
-      find.byKey(const Key('next-step-input')),
-      'Domattina in biblioteca',
-    );
-    await tester.tap(find.byKey(const Key('next-step-save')));
-    await settle(tester);
-    expect(find.text('Domattina in biblioteca'), findsOneWidget);
-    expect(file.readAsStringSync(), contains('Domattina in biblioteca'));
-  });
-
   testWidgets('svuota la testa: ogni riga diventa un task da ordinare', (
     tester,
   ) async {
@@ -2031,5 +1987,654 @@ void main() {
     await settle(tester);
     expect(find.text('Due'), findsOneWidget);
     expect(find.byKey(const Key('drag-Uno')), findsOneWidget);
+  });
+
+  testWidgets('il diario si scrive per giorno e ne nascono note sul posto', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+    await tester.runAsync(
+      () => WorkspaceRepository(root).createWorkspace('Lavoro'),
+    );
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+    await settle(tester);
+
+    // Sul telefono le icone in alto non ci stanno tutte: si scorre.
+    final button = find.byKey(const Key('diary-button'));
+    await tester.ensureVisible(button);
+    await tester.tap(button);
+    await settle(tester);
+    expect(find.text('Cosa è successo oggi?'), findsOneWidget);
+
+    final now = DateTime.now();
+    String two(int n) => n.toString().padLeft(2, '0');
+    final key = '${now.year}-${two(now.month)}-${two(now.day)}';
+    final field = find.byKey(ValueKey('diary-field-$key'));
+    const text = 'Mattina al mare. Idea: un orto sul tetto.';
+    await tester.enterText(field, text);
+    await settle(tester);
+    final file = File('${root.path}/Lavoro/diary/$key.md');
+    expect(file.readAsStringSync(), text);
+
+    final editableFinder = find.descendant(
+      of: field,
+      matching: find.byType(EditableText),
+    );
+    final editable = tester.state<EditableTextState>(editableFinder);
+    Future<void> menu(int from, int to) async {
+      editable.userUpdateTextEditingValue(
+        editable.textEditingValue.copyWith(
+          selection: TextSelection(baseOffset: from, extentOffset: to),
+        ),
+        SelectionChangedCause.longPress,
+      );
+      editable.showToolbar();
+      await tester.pump();
+    }
+
+    List<String?> colored() => [
+      for (final span
+          in tester
+                  .widget<EditableText>(editableFinder)
+                  .controller
+                  .buildTextSpan(
+                    context: tester.element(field),
+                    withComposing: false,
+                  )
+                  .children
+                  ?.whereType<TextSpan>() ??
+              const <TextSpan>[])
+        if (span.style?.backgroundColor != null) span.text,
+    ];
+
+    // Si sceglie "un orto sul tetto. " (lo spazio in fondo si toglie) e
+    // la nota nasce dal foglio, senza lasciare il diario.
+    await menu(23, 41);
+    await tester.tap(find.text('Crea nota'));
+    await settle(tester);
+    await tester.enterText(find.byKey(const Key('note-sheet-title')), 'Orto');
+    await tester.enterText(find.byKey(const Key('note-sheet-tags')), 'casa');
+    await tester.tap(find.byKey(const Key('note-sheet-save')));
+    await settle(tester);
+
+    expect(find.text('Nota creata'), findsOneWidget);
+    expect(find.byKey(const Key('diary-list')), findsOneWidget);
+    final notes = Directory('${root.path}/Lavoro')
+        .listSync()
+        .whereType<File>()
+        .where((f) => f.path.endsWith('.md'))
+        .toList();
+    expect(notes, hasLength(1));
+    final saved = notes.single.readAsStringSync();
+    expect(saved, contains('title: "Orto"'));
+    expect(saved, contains('casa'));
+    expect(saved, contains('un orto sul tetto.'));
+    expect(colored(), ['un orto sul tetto.']);
+
+    // Accanto alla casella, la colonna dei tag delle sue note.
+    final tagColumn = find.byKey(ValueKey('diary-tags-$key'));
+    expect(
+      find.descendant(of: tagColumn, matching: find.text('casa')),
+      findsOneWidget,
+    );
+
+    // Sul testo colorato il menu apre la nota o toglie il colore.
+    await menu(26, 30);
+    expect(find.text('Crea nota'), findsNothing);
+    Finder inMenu(String label) => find.descendant(
+      of: find.byType(AdaptiveTextSelectionToolbar),
+      matching: find.text(label),
+    );
+    expect(inMenu('Apri nota'), findsOneWidget);
+    await tester.tap(find.text('Togli colore'));
+    await settle(tester);
+    expect(colored(), isEmpty);
+    expect(notes.single.existsSync(), isTrue);
+    await tester.tap(find.text('Annulla'));
+    await settle(tester);
+    expect(colored(), ['un orto sul tetto.']);
+
+    await menu(26, 30);
+    await tester.tap(inMenu('Apri nota'));
+    await settle(tester);
+    expect(find.text('Orto'), findsWidgets);
+    await tester.tap(find.byType(BackButton));
+    await settle(tester);
+
+    // Toccando la frase colorata ci si porta solo il cursore: la si può
+    // correggere e resta collegata, mentre la nota non cambia.
+    final caret = editable.renderEditable.getLocalRectForCaret(
+      const TextPosition(offset: 30),
+    );
+    await tester.tapAt(
+      editable.renderEditable.localToGlobal(caret.center + const Offset(2, 0)),
+    );
+    await settle(tester);
+    expect(find.byKey(const Key('note-menu')), findsNothing);
+    expect(find.byKey(const Key('diary-list')), findsOneWidget);
+    final fixed = text.replaceFirst('tetto', 'tetto grande');
+    tester.testTextInput.updateEditingValue(
+      TextEditingValue(
+        text: fixed,
+        selection: TextSelection.collapsed(
+          offset: fixed.indexOf('tetto') + 'tetto grande'.length,
+        ),
+      ),
+    );
+    await settle(tester);
+    expect(colored(), ['un orto sul tetto grande.']);
+    expect(notes.single.readAsStringSync(), saved);
+
+    await menu(26, 30);
+    await tester.tap(inMenu('Apri nota'));
+    await settle(tester);
+    expect(find.byKey(const Key('note-menu')), findsOneWidget);
+    expect(find.text('Orto'), findsWidgets);
+
+    // Cancellata la nota, anche il colore se ne va.
+    await tester.tap(find.byKey(const Key('note-menu')));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('delete-note')));
+    await settle(tester);
+    expect(find.byKey(const Key('diary-list')), findsOneWidget);
+    expect(colored(), isEmpty);
+    expect(
+      find.descendant(of: tagColumn, matching: find.text('casa')),
+      findsNothing,
+    );
+
+    // Dal foglio nasce anche un task.
+    await menu(0, 15);
+    await tester.tap(find.text('Crea nota'));
+    await settle(tester);
+    await tester.tap(find.text('Task'));
+    await tester.pump();
+    await tester.enterText(
+      find.byKey(const Key('note-sheet-title')),
+      'Tornare al mare',
+    );
+    FocusManager.instance.primaryFocus?.unfocus();
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('due-date-row')));
+    await settle(tester);
+    await tester.tap(find.text('OK'));
+    await settle(tester);
+    await tester.tap(find.text('Crea task'));
+    await settle(tester);
+    expect(find.text('Task creato'), findsOneWidget);
+    final task = Directory('${root.path}/Lavoro')
+        .listSync()
+        .whereType<File>()
+        .where((f) => f.path.endsWith('.md'))
+        .single
+        .readAsStringSync();
+    expect(task, contains('type: "task"'));
+    expect(task, contains('Mattina al mare'));
+    expect(task, contains('due: "$key"'));
+    expect(colored(), ['Mattina al mare']);
+  });
+
+  testWidgets('nel diario solo oggi è aperto; il pulsante apre tutto', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+    final now = DateTime.now();
+    final yesterday = DateTime(now.year, now.month, now.day - 1);
+    final before = DateTime(now.year, now.month, now.day - 2);
+    String two(int n) => n.toString().padLeft(2, '0');
+    String key(DateTime d) => '${d.year}-${two(d.month)}-${two(d.day)}';
+    final long = List.filled(6, 'Riga.').join('\n');
+    await tester.runAsync(() async {
+      await WorkspaceRepository(root).createWorkspace('Lavoro');
+      final dir = Directory('${root.path}/Lavoro/diary')..createSync();
+      for (final d in [now, yesterday, before]) {
+        File('${dir.path}/${key(d)}.md').writeAsStringSync(long);
+      }
+    });
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+    await settle(tester);
+    final button = find.byKey(const Key('diary-button'));
+    await tester.ensureVisible(button);
+    await tester.tap(button);
+    await settle(tester);
+
+    Finder field(DateTime d) => find.byKey(ValueKey('diary-field-${key(d)}'));
+    Finder collapsed(DateTime d) =>
+        find.byKey(ValueKey('diary-collapsed-${key(d)}'));
+    expect(field(now), findsOneWidget);
+    expect(collapsed(now), findsNothing);
+    expect(collapsed(yesterday), findsOneWidget);
+    expect(field(yesterday), findsNothing);
+
+    // Toccando un giorno chiuso si apre solo quello; la sua freccina lo
+    // richiude e lo riapre, senza toccare gli altri.
+    await tester.tap(collapsed(yesterday));
+    await settle(tester);
+    expect(field(yesterday), findsOneWidget);
+    Finder toggle(DateTime d) => find.byKey(ValueKey('diary-toggle-${key(d)}'));
+    await tester.tap(toggle(yesterday));
+    await settle(tester);
+    expect(collapsed(yesterday), findsOneWidget);
+    expect(field(now), findsOneWidget);
+    await tester.tap(toggle(yesterday));
+    await settle(tester);
+    expect(field(yesterday), findsOneWidget);
+    // Anche oggi si può chiudere.
+    await tester.tap(toggle(now));
+    await settle(tester);
+    expect(collapsed(now), findsOneWidget);
+    await tester.tap(toggle(now));
+    await settle(tester);
+    expect(field(now), findsOneWidget);
+    await tester.scrollUntilVisible(
+      collapsed(before),
+      200,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const Key('diary-list')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    expect(collapsed(before), findsOneWidget);
+
+    // Il pulsante in alto li apre tutti, e poi li richiude.
+    await tester.tap(find.byKey(const Key('diary-expand-all')));
+    await settle(tester);
+    expect(collapsed(before), findsNothing);
+    expect(field(before), findsOneWidget);
+    await tester.tap(find.byKey(const Key('diary-expand-all')));
+    await settle(tester);
+    expect(collapsed(before), findsOneWidget);
+  });
+
+  testWidgets('richiudendo un giorno lungo si torna al suo inizio', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+    final now = DateTime.now();
+    final yesterday = DateTime(now.year, now.month, now.day - 1);
+    String two(int n) => n.toString().padLeft(2, '0');
+    String key(DateTime d) => '${d.year}-${two(d.month)}-${two(d.day)}';
+    await tester.runAsync(() async {
+      await WorkspaceRepository(root).createWorkspace('Lavoro');
+      final dir = Directory('${root.path}/Lavoro/diary')..createSync();
+      File('${dir.path}/${key(yesterday)}.md')
+          .writeAsStringSync(List.filled(60, 'Riga.').join('\n'));
+    });
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+    await settle(tester);
+    final button = find.byKey(const Key('diary-button'));
+    await tester.ensureVisible(button);
+    await tester.tap(button);
+    await settle(tester);
+
+    await tester.tap(find.byKey(ValueKey('diary-collapsed-${key(yesterday)}')));
+    await settle(tester);
+    final toggle = find.byKey(ValueKey('diary-toggle-${key(yesterday)}'));
+    await tester.ensureVisible(toggle);
+    await settle(tester);
+    final list = tester.getRect(find.byKey(const Key('diary-list')));
+    final date = find.byKey(ValueKey('diary-date-${key(yesterday)}'));
+    expect(tester.getRect(date).top, lessThan(list.top));
+
+    await tester.tap(toggle);
+    await settle(tester);
+    expect(
+      find.byKey(ValueKey('diary-collapsed-${key(yesterday)}')),
+      findsOneWidget,
+    );
+    expect(tester.getRect(date).top, greaterThanOrEqualTo(list.top));
+    expect(tester.getRect(date).top, lessThan(list.center.dy));
+  });
+
+  testWidgets('la colonna delle date scorre veloce nel tempo', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+    final now = DateTime.now();
+    final old = DateTime(now.year, now.month, now.day - 200);
+    String two(int n) => n.toString().padLeft(2, '0');
+    String key(DateTime d) => '${d.year}-${two(d.month)}-${two(d.day)}';
+    await tester.runAsync(() async {
+      await WorkspaceRepository(root).createWorkspace('Lavoro');
+      final dir = Directory('${root.path}/Lavoro/diary')..createSync();
+      File('${dir.path}/${key(old)}.md').writeAsStringSync('Trasloco finito.');
+    });
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+    await settle(tester);
+    final button = find.byKey(const Key('diary-button'));
+    await tester.ensureVisible(button);
+    await tester.tap(button);
+    await settle(tester);
+
+    // In fondo alla colonna c'è il giorno più vecchio scritto.
+    final column = find.byKey(const Key('diary-scrubber'));
+    final rect = tester.getRect(column);
+    final gesture = await tester.startGesture(
+      rect.topCenter + const Offset(0, 40),
+    );
+    await gesture.moveTo(rect.center);
+    await tester.pump();
+    expect(find.byKey(const Key('diary-scrub-bubble')), findsOneWidget);
+    await gesture.moveTo(rect.bottomCenter - const Offset(0, 20));
+    await tester.pump();
+    expect(find.text('Trasloco finito.'), findsWidgets);
+
+    await gesture.up();
+    await tester.pump();
+    expect(find.byKey(const Key('diary-scrub-bubble')), findsNothing);
+    expect(find.byKey(ValueKey('diary-field-${key(old)}')), findsOneWidget);
+    expect(find.byKey(ValueKey('diary-field-${key(now)}')), findsNothing);
+
+    // Sopra c'è il giorno dopo, scorrendo normalmente la lista.
+    final next = DateTime(old.year, old.month, old.day + 1);
+    await tester.drag(
+      find.byKey(const Key('diary-list')),
+      const Offset(0, 300),
+    );
+    await settle(tester);
+    expect(find.byKey(ValueKey('diary-field-${key(next)}')), findsOneWidget);
+
+    // Portando il dito in cima alla colonna si torna a oggi.
+    final back = await tester.startGesture(rect.center);
+    await back.moveTo(rect.topCenter + const Offset(0, 2));
+    await back.moveTo(rect.topCenter + const Offset(0, 1));
+    await back.up();
+    await tester.pump();
+    expect(find.text('Cosa è successo oggi?'), findsOneWidget);
+  });
+
+  testWidgets('la colonna delle date arriva alla nota più vecchia', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+    final now = DateTime.now();
+    final old = DateTime(now.year, now.month, now.day - 500);
+    String two(int n) => n.toString().padLeft(2, '0');
+    final key = '${old.year}-${two(old.month)}-${two(old.day)}';
+    await tester.runAsync(() async {
+      await WorkspaceRepository(root).createWorkspace('Lavoro');
+      File('${root.path}/Lavoro/vecchia.md').writeAsStringSync(
+        '---\ntitle: "Vecchia"\ncreated: "${old.toIso8601String()}"\n---\n',
+      );
+    });
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+    await settle(tester);
+    final button = find.byKey(const Key('diary-button'));
+    await tester.ensureVisible(button);
+    await tester.tap(button);
+    await settle(tester);
+
+    final rect = tester.getRect(find.byKey(const Key('diary-scrubber')));
+    final gesture = await tester.startGesture(rect.center);
+    await gesture.moveTo(rect.bottomCenter - const Offset(0, 20));
+    await gesture.moveTo(rect.bottomCenter - const Offset(0, 1));
+    await gesture.up();
+    await tester.pump();
+    expect(find.byKey(ValueKey('diary-field-$key')), findsOneWidget);
+  });
+
+  testWidgets('sotto il titolo di un task si sceglie la scadenza', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+    await tester.runAsync(
+      () => WorkspaceRepository(root).createWorkspace('Lavoro'),
+    );
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+    await settle(tester);
+
+    // Le note normali non hanno la riga della scadenza.
+    expect(find.byKey(const Key('due-date-row')), findsNothing);
+    await tester.tap(find.text('Task'));
+    await tester.pump();
+    expect(find.text('Aggiungi scadenza'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const Key('title-field')), 'Dentista');
+    FocusManager.instance.primaryFocus?.unfocus();
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('due-date-row')));
+    await settle(tester);
+    // Il calendario parte da oggi: si conferma.
+    await tester.tap(find.text('OK'));
+    await settle(tester);
+    expect(find.textContaining('Scadenza:'), findsOneWidget);
+
+    // La croce la toglie, e si rimette.
+    await tester.tap(find.byKey(const Key('due-date-clear')));
+    await tester.pump();
+    expect(find.text('Aggiungi scadenza'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('due-date-row')));
+    await settle(tester);
+    await tester.tap(find.text('OK'));
+    await settle(tester);
+
+    await tester.tap(find.text('Salva task'));
+    await settle(tester);
+    final now = DateTime.now();
+    String two(int n) => n.toString().padLeft(2, '0');
+    final saved = Directory('${root.path}/Lavoro')
+        .listSync()
+        .whereType<File>()
+        .single
+        .readAsStringSync();
+    expect(
+      saved,
+      contains('due: "${now.year}-${two(now.month)}-${two(now.day)}"'),
+    );
+
+    // Aprendo il task la scadenza si legge sotto il titolo.
+    await tester.tap(find.text('Dentista'));
+    await settle(tester);
+    expect(find.byKey(const Key('note-due')), findsOneWidget);
+  });
+
+  testWidgets('task manager: la scheda Scadenze ordina per scadenza', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+    final now = DateTime.now();
+    String two(int n) => n.toString().padLeft(2, '0');
+    String day(int offset) {
+      final d = DateTime(now.year, now.month, now.day + offset);
+      return '${d.year}-${two(d.month)}-${two(d.day)}';
+    }
+
+    await tester.runAsync(() async {
+      await WorkspaceRepository(root).createWorkspace('Lavoro');
+      final dir = '${root.path}/Lavoro';
+      void write(String id, String title, String? due, {bool done = false}) =>
+          File('$dir/$id.md').writeAsStringSync(
+            '---\ntitle: "$title"\ncreated: "2026-01-01T00:00:00.000"\n'
+            'type: "task"\ndone: $done\n'
+            '${due == null ? '' : 'due: "$due"\n'}---\n',
+          );
+      write('a', 'Bollette', day(-3));
+      write('b', 'Dentista', day(1));
+      write('c', 'Passaporto', day(40));
+      write('d', 'Senza data', null);
+      write('e', 'Già fatto', day(2), done: true);
+    });
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+    await settle(tester);
+    await tester.ensureVisible(find.byKey(const Key('task-manager-button')));
+    await tester.tap(find.byKey(const Key('task-manager-button')));
+    await settle(tester);
+
+    // Si apre ancora su "Da fare"; "Scadenze" sta a sinistra.
+    expect(find.byKey(const Key('task-manager-due')), findsNothing);
+    final tabs = tester.getCenter(find.text('Scadenze'));
+    expect(tabs.dx, lessThan(tester.getCenter(find.text('Da fare')).dx));
+    await tester.tap(find.text('Scadenze'));
+    await settle(tester);
+
+    double y(String text) => tester.getCenter(find.text(text)).dy;
+    expect(find.text('SCADUTI'), findsOneWidget);
+    expect(find.text('DOMANI'), findsOneWidget);
+    expect(find.text('PIÙ AVANTI'), findsOneWidget);
+    expect(y('Bollette'), lessThan(y('Dentista')));
+    expect(y('Dentista'), lessThan(y('Passaporto')));
+    expect(find.text('Senza data'), findsNothing);
+    expect(find.text('Già fatto'), findsNothing);
+    expect(find.textContaining('scaduto da 3 giorni'), findsOneWidget);
+    expect(find.textContaining('domani'), findsOneWidget);
+    expect(find.textContaining('tra 40 giorni'), findsOneWidget);
+
+    // Spuntato, va fra i completati.
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const ValueKey('b')),
+        matching: find.byType(TaskCheck),
+      ),
+    );
+    await settle(tester);
+    expect(find.text('Dentista'), findsNothing);
+  });
+
+  testWidgets('dalle impostazioni si scelgono e ordinano i pulsanti in alto', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+    await tester.runAsync(
+      () => WorkspaceRepository(root).createWorkspace('Lavoro'),
+    );
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+    await settle(tester);
+
+    await tester.tap(find.byKey(const Key('settings-button')));
+    await settle(tester);
+    expect(find.text('6 di 6 visibili'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('home-buttons')));
+    await settle(tester);
+    // Ogni pulsante spiega a cosa serve; le impostazioni restano sempre.
+    expect(find.textContaining('come una mappa'), findsOneWidget);
+
+    // Via grafo e calendario.
+    await tester.tap(find.byKey(const Key('home-button-graph')));
+    await tester.tap(find.byKey(const Key('home-button-calendar')));
+    await tester.pump();
+
+    // Il diario in cima: lo si trascina dalla maniglia sopra "Fissate".
+    final drag = find.byKey(const Key('home-button-drag-diary'));
+    final target = tester.getCenter(
+      find.byKey(const Key('home-button-drag-pinned')),
+    );
+    final gesture = await tester.startGesture(tester.getCenter(drag));
+    await tester.pump();
+    final start = tester.getCenter(drag);
+    for (var i = 1; i <= 10; i++) {
+      await gesture.moveTo(
+        Offset.lerp(start, target - const Offset(0, 30), i / 10)!,
+      );
+      await tester.pump(const Duration(milliseconds: 30));
+    }
+    await tester.pump(const Duration(milliseconds: 300));
+    await gesture.up();
+    await settle(tester);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('home-button-settings')),
+      200,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const Key('home-buttons-list')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    expect(find.byKey(const Key('home-button-settings')), findsOneWidget);
+
+    await tester.tap(find.byType(BackButton));
+    await settle(tester);
+    expect(find.text('4 di 6 visibili'), findsOneWidget);
+    await tester.tap(find.byType(BackButton));
+    await settle(tester);
+
+    expect(find.byKey(const Key('graph-button')), findsNothing);
+    expect(find.byKey(const Key('calendar-button')), findsNothing);
+    double x(String key) => tester.getCenter(find.byKey(Key(key))).dx;
+    expect(x('diary-button'), lessThan(x('pinned-button')));
+    expect(x('pinned-button'), lessThan(x('lists-button')));
+    expect(x('task-manager-button'), lessThan(x('settings-button')));
+  });
+
+  testWidgets('una nota creata nella home entra nel diario', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+    await tester.runAsync(() async {
+      await WorkspaceRepository(root).createWorkspace('Lavoro');
+      // Una nota che c'era già, di un altro giorno.
+      File('${root.path}/Lavoro/vecchia.md').writeAsStringSync(
+        '---\ntitle: "Vecchia idea"\ncreated: "2026-03-07T10:00:00.000"\n'
+        '---\n',
+      );
+    });
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+    await settle(tester);
+    expect(
+      File('${root.path}/Lavoro/diary/2026-03-07.md').readAsStringSync(),
+      'Vecchia idea',
+    );
+
+    await tester.enterText(find.byKey(const Key('title-field')), 'Orto');
+    FocusManager.instance.primaryFocus?.unfocus();
+    await settle(tester);
+    await tester.tap(find.text('Salva nota'));
+    await settle(tester);
+
+    final now = DateTime.now();
+    String two(int n) => n.toString().padLeft(2, '0');
+    final key = '${now.year}-${two(now.month)}-${two(now.day)}';
+    expect(
+      File('${root.path}/Lavoro/diary/$key.md').readAsStringSync(),
+      'Orto',
+    );
+
+    // Nel diario la riga è colorata e, tenendola premuta, porta alla nota.
+    final button = find.byKey(const Key('diary-button'));
+    await tester.ensureVisible(button);
+    await tester.tap(button);
+    await settle(tester);
+    final field = find.byKey(ValueKey('diary-field-$key'));
+    final editable = tester.state<EditableTextState>(
+      find.descendant(of: field, matching: find.byType(EditableText)),
+    );
+    final span = editable.widget.controller.buildTextSpan(
+      context: tester.element(field),
+      withComposing: false,
+    );
+    expect(
+      [
+        for (final s in span.children?.whereType<TextSpan>() ?? <TextSpan>[])
+          if (s.style?.backgroundColor != null) s.text,
+      ],
+      ['Orto'],
+    );
+    editable.userUpdateTextEditingValue(
+      editable.textEditingValue.copyWith(
+        selection: const TextSelection(baseOffset: 0, extentOffset: 4),
+      ),
+      SelectionChangedCause.longPress,
+    );
+    editable.showToolbar();
+    await tester.pump();
+    await tester.tap(find.text('Apri nota'));
+    await settle(tester);
+    expect(find.byKey(const Key('note-menu')), findsOneWidget);
   });
 }

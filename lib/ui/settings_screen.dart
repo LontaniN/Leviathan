@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
+import '../model/home_buttons.dart';
 import '../model/tags.dart';
 import '../state/settings.dart';
+import 'home_buttons_screen.dart';
 import 'language_screen.dart';
 import 'search_screen.dart';
 import 'theme.dart';
 
-/// Impostazioni dell'app: la lingua dell'interfaccia, la palette e, se c'è
+/// Impostazioni dell'app: la lingua dell'interfaccia, i pulsanti in alto
+/// nella home (vedi [HomeButtonsScreen]), la palette e, se c'è
 /// [onReplayTour], il tour guidato da rivedere.
 ///
 /// Le palette sono schede a due colonne, ognuna con una miniatura della home
@@ -48,6 +51,25 @@ class SettingsScreen extends StatelessWidget {
                   onChanged: settings.setLanguage,
                 ),
               ),
+              SectionTitle(context.l10n.home),
+              ListTile(
+                key: const Key('home-buttons'),
+                leading: const Icon(Icons.view_week_outlined),
+                title: Text(context.l10n.homeButtons),
+                subtitle: Text(
+                  context.l10n.homeButtonsCount(
+                    settings.homeButtons.length,
+                    HomeButton.values.length,
+                  ),
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => HomeButtonsScreen(settings: settings),
+                  ),
+                ),
+              ),
+              const SizedBox(height: LeviathanSpacing.md),
               SectionTitle(context.l10n.tagsAndSources),
               SwitchListTile(
                 key: const Key('alphabetical-groups'),
