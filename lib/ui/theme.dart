@@ -277,18 +277,13 @@ class LeviathanSizes {
   /// Larghezza della barretta colorata del primo tag accanto a una nota.
   static const tagBar = 3.0;
 
-  /// Altezza della barretta nella lista compatta e in quella espansa.
+  /// Altezza della barretta nelle liste compatte e in quella di tutte le note.
   static const tagBarCompact = 28.0;
   static const tagBarExpanded = 40.0;
 
   /// Altezza della barra di ricerca della home e dei pulsanti principali.
   static const searchBar = 44.0;
   static const button = 48.0;
-
-  /// La colonna delle recenti: frazione della larghezza e limiti.
-  static const listFraction = 0.32;
-  static const listMin = 112.0;
-  static const listMax = 220.0;
 
   /// Raggio dei pallini dei tag nei chip normali e compatti.
   static const tagDot = 5.0;

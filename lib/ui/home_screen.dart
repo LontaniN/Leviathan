@@ -38,13 +38,12 @@ import 'theme.dart';
 import 'workspace_name_form.dart';
 
 /// Schermata principale di un workspace: in alto il nome e la barra di
-/// ricerca, a sinistra le ultime note, a destra l'editor per scriverne una
-/// nuova con tag e fonti.
+/// ricerca, sotto, a tutta larghezza, l'editor per scrivere una nota nuova
+/// con tag e fonti.
 ///
-/// La freccia in cima alla lista la espande a tutta larghezza, con anteprima,
-/// tag e data di ogni nota. Le note fissate stanno in cima, le altre sotto
-/// intestazioni per giorno o mese. Tenendo premuta una nota si fissa, si
-/// spunta o si elimina.
+/// Il tasto accanto alla ricerca apre l'elenco di tutte le note, con
+/// anteprima, tag e data di ognuna (vedi [_AllNotesScreen]). Salvando una
+/// nota il tasto si illumina nel suo colore.
 ///
 /// Con [startTour] sopra la home parte il tour guidato delle funzioni
 /// principali (vedi [AppTour]); si può rivedere dalle impostazioni.
@@ -90,7 +89,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   /// La modifica di una nota rimasta a metà quando Android ha chiuso l'app:
   /// la home propone di riprenderla.
   EditDraft? _resume;
-  bool _listExpanded = false;
 
   /// Il tour guidato è aperto; [_tourWelcome] se parte dal benvenuto (la
   /// prima volta, non quando lo si rivede dalle impostazioni).
@@ -100,13 +98,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   /// Gli elementi che il tour illumina.
   final _editorKey = GlobalKey();
   final _tagsKey = GlobalKey();
-  final _listKey = GlobalKey();
+  final _notesKey = GlobalKey();
   final _searchKey = GlobalKey();
   final _taskManagerKey = GlobalKey();
   final _viewsKey = GlobalKey();
 
-  /// La nota appena salvata, la cui voce nella lista si illumina; [_flashSeq]
-  /// cambia a ogni salvataggio, così il bagliore riparte anche sulla stessa.
+  /// La nota appena salvata, nel cui colore si illumina il tasto delle note;
+  /// [_flashSeq] cambia a ogni salvataggio, così il bagliore riparte anche
+  /// sulla stessa.
   String? _flashId;
   int _flashSeq = 0;
 
@@ -237,11 +236,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         }
         return;
       }
-      // Lista espansa: l'editor non c'è. Si scrive la bozza e lo si riapre,
-      // così la rilegge.
-      final appended = _addToDraft(target, share);
-      setState(() => _listExpanded = false);
-      if (appended) notify(l.sharedAppended);
+      // L'editor non c'è ancora: la bozza la legge quando compare.
+      if (_addToDraft(target, share)) notify(l.sharedAppended);
       return;
     }
     final appended = _addToDraft(target, share);
@@ -303,13 +299,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  /// Riapre il tour dalle impostazioni: senza benvenuto, con la lista
-  /// stretta così l'editor si vede.
+  /// Riapre il tour dalle impostazioni, senza benvenuto.
   void _replayTour() {
     Navigator.of(context).popUntil((route) => route.isFirst);
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() {
-      _listExpanded = false;
       _tourWelcome = false;
       _touring = true;
     });
@@ -324,7 +318,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   List<TourStep> _tourSteps(AppLocalizations l) => [
     (target: _editorKey, title: l.tourEditorTitle, body: l.tourEditorBody),
     (target: _tagsKey, title: l.tourTagsTitle, body: l.tourTagsBody),
-    (target: _listKey, title: l.tourListTitle, body: l.tourListBody),
+    (target: _notesKey, title: l.tourListTitle, body: l.tourListBody),
     (target: _searchKey, title: l.tourSearchTitle, body: l.tourSearchBody),
     // Tolto dalla fila in alto, il task manager non ha niente da illuminare.
     if (widget.settings.homeButtons.contains(HomeButton.taskManager))
@@ -350,8 +344,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen));
   }
 
-  void _openNote(Note note) =>
-      _push(NoteScreen(noteId: note.id, notes: _notes));
+  void _openNotes() => _push(_AllNotesScreen(notes: _notes));
 
   void _openGraph() => _push(
     GraphScreen(
@@ -437,9 +430,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 alignment: Alignment.topCenter,
                 child: writing
                     ? const SizedBox(width: double.infinity)
-                    : _SearchPill(
-                        key: _searchKey,
-                        onTap: () => _push(SearchScreen(notes: _notes)),
+                    : _SearchRow(
+                        searchKey: _searchKey,
+                        notesKey: _notesKey,
+                        onSearch: () => _push(SearchScreen(notes: _notes)),
+                        onNotes: _openNotes,
+                        flash: _flashId == null ? null : _notes.byId(_flashId!),
+                        flashSeq: _flashSeq,
                       ),
               ),
               if (_resume case final edit? when !writing)
@@ -465,76 +462,29 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Widget _body() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final collapsedWidth =
-            (constraints.maxWidth * LeviathanSizes.listFraction).clamp(
-              LeviathanSizes.listMin,
-              LeviathanSizes.listMax,
-            );
-        final listWidth = _listExpanded ? constraints.maxWidth : collapsedWidth;
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            AnimatedContainer(
-              key: _listKey,
-              duration: LeviathanDurations.panel,
-              curve: Curves.easeOutCubic,
-              width: listWidth,
-              // Durante l'animazione la lista è già impaginata alla
-              // larghezza finale e viene solo svelata.
-              child: ClipRect(
-                child: OverflowBox(
-                  alignment: Alignment.topLeft,
-                  minWidth: listWidth,
-                  maxWidth: listWidth,
-                  child: _NoteList(
-                    notes: _notes.notes,
-                    expanded: _listExpanded,
-                    onToggle: () =>
-                        setState(() => _listExpanded = !_listExpanded),
-                    onOpen: _openNote,
-                    onLongPress: (note) =>
-                        showNoteActions(context, _notes, note),
-                    onToggleDone: _notes.setDone,
-                    flashId: _flashId,
-                    flashSeq: _flashSeq,
-                  ),
-                ),
-              ),
-            ),
-            if (!_listExpanded)
-              Expanded(
-                child: NoteEditor(
-                  key: _editorKey,
-                  tagsKey: _tagsKey,
-                  tagCounts: _notes.tagCounts,
-                  sourceCounts: _notes.sourceCounts,
-                  draft: widget.state.draftOf(widget.state.currentWorkspace!),
-                  onTagLongPress: (tag) =>
-                      showTagColorSheet(context, _notes, tag),
-                  onSourceLongPress: (source) =>
-                      showSourceSheet(context, _notes, source),
-                  onPickNote: () => pickNote(context, _notes),
-                  onSave: (draft) => _flash(
-                    _notes.create(
-                      title: draft.title,
-                      body: draft.body,
-                      tags: draft.tags,
-                      sources: draft.sources,
-                      isTask: draft.isTask,
-                      knowledge: draft.knowledge,
-                      due: draft.due,
-                      created: draft.date == null
-                          ? null
-                          : onDay(draft.date!, DateTime.now()),
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        );
-      },
+    return NoteEditor(
+      key: _editorKey,
+      tagsKey: _tagsKey,
+      tagCounts: _notes.tagCounts,
+      sourceCounts: _notes.sourceCounts,
+      draft: widget.state.draftOf(widget.state.currentWorkspace!),
+      onTagLongPress: (tag) => showTagColorSheet(context, _notes, tag),
+      onSourceLongPress: (source) => showSourceSheet(context, _notes, source),
+      onPickNote: () => pickNote(context, _notes),
+      onSave: (draft) => _flash(
+        _notes.create(
+          title: draft.title,
+          body: draft.body,
+          tags: draft.tags,
+          sources: draft.sources,
+          isTask: draft.isTask,
+          knowledge: draft.knowledge,
+          due: draft.due,
+          created: draft.date == null
+              ? null
+              : onDay(draft.date!, DateTime.now()),
+        ),
+      ),
     );
   }
 }
@@ -780,6 +730,75 @@ class _ScrollingIconsState extends State<_ScrollingIcons> {
   }
 }
 
+/// La barra di ricerca della home e, accanto, il tasto che apre tutte le
+/// note. Il tasto si illumina nel colore di [flash], la nota appena salvata.
+class _SearchRow extends StatelessWidget {
+  const _SearchRow({
+    required this.searchKey,
+    required this.notesKey,
+    required this.onSearch,
+    required this.onNotes,
+    required this.flash,
+    required this.flashSeq,
+  });
+
+  /// Chiavi della barra e del tasto, per il tour.
+  final GlobalKey searchKey;
+  final GlobalKey notesKey;
+  final VoidCallback onSearch;
+  final VoidCallback onNotes;
+  final Note? flash;
+  final int flashSeq;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        LeviathanSpacing.md,
+        LeviathanSpacing.sm,
+        LeviathanSpacing.md,
+        LeviathanSpacing.xs,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _SearchPill(key: searchKey, onTap: onSearch),
+          ),
+          const SizedBox(width: LeviathanSpacing.sm),
+          Material(
+            key: notesKey,
+            color: palette.surface,
+            shape: const CircleBorder(),
+            clipBehavior: Clip.antiAlias,
+            child: _SaveFlash(
+              color: flash == null
+                  ? palette.accent
+                  : noteColor(context, flash!),
+              seq: flash == null ? null : flashSeq,
+              child: InkWell(
+                key: const Key('notes-button'),
+                onTap: onNotes,
+                child: Tooltip(
+                  message: context.l10n.recent,
+                  child: SizedBox.square(
+                    dimension: LeviathanSizes.searchBar,
+                    child: Icon(
+                      Icons.history,
+                      size: LeviathanIconSize.md,
+                      color: palette.accent,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// La barra di ricerca della home: una pillola che apre la ricerca vera e
 /// ricorda le scorciatoie dei filtri.
 class _SearchPill extends StatelessWidget {
@@ -808,45 +827,37 @@ class _SearchPill extends StatelessWidget {
         ),
       ),
     );
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        LeviathanSpacing.md,
-        LeviathanSpacing.sm,
-        LeviathanSpacing.md,
-        LeviathanSpacing.xs,
-      ),
-      child: Material(
-        color: palette.surface,
-        shape: const StadiumBorder(),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          key: const Key('search-button'),
-          onTap: onTap,
-          child: SizedBox(
-            height: LeviathanSizes.searchBar,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: LeviathanSpacing.lg,
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.search,
-                    size: LeviathanIconSize.md,
-                    color: palette.muted,
+    return Material(
+      color: palette.surface,
+      shape: const StadiumBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        key: const Key('search-button'),
+        onTap: onTap,
+        child: SizedBox(
+          height: LeviathanSizes.searchBar,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: LeviathanSpacing.lg,
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.search,
+                  size: LeviathanIconSize.md,
+                  color: palette.muted,
+                ),
+                const SizedBox(width: LeviathanSpacing.md),
+                Expanded(
+                  child: Text(
+                    context.l10n.searchNotes,
+                    overflow: TextOverflow.ellipsis,
+                    style: LeviathanText.body.copyWith(color: palette.muted),
                   ),
-                  const SizedBox(width: LeviathanSpacing.md),
-                  Expanded(
-                    child: Text(
-                      context.l10n.searchNotes,
-                      overflow: TextOverflow.ellipsis,
-                      style: LeviathanText.body.copyWith(color: palette.muted),
-                    ),
-                  ),
-                  shortcut('#'),
-                  shortcut('@'),
-                ],
-              ),
+                ),
+                shortcut('#'),
+                shortcut('@'),
+              ],
             ),
           ),
         ),
@@ -927,76 +938,37 @@ List<_Entry> _entries(AppLocalizations l, List<Note> notes, DateTime now) {
   return entries;
 }
 
-/// Cronologia delle note, dalla più recente.
-class _NoteList extends StatelessWidget {
-  const _NoteList({
-    required this.notes,
-    required this.expanded,
-    required this.onToggle,
-    required this.onOpen,
-    required this.onLongPress,
-    required this.onToggleDone,
-    this.flashId,
-    this.flashSeq = 0,
-  });
+/// Tutte le note, dalla più recente: le fissate in cima, le altre sotto
+/// intestazioni per giorno o mese, con anteprima, tag e data. Si apre dal
+/// tasto accanto alla ricerca della home. Tenendo premuta una nota si fissa,
+/// si spunta o si elimina.
+class _AllNotesScreen extends StatelessWidget {
+  const _AllNotesScreen({required this.notes});
 
-  final List<Note> notes;
-  final bool expanded;
-  final VoidCallback onToggle;
-  final ValueChanged<Note> onOpen;
-  final ValueChanged<Note> onLongPress;
-  final void Function(Note note, bool done) onToggleDone;
+  final NotesController notes;
 
-  /// La nota da illuminare e il numero del salvataggio (vedi [_SaveFlash]).
-  final String? flashId;
-  final int flashSeq;
+  void _open(BuildContext context, Note note) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => NoteScreen(noteId: note.id, notes: notes),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.palette;
-    final l = context.l10n;
-    final entries = _entries(l, notes, DateTime.now());
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        InkWell(
-          key: const Key('list-toggle'),
-          onTap: onToggle,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              LeviathanSpacing.md,
-              LeviathanSpacing.md,
-              LeviathanSpacing.sm,
-              LeviathanSpacing.sm,
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    expanded ? l.allNotes(notes.length) : l.recent,
-                    overflow: TextOverflow.ellipsis,
-                    style: LeviathanText.title.copyWith(color: palette.text),
-                  ),
-                ),
-                // Verso destra la lista si allarga, verso sinistra torna
-                // stretta.
-                AnimatedRotation(
-                  turns: expanded ? 0.5 : 0,
-                  duration: LeviathanDurations.panel,
-                  child: Icon(
-                    Icons.chevron_right,
-                    size: LeviathanIconSize.md,
-                    color: palette.accent,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        Expanded(
-          child: notes.isEmpty
+    return ListenableBuilder(
+      listenable: notes,
+      builder: (context, _) {
+        final palette = context.palette;
+        final l = context.l10n;
+        final all = notes.notes;
+        final entries = _entries(l, all, DateTime.now());
+        return Scaffold(
+          appBar: AppBar(title: Text(l.allNotes(all.length))),
+          body: all.isEmpty
               ? Padding(
-                  padding: const EdgeInsets.all(LeviathanSpacing.md),
+                  padding: const EdgeInsets.all(LeviathanSpacing.lg),
                   child: Text(
                     l.noNotesYet,
                     style: LeviathanText.body.copyWith(color: palette.muted),
@@ -1009,40 +981,23 @@ class _NoteList extends StatelessWidget {
                     _SectionEntry(:final label) => _SectionLabel(
                       key: ValueKey('section-$label'),
                       label: label,
-                      expanded: expanded,
                     ),
-                    // La chiave tiene lo stato del bagliore attaccato alla
-                    // nota quando una nuova entra in cima.
-                    _NoteEntry(:final note) => _SaveFlash(
+                    _NoteEntry(:final note) => _NoteDivider(
                       key: ValueKey(note.id),
-                      color: noteColor(context, note),
-                      seq: note.id == flashId ? flashSeq : null,
-                      child: _NoteDivider(
-                        // Fra due note una linea sottile le separa; prima di
-                        // un'intestazione di sezione non serve.
-                        show: _isNote(entries, i + 1),
-                        indent: expanded
-                            ? LeviathanSpacing.lg
-                            : LeviathanSpacing.md,
-                        child: expanded
-                            ? _ExpandedTile(
-                                note: note,
-                                onTap: onOpen,
-                                onLongPress: onLongPress,
-                                onToggleDone: onToggleDone,
-                              )
-                            : _CompactTile(
-                                note: note,
-                                onTap: onOpen,
-                                onLongPress: onLongPress,
-                                onToggleDone: onToggleDone,
-                              ),
+                      // Fra due note una linea sottile le separa; prima di
+                      // un'intestazione di sezione non serve.
+                      show: _isNote(entries, i + 1),
+                      child: _NoteTile(
+                        note: note,
+                        onTap: (n) => _open(context, n),
+                        onLongPress: (n) => showNoteActions(context, notes, n),
+                        onToggleDone: notes.setDone,
                       ),
                     ),
                   },
                 ),
-        ),
-      ],
+        );
+      },
     );
   }
 }
@@ -1053,14 +1008,9 @@ bool _isNote(List<_Entry> entries, int i) =>
 
 /// Una voce con, se [show], una linea sottile sotto.
 class _NoteDivider extends StatelessWidget {
-  const _NoteDivider({
-    required this.show,
-    required this.indent,
-    required this.child,
-  });
+  const _NoteDivider({super.key, required this.show, required this.child});
 
   final bool show;
-  final double indent;
   final Widget child;
 
   @override
@@ -1070,7 +1020,11 @@ class _NoteDivider extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         child,
-        Divider(height: 1, indent: indent, endIndent: indent),
+        const Divider(
+          height: 1,
+          indent: LeviathanSpacing.lg,
+          endIndent: LeviathanSpacing.lg,
+        ),
       ],
     );
   }
@@ -1078,16 +1032,15 @@ class _NoteDivider extends StatelessWidget {
 
 /// Intestazione di una sezione della lista ("Oggi", "Fissate", un mese).
 class _SectionLabel extends StatelessWidget {
-  const _SectionLabel({super.key, required this.label, required this.expanded});
+  const _SectionLabel({super.key, required this.label});
 
   final String label;
-  final bool expanded;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(
-        expanded ? LeviathanSpacing.lg : LeviathanSpacing.md,
+      padding: const EdgeInsets.fromLTRB(
+        LeviathanSpacing.lg,
         LeviathanSpacing.md,
         LeviathanSpacing.sm,
         LeviathanSpacing.xs,
@@ -1102,13 +1055,12 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-/// Fa illuminare per un attimo una voce della lista nel colore della sua
-/// nota, al posto di un avviso di salvataggio.
+/// Fa illuminare per un attimo il tasto delle note nel colore della nota
+/// appena salvata, al posto di un avviso di salvataggio.
 ///
 /// Si accende quando riceve un [seq] nuovo, anche alla prima comparsa.
 class _SaveFlash extends StatefulWidget {
   const _SaveFlash({
-    super.key,
     required this.color,
     required this.seq,
     required this.child,
@@ -1206,8 +1158,8 @@ class _When extends StatelessWidget {
           Icon(Icons.push_pin, size: LeviathanIconSize.xs, color: muted),
           const SizedBox(width: LeviathanSpacing.xxs),
         ],
-        // Nella colonna stretta una data con l'anno e la puntina possono non
-        // starci: la data si accorcia invece di sforare.
+        // Accanto a un titolo lungo una data con l'anno e la puntina possono
+        // non starci: la data si accorcia invece di sforare.
         Flexible(
           child: Text(
             formatRelative(context.l10n, note.created, DateTime.now()),
@@ -1222,68 +1174,8 @@ class _When extends StatelessWidget {
   }
 }
 
-class _CompactTile extends StatelessWidget {
-  const _CompactTile({
-    required this.note,
-    required this.onTap,
-    required this.onLongPress,
-    required this.onToggleDone,
-  });
-
-  final Note note;
-  final ValueChanged<Note> onTap;
-  final ValueChanged<Note> onLongPress;
-  final void Function(Note note, bool done) onToggleDone;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () => onTap(note),
-      onLongPress: () => onLongPress(note),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          LeviathanSpacing.md,
-          LeviathanSpacing.sm,
-          LeviathanSpacing.sm,
-          LeviathanSpacing.sm,
-        ),
-        child: Row(
-          children: [
-            TagBar(note: note, height: LeviathanSizes.tagBarCompact),
-            const SizedBox(width: LeviathanSpacing.sm),
-            if (note.isTask)
-              TaskCheck(
-                note: note,
-                onChanged: (done) => onToggleDone(note, done),
-              ),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    note.displayTitle(context.l10n.untitled),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: taskTitleStyle(
-                      context,
-                      note,
-                      LeviathanText.body.copyWith(fontWeight: FontWeight.w500),
-                    ),
-                  ),
-                  const SizedBox(height: LeviathanSpacing.xxs),
-                  _When(note: note),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ExpandedTile extends StatelessWidget {
-  const _ExpandedTile({
+class _NoteTile extends StatelessWidget {
+  const _NoteTile({
     required this.note,
     required this.onTap,
     required this.onLongPress,

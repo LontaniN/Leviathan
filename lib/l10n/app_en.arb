@@ -267,7 +267,7 @@
   "tourTagsTitle": "Tags connect everything",
   "tourTagsBody": "Add as many as you like: the ones you already use are suggested as you type. The first tag gives the note its color. Below, note where the idea came from.",
   "tourListTitle": "Your notes",
-  "tourListBody": "The latest ones, newest first. Tap to read and edit; press and hold to pin, check off or delete. The arrow widens the list.",
+  "tourListBody": "This button opens all your notes, newest first. Tap one to read and edit it; press and hold to pin, check off or delete it.",
   "tourSearchTitle": "Find anything",
   "tourSearchBody": "Search titles, text, tags and sources. Type # to filter by tag and @ by source.",
   "tourTaskManagerTitle": "Put tasks in order",

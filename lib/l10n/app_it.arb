@@ -229,7 +229,7 @@
   "tourTagsTitle": "I tag collegano tutto",
   "tourTagsBody": "Aggiungine quanti vuoi: mentre scrivi compaiono quelli che usi già. Il primo tag dà il colore alla nota. Sotto, scrivi da dove viene l'idea.",
   "tourListTitle": "Le tue note",
-  "tourListBody": "Le ultime, dalla più recente. Tocca per leggere e modificare, tieni premuto per fissare, spuntare o eliminare. La freccia allarga l'elenco.",
+  "tourListBody": "Questo tasto apre tutte le note, dalla più recente. Toccane una per leggerla e modificarla, tienila premuta per fissarla, spuntarla o eliminarla.",
   "tourSearchTitle": "Trova tutto",
   "tourSearchBody": "Cerca in titoli, testo, tag e fonti. Scrivi # per filtrare per tag e @ per fonte.",
   "tourTaskManagerTitle": "Metti in ordine i task",

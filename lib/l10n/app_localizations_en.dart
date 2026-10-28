@@ -807,7 +807,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tourListBody =>
-      'The latest ones, newest first. Tap to read and edit; press and hold to pin, check off or delete. The arrow widens the list.';
+      'This button opens all your notes, newest first. Tap one to read and edit it; press and hold to pin, check off or delete it.';
 
   @override
   String get tourSearchTitle => 'Find anything';

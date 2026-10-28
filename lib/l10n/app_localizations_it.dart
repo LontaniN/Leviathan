@@ -795,7 +795,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get tourListBody =>
-      'Le ultime, dalla più recente. Tocca per leggere e modificare, tieni premuto per fissare, spuntare o eliminare. La freccia allarga l\'elenco.';
+      'Questo tasto apre tutte le note, dalla più recente. Toccane una per leggerla e modificarla, tienila premuta per fissarla, spuntarla o eliminarla.';
 
   @override
   String get tourSearchTitle => 'Trova tutto';

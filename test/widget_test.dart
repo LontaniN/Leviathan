@@ -60,6 +60,12 @@ void main() {
     }
   }
 
+  // Apre l'elenco di tutte le note dal tasto accanto alla ricerca.
+  Future<void> openNotes(WidgetTester tester) async {
+    await tester.tap(find.byKey(const Key('notes-button')));
+    await settle(tester);
+  }
+
   testWidgets('primo avvio: crea il workspace e lo apre', (tester) async {
     await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
     await settle(tester);
@@ -139,7 +145,6 @@ void main() {
 
     await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
     await settle(tester);
-    expect(find.text('Vecchia'), findsOneWidget);
 
     await tester.enterText(find.byKey(const Key('title-field')), 'Luce');
     await tester.enterText(
@@ -158,25 +163,21 @@ void main() {
     await tester.pump();
     await tester.ensureVisible(find.text('Salva nota'));
     await tester.tap(find.text('Salva nota'));
-    // Niente avviso in basso: la voce della nota nuova si illumina e poi
-    // torna normale.
+    // Niente avviso in basso: il tasto delle note si illumina e poi torna
+    // normale.
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.byType(SnackBar), findsNothing);
-    Color flashOf(String title) {
+    double flash() {
       final box = tester.widget<DecoratedBox>(
-        find.ancestor(
-          of: find.text(title),
-          matching: find.byKey(const Key('save-flash')),
-        ),
+        find.byKey(const Key('save-flash')),
       );
-      return (box.decoration as BoxDecoration).color!;
+      return (box.decoration as BoxDecoration).color!.a;
     }
 
-    expect(flashOf('Luce').a, greaterThan(0));
-    expect(flashOf('Vecchia').a, 0);
+    expect(flash(), greaterThan(0));
     await settle(tester);
-    expect(flashOf('Luce').a, 0);
+    expect(flash(), 0);
 
     // La nota nuova è in cima alla lista e su disco.
     final files = Directory('${root.path}/Lavoro')
@@ -188,9 +189,8 @@ void main() {
     expect(saved, contains('tags: ["fotografia","luce-naturale"]'));
     expect(saved, contains('sources: ["Mario Rossi","Anna"]'));
 
-    // Lista espansa: anteprima e tag; poi si apre la nota.
-    await tester.tap(find.byKey(const Key('list-toggle')));
-    await settle(tester);
+    // L'elenco di tutte le note: anteprima e tag; poi si apre la nota.
+    await openNotes(tester);
     expect(find.text('Tutte le note (2)'), findsOneWidget);
     expect(find.text('La luce del mattino'), findsOneWidget);
 
@@ -280,7 +280,8 @@ void main() {
             .singleWhere((f) => f.path.contains('esame'));
     expect(taskFile().readAsStringSync(), contains('done: false'));
 
-    // Spunta dalla lista delle recenti.
+    // Spunta dall'elenco delle note.
+    await openNotes(tester);
     final check = find.byWidgetPredicate(
       (w) =>
           w.key is ValueKey<String> &&
@@ -290,6 +291,8 @@ void main() {
     await settle(tester);
     expect(taskFile().readAsStringSync(), contains('done: true'));
     expect(taskFile().readAsStringSync(), contains('done_at:'));
+    await tester.tap(find.byType(BackButton));
+    await settle(tester);
 
     // Il filtro stato:fatto lo trova, stato:aperto no.
     await tester.tap(find.byKey(const Key('search-button')));
@@ -345,6 +348,7 @@ void main() {
             .singleWhere((f) => f.path.contains('spesa'));
 
     // Nella lettura le caselle si spuntano e il file si aggiorna.
+    await openNotes(tester);
     await tester.tap(find.text('Spesa'));
     await settle(tester);
     expect(find.byIcon(Icons.check_box_outline_blank), findsNWidgets(2));
@@ -793,6 +797,7 @@ void main() {
     });
     await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
     await settle(tester);
+    await openNotes(tester);
     expect(find.text('FISSATE'), findsNothing);
     expect(
       tester.getTopLeft(find.text('Nuova')).dy,
@@ -892,6 +897,7 @@ void main() {
     await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
     await settle(tester);
 
+    await openNotes(tester);
     await tester.tap(find.text('Idea'));
     await settle(tester);
     expect(find.textContaining('5 parole'), findsOneWidget);
@@ -926,6 +932,7 @@ void main() {
     await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
     await settle(tester);
 
+    await openNotes(tester);
     await tester.tap(find.text('Idea'));
     await settle(tester);
     final chosen = Tags.palette.firstWhere(
@@ -1001,6 +1008,7 @@ void main() {
       await tester.runAsync(noteFile);
       await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
       await settle(tester);
+      await openNotes(tester);
       await tester.tap(find.text('Da rivedere').first);
       await settle(tester);
       await tester.tap(find.byTooltip('Modifica'));
@@ -1115,7 +1123,10 @@ void main() {
       await tester.tap(find.byType(BackButton));
       await settle(tester);
 
+      await openNotes(tester);
       await tester.tap(find.text('Da rivedere').first);
+      await settle(tester);
+      await tester.tap(find.byType(BackButton));
       await settle(tester);
       await tester.tap(find.byType(BackButton));
       await settle(tester);
@@ -1146,6 +1157,7 @@ void main() {
       await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
       await settle(tester);
 
+      await openNotes(tester);
       await tester.tap(find.text('Esame').first);
       await settle(tester);
       await tester.tap(find.byTooltip('Modifica'));
@@ -1227,6 +1239,7 @@ void main() {
       AppLifecycleState.resumed,
     ]);
     await settle(tester);
+    await openNotes(tester);
     expect(find.text('Scritta con Obsidian'), findsOneWidget);
   });
 
@@ -1395,6 +1408,7 @@ void main() {
         _app(AppState(_FakeStorage(root)), shares: shares),
       );
       await settle(tester);
+      await openNotes(tester);
       await tester.tap(find.text('Da rivedere').first);
       await settle(tester);
       await tester.tap(find.byTooltip('Modifica'));
@@ -1418,7 +1432,7 @@ void main() {
       expect(draft.readAsStringSync(), contains('Arrivato ora'));
     });
 
-    testWidgets("con la lista espansa l'editor si riapre col testo", (
+    testWidgets("dall'elenco delle note si torna all'editor col testo", (
       tester,
     ) async {
       await phone(tester);
@@ -1430,8 +1444,7 @@ void main() {
         _app(AppState(_FakeStorage(root)), shares: shares),
       );
       await settle(tester);
-      await tester.tap(find.byKey(const Key('list-toggle')));
-      await settle(tester);
+      await openNotes(tester);
       expect(find.byKey(const Key('body-field')), findsNothing);
 
       shares.receive((subject: '', text: 'Dalla lista'));
@@ -1571,7 +1584,7 @@ void main() {
     );
     await settle(tester);
 
-    expect(find.text('Recent'), findsOneWidget);
+    expect(find.byTooltip('Recent'), findsOneWidget);
     expect(find.text('Search notes'), findsOneWidget);
     expect(find.text('Save note'), findsOneWidget);
     expect(find.byKey(const Key('home-summary')), findsOneWidget);
@@ -2435,6 +2448,7 @@ void main() {
     );
 
     // Aprendo il task la scadenza si legge sotto il titolo.
+    await openNotes(tester);
     await tester.tap(find.text('Dentista'));
     await settle(tester);
     expect(find.byKey(const Key('note-due')), findsOneWidget);
