@@ -295,8 +295,8 @@ class LeviathanSizes {
   /// Altezza minima delle due schede da confrontare nel task manager.
   static const compareCard = 120.0;
 
-  /// Larghezza massima del titolo di un nodo del grafo.
-  static const graphLabelWidth = 140.0;
+  /// Larghezza massima del nome di un tag sul grafo.
+  static const graphTagWidth = 200.0;
 
   /// Larghezza massima della scheda del tour guidato.
   static const tourCardWidth = 400.0;
@@ -394,8 +394,9 @@ class LeviathanOpacity {
   static const nodeDim = 0.12;
   static const nodeDone = 0.35;
 
-  /// Titoli dei nodi del grafo.
-  static const graphLabel = 0.87;
+  /// Nomi dei tag sul grafo, e quelli dei tag fuori dal filtro.
+  static const graphTag = 0.92;
+  static const graphTagDim = 0.25;
 }
 
 class LeviathanRadii {
@@ -479,8 +480,17 @@ class LeviathanText {
     letterSpacing: 1.0,
   );
 
-  /// Etichette minime: chip compatti, nodi del grafo.
+  /// Etichette minime: chip compatti.
   static const tiny = TextStyle(fontSize: 11);
+
+  /// Nome di un tag sul grafo: la dimensione cresce con le note del tag, da
+  /// [graphTagMin] a [graphTagMax].
+  static const graphTag = TextStyle(
+    fontWeight: FontWeight.w700,
+    letterSpacing: 0.2,
+  );
+  static const graphTagMin = 12.0;
+  static const graphTagMax = 22.0;
 
   /// Il numero del giorno accanto a una casella del diario.
   static const diaryDay = TextStyle(

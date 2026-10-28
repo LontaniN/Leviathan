@@ -137,3 +137,31 @@ Rect boundsOf(Float64List xs, Float64List ys, [Iterable<int>? only]) {
   if (minX == double.infinity) return Rect.zero;
   return Rect.fromLTRB(minX, minY, maxX, maxY);
 }
+
+/// Dove scrivere il nome di un tag: la media delle sue note, ricalcolata
+/// sulla metà più vicina. Se il tag è diviso in due gruppi il nome finisce in
+/// quello più fitto invece che nel vuoto in mezzo.
+Offset tagCenter(List<int> members, Float64List xs, Float64List ys) {
+  var mx = 0.0, my = 0.0;
+  for (final i in members) {
+    mx += xs[i];
+    my += ys[i];
+  }
+  mx /= members.length;
+  my /= members.length;
+  if (members.length < 4) return Offset(mx, my);
+  final byDistance = [...members]
+    ..sort((a, b) {
+      final da = (xs[a] - mx) * (xs[a] - mx) + (ys[a] - my) * (ys[a] - my);
+      final db = (xs[b] - mx) * (xs[b] - mx) + (ys[b] - my) * (ys[b] - my);
+      return da.compareTo(db);
+    });
+  final core = byDistance.take((members.length + 1) ~/ 2);
+  var cx = 0.0, cy = 0.0;
+  for (final i in core) {
+    cx += xs[i];
+    cy += ys[i];
+  }
+  final k = (members.length + 1) ~/ 2;
+  return Offset(cx / k, cy / k);
+}

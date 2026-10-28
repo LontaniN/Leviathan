@@ -30,10 +30,13 @@ class GraphEdge {
 /// Il grafo delle note: ogni nota è un nodo, due note con un tag in comune
 /// sono collegate. Le fonti non contano.
 class NoteGraph {
-  NoteGraph(this.nodes, this.edges);
+  NoteGraph(this.nodes, this.edges, [this.tagMembers = const {}]);
 
   final List<GraphNode> nodes;
   final List<GraphEdge> edges;
+
+  /// Per ogni tag, gli indici in [nodes] delle note che lo portano.
+  final Map<String, List<int>> tagMembers;
 
   /// Oltre questo numero di note un tag non collega tutte le coppie (sarebbero
   /// troppe: 200 note → 19.900 linee) ma ogni nota a pochi compagni.
@@ -107,7 +110,7 @@ class NoteGraph {
         ),
       );
     }
-    return NoteGraph(nodes, edges);
+    return NoteGraph(nodes, edges, members);
   }
 
   static int _hash(String s) {

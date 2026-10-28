@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart' hide Tags;
@@ -185,6 +186,33 @@ void main() {
       expect(store.read(), isEmpty);
       store.write({'a': const Offset(1.234, -5.0)});
       expect(store.read(), {'a': const Offset(1.2, -5.0)});
+    });
+  });
+
+  group('nomi dei tag', () {
+    test('il grafo sa quali note portano ogni tag', () {
+      final graph = NoteGraph.build([
+        _note('a', ['x', 'y'], day: 1),
+        _note('b', ['x'], day: 2),
+        _note('c', ['y'], day: 3),
+      ]);
+      expect(graph.tagMembers['x'], [0, 1]);
+      expect(graph.tagMembers['y'], [0, 2]);
+    });
+
+    test('il nome sta nel gruppo più fitto, non nel vuoto in mezzo', () {
+      // Cinque note vicine all'origine e tre lontane a destra.
+      final xs = Float64List.fromList([0, 2, -2, 1, -1, 100, 102, 98]);
+      final ys = Float64List.fromList([0, 1, -1, -2, 2, 0, 1, -1]);
+      final center = tagCenter(List.generate(8, (i) => i), xs, ys);
+      expect(center.dx.abs(), lessThan(5));
+      expect(center.dy.abs(), lessThan(5));
+    });
+
+    test('con poche note è la media', () {
+      final xs = Float64List.fromList([0, 10]);
+      final ys = Float64List.fromList([0, 4]);
+      expect(tagCenter([0, 1], xs, ys), const Offset(5, 2));
     });
   });
 }

@@ -1,3 +1,6 @@
+import 'dart:math' as math;
+import 'dart:ui' show lerpDouble;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
@@ -371,7 +374,6 @@ class _GraphScreenState extends State<GraphScreen>
                                   selected: _selected,
                                   matching: _matching,
                                   palette: context.palette,
-                                  untitled: l.untitled,
                                 ),
                               ),
                             ),
@@ -407,7 +409,6 @@ class _GraphPainter extends CustomPainter {
     required this.selected,
     required this.matching,
     required this.palette,
-    required this.untitled,
   }) : super(repaint: layout);
 
   final NoteGraph graph;
@@ -417,10 +418,6 @@ class _GraphPainter extends CustomPainter {
   final Set<String>? matching;
   final LeviathanPalette palette;
 
-  /// Etichetta delle note senza titolo, nella lingua dell'interfaccia.
-  final String untitled;
-
-  static const _labelZoom = 1.3;
   static final Map<String, TextPainter> _labels = {};
 
   bool _isIn(int i) =>
@@ -501,38 +498,65 @@ class _GraphPainter extends CustomPainter {
     }
     canvas.restore();
 
-    // Etichette in coordinate dello schermo (dimensione fissa del testo).
-    final showAll = view.scale >= _labelZoom;
-    for (var i = 0; i < graph.nodes.length; i++) {
-      if (!(showAll && _isIn(i)) && i != selected) continue;
-      final node = graph.nodes[i];
-      final p = view.toScreen(Offset(xs[i], ys[i]), size);
-      if (p.dx < -80 ||
-          p.dy < -20 ||
-          p.dx > size.width + 80 ||
-          p.dy > size.height + 20) {
-        continue;
-      }
-      final title = node.note.displayTitle(untitled);
-      final label = _labels.putIfAbsent(
-        '${node.note.id}|$title|${palette.id}',
-        () => TextPainter(
-          text: TextSpan(
-            text: title,
-            style: LeviathanText.tiny.copyWith(
-              color: palette.text.withValues(
-                alpha: LeviathanOpacity.graphLabel,
-              ),
-            ),
-          ),
-          textDirection: TextDirection.ltr,
-          maxLines: 1,
-          ellipsis: '…',
-        )..layout(maxWidth: LeviathanSizes.graphLabelWidth),
+    // Nomi dei tag in coordinate dello schermo, a qualsiasi zoom: segnano le
+    // regioni del grafo. Prima i tag più usati; uno che si sovrapporrebbe a
+    // un nome già scritto si salta.
+    final tags = graph.tagMembers.entries.toList()
+      ..sort((a, b) {
+        final bySize = b.value.length.compareTo(a.value.length);
+        return bySize != 0 ? bySize : a.key.compareTo(b.key);
+      });
+    final most = tags.isEmpty ? 1 : tags.first.value.length;
+    final taken = <Rect>[];
+    for (final MapEntry(key: tag, value: members) in tags) {
+      final p = view.toScreen(tagCenter(members, xs, ys), size);
+      final active = matching == null || members.any(_isIn);
+      final label = _tagLabel(tag, members.length, most, active);
+      final box = Rect.fromCenter(
+        center: p,
+        width: label.width,
+        height: label.height,
       );
-      final r = nodeRadius(node.degree) * view.scale;
-      label.paint(canvas, p + Offset(-label.width / 2, r + 3));
+      if (!box.overlaps(Offset.zero & size)) continue;
+      if (taken.any(box.overlaps)) continue;
+      taken.add(box);
+      label.paint(canvas, box.topLeft);
     }
+  }
+
+  TextPainter _tagLabel(String tag, int count, int most, bool active) {
+    // Dimensione sulla radice del numero di note: i tag piccoli restano
+    // leggibili, quelli grandi spiccano senza diventare enormi.
+    final t = most <= 1 ? 0.0 : math.sqrt((count - 1) / (most - 1));
+    final fontSize = lerpDouble(
+      LeviathanText.graphTagMin,
+      LeviathanText.graphTagMax,
+      t,
+    )!.roundToDouble();
+    final color = Tags.colorOf(tag);
+    return _labels.putIfAbsent(
+      '$tag|$fontSize|$active|${color.toARGB32()}|${palette.id}',
+      () => TextPainter(
+        text: TextSpan(
+          text: tag,
+          style: LeviathanText.graphTag.copyWith(
+            fontSize: fontSize,
+            color: color.withValues(
+              alpha: active
+                  ? LeviathanOpacity.graphTag
+                  : LeviathanOpacity.graphTagDim,
+            ),
+            shadows: [
+              Shadow(color: palette.background, blurRadius: 4),
+              Shadow(color: palette.background, blurRadius: 8),
+            ],
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+        maxLines: 1,
+        ellipsis: '…',
+      )..layout(maxWidth: LeviathanSizes.graphTagWidth),
+    );
   }
 
   @override
@@ -541,7 +565,6 @@ class _GraphPainter extends CustomPainter {
       old.selected != selected ||
       old.matching != matching ||
       old.palette != palette ||
-      old.untitled != untitled ||
       old.graph != graph ||
       old.layout != layout;
 }
