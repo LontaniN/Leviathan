@@ -90,4 +90,62 @@ void main() {
     expect(extracts.all.map((e) => e.text), ['a', 'c']);
     expect(store.readExtracts().map((e) => e.text), ['a', 'c']);
   });
+
+  group('il pezzo segue le modifiche', () {
+    const before = 'Idea: un orto sul tetto.';
+    final a = _e('a', 'orto sul tetto', 9, note: 'n');
+
+    DiaryExtract? follow(String after, {int caret = -1}) {
+      final changed = followEdit(before, after, [a], caret: caret);
+      return changed.isEmpty ? null : changed.single;
+    }
+
+    test('scrivendo dentro si allarga e tiene la nota', () {
+      final e = follow('Idea: un orto grande sul tetto.')!;
+      expect(e.text, 'orto grande sul tetto');
+      expect(e.start, 9);
+      expect(e.noteId, 'n');
+      expect(e.id, 'a');
+      expect(
+        extractRanges('Idea: un orto grande sul tetto.', [e]).single.end,
+        30,
+      );
+    });
+
+    test('correggendo una parola resta collegato', () {
+      expect(
+        follow('Idea: un orto sul tettuccio.')!.text,
+        'orto sul tettuccio',
+      );
+      expect(follow('Idea: un orto sul tet.')!.text, 'orto sul tet');
+    });
+
+    test('scrivendo ai bordi il testo nuovo resta fuori', () {
+      expect(follow('Idea: un bell\'orto sul tetto.'), isNull);
+      // Il cursore alla fine di ", subito": senza, il "to" di "subito"
+      // sembrerebbe scritto dentro "tetto".
+      expect(follow('Idea: un orto sul tetto, subito.', caret: 31), isNull);
+      expect(follow('Stamattina. Idea: un orto sul tetto.'), isNull);
+    });
+
+    test('il cursore dice dove si è scritto fra lettere uguali', () {
+      // "tetto" → "tettto": senza cursore la t in più cade dentro comunque.
+      expect(
+        follow('Idea: un orto sul tettto.', caret: 21)!.text,
+        'orto sul tettto',
+      );
+      // Una "o" scritta subito prima di "orto" resta fuori.
+      expect(follow('Idea: un oorto sul tetto.', caret: 10), isNull);
+    });
+
+    test('cancellato tutto non cambia', () {
+      expect(follow('Idea: un .'), isNull);
+    });
+
+    test('una modifica a cavallo del bordo prende il testo nuovo', () {
+      final e = follow('Idea: due orti sul tetto.')!;
+      expect(e.text, 'due orti sul tetto');
+      expect(e.start, 6);
+    });
+  });
 }

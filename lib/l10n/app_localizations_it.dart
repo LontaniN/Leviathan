@@ -1062,6 +1062,18 @@ class AppLocalizationsIt extends AppLocalizations {
   String get diaryNothingWritten => 'Niente di scritto';
 
   @override
+  String get diaryExpandAll => 'Apri tutti i giorni';
+
+  @override
+  String get diaryCollapseAll => 'Chiudi tutti i giorni';
+
+  @override
+  String get diaryExpandDay => 'Apri questo giorno';
+
+  @override
+  String get diaryCollapseDay => 'Chiudi questo giorno';
+
+  @override
   String get diaryOpenNote => 'Apri nota';
 
   @override

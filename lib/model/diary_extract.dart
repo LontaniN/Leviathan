@@ -35,14 +35,16 @@ class DiaryExtract {
   bool get pending => noteId == null;
 
   DiaryExtract copyWith({
+    String? text,
+    int? start,
     List<String>? tags,
     List<String>? sources,
     String? noteId,
   }) => DiaryExtract(
     id: id,
     day: day,
-    text: text,
-    start: start,
+    text: text ?? this.text,
+    start: start ?? this.start,
     tags: tags ?? this.tags,
     sources: sources ?? this.sources,
     noteId: noteId ?? this.noteId,
@@ -127,4 +129,63 @@ ExtractRange? extractAt(List<ExtractRange> ranges, int offset) {
     if (offset >= range.start && offset < range.end) return range;
   }
   return null;
+}
+
+/// I pezzi toccati quando il testo di un giorno passa da [before] ad
+/// [after], aggiornati perché la nota resti collegata: chi scrive dentro una
+/// frase colorata (corregge una parola, ne aggiunge una) la allarga o la
+/// accorcia, invece di perderne il colore. La nota non cambia.
+///
+/// [caret] è il cursore dopo la modifica, -1 se non si sa: dice dove è
+/// finita, quando il testo da solo non basta (una lettera scritta accanto a
+/// una uguale). Scrivendo proprio all'inizio o alla fine di un pezzo, il
+/// testo nuovo resta fuori. Un pezzo cancellato tutto resta com'era: non si
+/// ritrova più nel testo, finché non lo si riscrive.
+List<DiaryExtract> followEdit(
+  String before,
+  String after,
+  Iterable<DiaryExtract> extracts, {
+  int caret = -1,
+}) {
+  if (before == after) return const [];
+  final shorter = before.length < after.length ? before.length : after.length;
+  var suffix = 0;
+  while (suffix < shorter &&
+      before[before.length - 1 - suffix] == after[after.length - 1 - suffix]) {
+    suffix++;
+  }
+  if (caret >= 0 && caret <= after.length && after.length - caret < suffix) {
+    suffix = after.length - caret;
+  }
+  var prefix = 0;
+  while (prefix < shorter - suffix && before[prefix] == after[prefix]) {
+    prefix++;
+  }
+  // Nel testo di prima si è sostituito [from, to) con [written] caratteri.
+  final from = prefix;
+  final to = before.length - suffix;
+  final written = after.length - suffix - prefix;
+  final delta = written - (to - from);
+  return [
+    for (final range in extractRanges(before, extracts))
+      if (to > range.start && from < range.end)
+        ?_followed(range, from, to, written, delta, after),
+  ];
+}
+
+DiaryExtract? _followed(
+  ExtractRange range,
+  int from,
+  int to,
+  int written,
+  int delta,
+  String after,
+) {
+  final start = from < range.start ? from : range.start;
+  final end = to > range.end ? from + written : range.end + delta;
+  if (end <= start) return null;
+  return range.extract.copyWith(
+    text: after.substring(start, end),
+    start: start,
+  );
 }

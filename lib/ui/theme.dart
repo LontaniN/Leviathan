@@ -344,6 +344,9 @@ class LeviathanSizes {
 
   /// Le righe che una casella del diario mostra anche vuota.
   static const diaryMinLines = 3;
+
+  /// Le righe che mostra una casella del diario chiusa.
+  static const diaryCollapsedLines = 3;
 }
 
 /// Durate delle animazioni.

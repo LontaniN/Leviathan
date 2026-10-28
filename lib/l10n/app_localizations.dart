@@ -1778,6 +1778,30 @@ abstract class AppLocalizations {
   /// **'Nothing written'**
   String get diaryNothingWritten;
 
+  /// No description provided for @diaryExpandAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Expand all days'**
+  String get diaryExpandAll;
+
+  /// No description provided for @diaryCollapseAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse all days'**
+  String get diaryCollapseAll;
+
+  /// No description provided for @diaryExpandDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Expand this day'**
+  String get diaryExpandDay;
+
+  /// No description provided for @diaryCollapseDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse this day'**
+  String get diaryCollapseDay;
+
   /// No description provided for @diaryOpenNote.
   ///
   /// In en, this message translates to:

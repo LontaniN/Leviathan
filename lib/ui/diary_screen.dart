@@ -26,13 +26,19 @@ import 'theme.dart';
 /// basso chiede titolo, tag e fonti e la nota nasce subito, con quel testo
 /// nel corpo e datata a quel giorno, senza lasciare la pagina. Il testo
 /// resta colorato col primo tag della nota, così si vede cosa è già una
-/// nota; tenendolo premuto se ne apre la nota o si toglie il colore.
+/// nota; tenendolo premuto se ne apre la nota o si toglie il colore. Un
+/// tocco ci porta solo il cursore: il testo si modifica come il resto, e il
+/// pezzo segue le modifiche senza perdere la nota (vedi [followEdit]).
 ///
 /// Trascinando il dito su e giù sulla colonna delle date si corre nel
 /// tempo: in cima oggi, in fondo il giorno della nota più vecchia (o del
 /// giorno scritto più vecchio, se viene prima). Mentre si
 /// scorre compaiono un puntino per ogni giorno scritto (il dito ci si
 /// aggancia) e una bolla con la data e l'inizio del testo.
+///
+/// Aperta solo la casella di oggi: gli altri giorni mostrano le prime righe
+/// e si aprono toccandoli, o tutti insieme col pulsante in alto. La freccina
+/// in fondo a una casella lunga la apre o la richiude da sola.
 ///
 /// Il testo si salva poco dopo ogni modifica (e subito se l'app va in
 /// secondo piano), un file per giorno (vedi [DiaryStore]).
@@ -67,6 +73,12 @@ class _DiaryScreenState extends State<DiaryScreen> with WidgetsBindingObserver {
 
   /// Oggi, fissato all'apertura: la lista parte da qui.
   final _today = DateTime.now();
+
+  /// Tutte le caselle aperte, dal pulsante in alto; altrimenti solo oggi.
+  /// In [_opened] i giorni aperti (true) o chiusi (false) uno per uno, che
+  /// il pulsante dimentica.
+  bool _allOpen = false;
+  final _opened = <String, bool>{};
 
   /// I pezzi del diario diventati note.
   DiaryExtracts get _extracts => widget.extracts;
@@ -104,8 +116,18 @@ class _DiaryScreenState extends State<DiaryScreen> with WidgetsBindingObserver {
     if (state != AppLifecycleState.resumed) _save();
   }
 
-  void _changed(DateTime day, String text) {
+  /// [caret] è il cursore dopo la modifica (vedi [followEdit]).
+  void _changed(DateTime day, String text, int caret) {
     final key = DiaryStore.key(day);
+    final before = _days![key] ?? '';
+    for (final extract in followEdit(
+      before,
+      text,
+      _extracts.ofDay(key),
+      caret: caret,
+    )) {
+      _extracts.update(extract);
+    }
     _days![key] = text;
     _unsaved[key] = day;
     _saveTimer?.cancel();
@@ -301,7 +323,21 @@ class _DiaryScreenState extends State<DiaryScreen> with WidgetsBindingObserver {
     final palette = context.palette;
     final days = _days;
     return Scaffold(
-      appBar: AppBar(backgroundColor: palette.background, title: Text(l.diary)),
+      appBar: AppBar(
+        backgroundColor: palette.background,
+        title: Text(l.diary),
+        actions: [
+          IconButton(
+            key: const Key('diary-expand-all'),
+            tooltip: _allOpen ? l.diaryCollapseAll : l.diaryExpandAll,
+            icon: Icon(_allOpen ? Icons.unfold_less : Icons.unfold_more),
+            onPressed: () => setState(() {
+              _allOpen = !_allOpen;
+              _opened.clear();
+            }),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: days == null
             ? Center(
@@ -334,16 +370,19 @@ class _DiaryScreenState extends State<DiaryScreen> with WidgetsBindingObserver {
       final day = _dayAt(index);
       final key = DiaryStore.key(day);
       final extracts = _extractsOf(key);
+      final expanded = _opened[key] ?? (index == 0 || _allOpen);
       return Padding(
         key: ValueKey(key),
         padding: const EdgeInsets.only(bottom: LeviathanSpacing.md),
         child: _DiaryDay(
           day: day,
           today: index == 0,
+          expanded: expanded,
+          onToggle: () => setState(() => _opened[key] = !expanded),
           initialText: days[key] ?? '',
           extracts: extracts,
           tags: _tagsOf(key, extracts),
-          onChanged: (text) => _changed(day, text),
+          onChanged: (text, caret) => _changed(day, text, caret),
           onCreateNote: (text, start, from) =>
               _createNote(day, text, start, from: from),
           onOpenNote: _openNote,
@@ -560,6 +599,8 @@ class _DiaryDay extends StatefulWidget {
     required this.onCreateNote,
     required this.onOpenNote,
     required this.onRemoveExtract,
+    required this.expanded,
+    required this.onToggle,
     this.tags = const [],
   });
 
@@ -567,7 +608,9 @@ class _DiaryDay extends StatefulWidget {
   final bool today;
   final String initialText;
   final List<DiaryExtract> extracts;
-  final ValueChanged<String> onChanged;
+
+  /// Il testo nuovo e il cursore dopo la modifica.
+  final void Function(String text, int caret) onChanged;
 
   /// "Crea nota" sul testo scelto; [from] se era già un pezzo colorato
   /// senza nota.
@@ -577,6 +620,11 @@ class _DiaryDay extends StatefulWidget {
 
   /// I tag delle note nate dalle frasi del giorno, per la colonna a destra.
   final List<String> tags;
+
+  /// Chiusa, la casella mostra solo le prime righe; toccandola o con la
+  /// freccina si apre, e con la freccina si richiude ([onToggle]).
+  final bool expanded;
+  final VoidCallback onToggle;
 
   @override
   State<_DiaryDay> createState() => _DiaryDayState();
@@ -607,20 +655,6 @@ class _DiaryDayState extends State<_DiaryDay> {
     _text.dispose();
     _focus.dispose();
     super.dispose();
-  }
-
-  /// Toccando un pezzo colorato si apre la sua nota. Il cursore arriva dove
-  /// si è toccato solo dopo il tocco; la tastiera non serve.
-  void _onTap() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final selection = _text.selection;
-      if (!selection.isCollapsed) return;
-      final id = _hit(selection)?.extract.noteId;
-      if (id == null) return;
-      _focus.unfocus();
-      widget.onOpenNote(id);
-    });
   }
 
   /// Il pezzo colorato toccato dalla selezione (o dal cursore), se c'è.
@@ -689,6 +723,111 @@ class _DiaryDayState extends State<_DiaryDay> {
     );
   }
 
+  /// Richiusa una casella lunga, se il suo inizio è finito sopra lo
+  /// schermo la lista ci salta, senza scorrere: si riprende a leggere da lì.
+  void _showStart() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Scrollable.ensureVisible(
+        context,
+        alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtStart,
+      );
+    });
+  }
+
+  /// Il campo per scrivere o, se la casella è chiusa, le prime righe del
+  /// testo con i pezzi colorati, che si aprono toccandole. Se il testo non
+  /// sta nelle prime righe, in fondo la freccina che apre o richiude la
+  /// casella. Resta aperta mentre ci si scrive.
+  Widget _content(BuildContext context) {
+    final l = context.l10n;
+    final palette = context.palette;
+    final style = LeviathanText.reading.copyWith(color: palette.text);
+    final field = TextField(
+      key: ValueKey('diary-field-${DiaryStore.key(widget.day)}'),
+      controller: _text,
+      focusNode: _focus,
+      onChanged: (text) => widget.onChanged(
+        text,
+        _text.selection.isValid ? _text.selection.extentOffset : -1,
+      ),
+      contextMenuBuilder: _menu,
+      minLines: LeviathanSizes.diaryMinLines,
+      maxLines: null,
+      keyboardType: TextInputType.multiline,
+      textCapitalization: TextCapitalization.sentences,
+      style: style,
+      decoration: InputDecoration(
+        hintText: widget.today ? l.diaryTodayHint : null,
+        filled: false,
+        border: InputBorder.none,
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: LeviathanSpacing.md,
+        ),
+      ),
+    );
+    if (_text.text.isEmpty) return field;
+    final key = DiaryStore.key(widget.day);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final span = _text.buildTextSpan(
+          context: context,
+          style: style,
+          withComposing: false,
+        );
+        final painter = TextPainter(
+          text: span,
+          maxLines: LeviathanSizes.diaryCollapsedLines,
+          textDirection: Directionality.of(context),
+          textScaler: MediaQuery.textScalerOf(context),
+        )..layout(maxWidth: constraints.maxWidth);
+        final cut = painter.didExceedMaxLines;
+        painter.dispose();
+        if (!cut) return field;
+        final open = widget.expanded || _focus.hasFocus;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (open)
+              field
+            else
+              GestureDetector(
+                key: ValueKey('diary-collapsed-$key'),
+                behavior: HitTestBehavior.opaque,
+                onTap: widget.onToggle,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: LeviathanSpacing.md),
+                  child: Text.rich(
+                    span,
+                    maxLines: LeviathanSizes.diaryCollapsedLines,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: IconButton(
+                key: ValueKey('diary-toggle-$key'),
+                tooltip: open ? l.diaryCollapseDay : l.diaryExpandDay,
+                visualDensity: VisualDensity.compact,
+                iconSize: LeviathanIconSize.md,
+                color: palette.muted,
+                icon: Icon(open ? Icons.expand_less : Icons.expand_more),
+                onPressed: () {
+                  if (open) {
+                    _focus.unfocus();
+                    _showStart();
+                  }
+                  widget.onToggle();
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
@@ -735,27 +874,7 @@ class _DiaryDayState extends State<_DiaryDay> {
             padding: const EdgeInsets.symmetric(
               horizontal: LeviathanSpacing.lg,
             ),
-            child: TextField(
-              key: ValueKey('diary-field-${DiaryStore.key(widget.day)}'),
-              controller: _text,
-              focusNode: _focus,
-              onChanged: widget.onChanged,
-              onTap: _onTap,
-              contextMenuBuilder: _menu,
-              minLines: LeviathanSizes.diaryMinLines,
-              maxLines: null,
-              keyboardType: TextInputType.multiline,
-              textCapitalization: TextCapitalization.sentences,
-              style: LeviathanText.reading.copyWith(color: palette.text),
-              decoration: InputDecoration(
-                hintText: widget.today ? l.diaryTodayHint : null,
-                filled: false,
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(
-                  vertical: LeviathanSpacing.md,
-                ),
-              ),
-            ),
+            child: _content(context),
           ),
         ),
         const SizedBox(width: LeviathanSpacing.xs),
@@ -834,7 +953,8 @@ class _HighlightController extends TextEditingController {
           text: text.substring(range.start, range.end),
           style: TextStyle(
             backgroundColor: color.withValues(alpha: LeviathanOpacity.extract),
-            // Sottolineato come un collegamento: toccandolo si apre la nota.
+            // Sottolineato come un collegamento: tenendolo premuto si apre
+            // la nota.
             decoration: range.extract.noteId == null
                 ? null
                 : TextDecoration.underline,

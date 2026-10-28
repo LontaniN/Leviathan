@@ -1073,6 +1073,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get diaryNothingWritten => 'Nothing written';
 
   @override
+  String get diaryExpandAll => 'Expand all days';
+
+  @override
+  String get diaryCollapseAll => 'Collapse all days';
+
+  @override
+  String get diaryExpandDay => 'Expand this day';
+
+  @override
+  String get diaryCollapseDay => 'Collapse this day';
+
+  @override
   String get diaryOpenNote => 'Open note';
 
   @override
