@@ -1826,6 +1826,30 @@ abstract class AppLocalizations {
   /// **'Create task'**
   String get diaryCreateTask;
 
+  /// No description provided for @diarySearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search the diary'**
+  String get diarySearch;
+
+  /// No description provided for @diaryCloseSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Close search'**
+  String get diaryCloseSearch;
+
+  /// No description provided for @diaryNoDaysFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No day contains these words'**
+  String get diaryNoDaysFound;
+
+  /// No description provided for @diaryDayCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 day} other{{count} days}}'**
+  String diaryDayCount(int count);
+
   /// No description provided for @taskCreated.
   ///
   /// In en, this message translates to:

@@ -2307,6 +2307,62 @@ void main() {
     expect(tester.getRect(date).top, lessThan(list.center.dy));
   });
 
+  testWidgets('la ricerca nel diario porta al giorno trovato', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2424);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+    final now = DateTime.now();
+    final old = DateTime(now.year, now.month, now.day - 40);
+    final other = DateTime(now.year, now.month, now.day - 3);
+    String two(int n) => n.toString().padLeft(2, '0');
+    String key(DateTime d) => '${d.year}-${two(d.month)}-${two(d.day)}';
+    await tester.runAsync(() async {
+      await WorkspaceRepository(root).createWorkspace('Lavoro');
+      final dir = Directory('${root.path}/Lavoro/diary')..createSync();
+      File('${dir.path}/${key(old)}.md').writeAsStringSync(
+        '${List.filled(6, 'Riga.').join('\n')}\nGita al lago con Anna.',
+      );
+      File('${dir.path}/${key(other)}.md').writeAsStringSync('Pioggia.');
+    });
+    await tester.pumpWidget(_app(AppState(_FakeStorage(root))));
+    await settle(tester);
+    final button = find.byKey(const Key('diary-button'));
+    await tester.ensureVisible(button);
+    await tester.tap(button);
+    await settle(tester);
+
+    await tester.tap(find.byKey(const Key('diary-search')));
+    await settle(tester);
+    final field = find.byKey(const Key('diary-search-field'));
+    await tester.enterText(field, 'neve');
+    await settle(tester);
+    expect(find.text('Nessun giorno contiene queste parole'), findsOneWidget);
+
+    // Senza accenti né maiuscole, e le parole possono stare ovunque.
+    await tester.enterText(field, 'LAGO anna');
+    await settle(tester);
+    expect(find.text('1 GIORNO'), findsOneWidget);
+    expect(find.byKey(ValueKey('diary-result-${key(other)}')), findsNothing);
+
+    await tester.tap(find.byKey(ValueKey('diary-result-${key(old)}')));
+    await settle(tester);
+    expect(field, findsNothing);
+    // Il giorno trovato è in cima e già aperto, anche se è lungo.
+    expect(find.byKey(ValueKey('diary-field-${key(old)}')), findsOneWidget);
+    expect(find.byKey(ValueKey('diary-collapsed-${key(old)}')), findsNothing);
+    final list = tester.getRect(find.byKey(const Key('diary-list')));
+    final date = find.byKey(ValueKey('diary-date-${key(old)}'));
+    expect(tester.getRect(date).top, lessThan(list.center.dy));
+
+    // Indietro, con la ricerca aperta, chiude solo la ricerca.
+    await tester.tap(find.byKey(const Key('diary-search')));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('diary-search-close')));
+    await settle(tester);
+    expect(field, findsNothing);
+    expect(find.byKey(const Key('diary-list')), findsOneWidget);
+  });
+
   testWidgets('la colonna delle date scorre veloce nel tempo', (tester) async {
     tester.view.physicalSize = const Size(1080, 2424);
     tester.view.devicePixelRatio = 2.625;

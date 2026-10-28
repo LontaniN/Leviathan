@@ -1097,6 +1097,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get diaryCreateTask => 'Create task';
 
   @override
+  String get diarySearch => 'Search the diary';
+
+  @override
+  String get diaryCloseSearch => 'Close search';
+
+  @override
+  String get diaryNoDaysFound => 'No day contains these words';
+
+  @override
+  String diaryDayCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days',
+      one: '1 day',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get taskCreated => 'Task created';
 
   @override

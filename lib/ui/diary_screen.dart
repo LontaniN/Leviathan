@@ -9,6 +9,8 @@ import '../l10n/l10n.dart';
 import '../model/dates.dart';
 import '../model/diary_extract.dart';
 import '../model/diary_scrub.dart';
+import '../model/diary_search.dart';
+import '../model/search.dart';
 import '../model/tags.dart';
 import '../state/diary_extracts.dart';
 import '../state/diary_sync.dart';
@@ -16,6 +18,7 @@ import '../state/notes_controller.dart';
 import 'chip_input.dart';
 import 'due_date_row.dart';
 import 'note_screen.dart';
+import 'search_screen.dart';
 import 'theme.dart';
 
 /// Il diario: una casella per giorno, da oggi all'indietro, dove scrivere
@@ -39,6 +42,11 @@ import 'theme.dart';
 /// Aperta solo la casella di oggi: gli altri giorni mostrano le prime righe
 /// e si aprono toccandoli, o tutti insieme col pulsante in alto. La freccina
 /// in fondo a una casella lunga la apre o la richiude da sola.
+///
+/// La lente in alto cerca nel testo di tutti i giorni (vedi [searchDiary]):
+/// sotto il campo i giorni trovati, dal più recente, con le parole
+/// evidenziate; toccandone uno la ricerca si chiude e la lista salta a quel
+/// giorno, già aperto.
 ///
 /// Il testo si salva poco dopo ogni modifica (e subito se l'app va in
 /// secondo piano), un file per giorno (vedi [DiaryStore]).
@@ -104,6 +112,7 @@ class _DiaryScreenState extends State<DiaryScreen> with WidgetsBindingObserver {
   void dispose() {
     _save();
     _scroll.dispose();
+    _query.dispose();
     _extracts.removeListener(_onExtracts);
     widget.notes.removeListener(_onNotes);
     WidgetsBinding.instance.removeObserver(this);
@@ -202,6 +211,33 @@ class _DiaryScreenState extends State<DiaryScreen> with WidgetsBindingObserver {
   }
 
   void _endScrub() => setState(() => _scrubDay = null);
+
+  /// La ricerca è aperta: al posto del titolo c'è il campo, e se c'è
+  /// scritto qualcosa al posto della lista i giorni trovati.
+  bool _searching = false;
+  final _query = TextEditingController();
+
+  void _openSearch() {
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() => _searching = true);
+  }
+
+  void _closeSearch() {
+    _query.clear();
+    setState(() => _searching = false);
+  }
+
+  /// Chiude la ricerca e porta la lista al giorno [day], aperto. La lista
+  /// si ricrea da capo, quindi parte già in cima, cioè da [_anchor].
+  void _jumpTo(DateTime day) {
+    FocusManager.instance.primaryFocus?.unfocus();
+    _query.clear();
+    setState(() {
+      _searching = false;
+      _anchor = daysAgo(day, _today);
+      _opened[DiaryStore.key(day)] = true;
+    });
+  }
 
   void _onExtracts() => setState(() {});
 
@@ -322,38 +358,93 @@ class _DiaryScreenState extends State<DiaryScreen> with WidgetsBindingObserver {
     final l = context.l10n;
     final palette = context.palette;
     final days = _days;
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: palette.background,
-        title: Text(l.diary),
-        actions: [
-          IconButton(
-            key: const Key('diary-expand-all'),
-            tooltip: _allOpen ? l.diaryCollapseAll : l.diaryExpandAll,
-            icon: Icon(_allOpen ? Icons.unfold_less : Icons.unfold_more),
-            onPressed: () => setState(() {
-              _allOpen = !_allOpen;
-              _opened.clear();
-            }),
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: days == null
-            ? Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(LeviathanSpacing.xl),
-                  child: Text(
-                    l.diaryLoadError(_error ?? ''),
-                    textAlign: TextAlign.center,
-                    style: LeviathanText.body.copyWith(color: palette.muted),
+    final terms = SearchQuery(text: _query.text).terms;
+    return PopScope(
+      // Indietro, con la ricerca aperta, chiude solo la ricerca.
+      canPop: !_searching,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _closeSearch();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: palette.background,
+          leading: _searching
+              ? IconButton(
+                  key: const Key('diary-search-close'),
+                  tooltip: l.diaryCloseSearch,
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: _closeSearch,
+                )
+              : null,
+          title: _searching
+              ? TextField(
+                  key: const Key('diary-search-field'),
+                  controller: _query,
+                  autofocus: true,
+                  autocorrect: false,
+                  textInputAction: TextInputAction.search,
+                  onChanged: (_) => setState(() {}),
+                  style: LeviathanText.body.copyWith(color: palette.text),
+                  decoration: InputDecoration(
+                    hintText: l.diarySearch,
+                    filled: false,
+                    border: InputBorder.none,
                   ),
-                ),
-              )
-            : LayoutBuilder(
-                builder: (context, constraints) =>
-                    _diary(days, constraints.maxHeight),
+                )
+              : Text(l.diary),
+          actions: [
+            if (_searching && _query.text.isNotEmpty)
+              IconButton(
+                tooltip: l.clear,
+                icon: const Icon(Icons.close),
+                onPressed: () => setState(_query.clear),
               ),
+            if (!_searching && days != null) ...[
+              IconButton(
+                key: const Key('diary-search'),
+                tooltip: l.diarySearch,
+                icon: const Icon(Icons.search),
+                onPressed: _openSearch,
+              ),
+              IconButton(
+                key: const Key('diary-expand-all'),
+                tooltip: _allOpen ? l.diaryCollapseAll : l.diaryExpandAll,
+                icon: Icon(_allOpen ? Icons.unfold_less : Icons.unfold_more),
+                onPressed: () => setState(() {
+                  _allOpen = !_allOpen;
+                  _opened.clear();
+                }),
+              ),
+            ],
+          ],
+        ),
+        body: SafeArea(
+          child: days == null
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(LeviathanSpacing.xl),
+                    child: Text(
+                      l.diaryLoadError(_error ?? ''),
+                      textAlign: TextAlign.center,
+                      style: LeviathanText.body.copyWith(color: palette.muted),
+                    ),
+                  ),
+                )
+              : _searching && terms.isNotEmpty
+              ? _DiaryResults(
+                  // Solo i giorni fino a oggi: la lista non va oltre.
+                  hits: [
+                    for (final hit in searchDiary(days, terms))
+                      if (daysAgo(hit.day, _today) >= 0) hit,
+                  ],
+                  terms: terms,
+                  onOpen: _jumpTo,
+                )
+              : LayoutBuilder(
+                  builder: (context, constraints) =>
+                      _diary(days, constraints.maxHeight),
+                ),
+        ),
       ),
     );
   }
@@ -567,6 +658,93 @@ class _ScrubBubble extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// I giorni trovati dalla ricerca nel diario: la data a sinistra, come nella
+/// lista, e accanto il pezzo di testo con le parole evidenziate.
+class _DiaryResults extends StatelessWidget {
+  const _DiaryResults({
+    required this.hits,
+    required this.terms,
+    required this.onOpen,
+  });
+
+  final List<DiaryHit> hits;
+  final List<String> terms;
+  final ValueChanged<DateTime> onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    final palette = context.palette;
+    if (hits.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(LeviathanSpacing.xl),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.search_off,
+                size: LeviathanIconSize.xl,
+                color: palette.muted,
+              ),
+              const SizedBox(height: LeviathanSpacing.md),
+              Text(
+                l.diaryNoDaysFound,
+                textAlign: TextAlign.center,
+                style: LeviathanText.body.copyWith(color: palette.muted),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    return ListView.separated(
+      key: const Key('diary-search-results'),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: const EdgeInsets.only(bottom: LeviathanSpacing.xl),
+      itemCount: hits.length + 1,
+      separatorBuilder: (_, i) => i == 0
+          ? const SizedBox.shrink()
+          : const Divider(
+              height: 1,
+              indent: LeviathanSpacing.lg,
+              endIndent: LeviathanSpacing.lg,
+            ),
+      itemBuilder: (context, i) {
+        if (i == 0) return SectionTitle(l.diaryDayCount(hits.length));
+        final hit = hits[i - 1];
+        return InkWell(
+          key: ValueKey('diary-result-${hit.key}'),
+          onTap: () => onOpen(hit.day),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: LeviathanSpacing.lg,
+              vertical: LeviathanSpacing.md,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${weekdayName(l, hit.day.weekday)} '
+                  '${formatDate(l, hit.day)}',
+                  style: LeviathanText.meta.copyWith(color: palette.muted),
+                ),
+                const SizedBox(height: LeviathanSpacing.xxs),
+                HighlightText(
+                  hit.snippet,
+                  terms: terms,
+                  maxLines: 3,
+                  style: LeviathanText.body.copyWith(color: palette.text),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
