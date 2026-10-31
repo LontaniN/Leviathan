@@ -1289,8 +1289,8 @@ abstract class AppLocalizations {
   /// No description provided for @tourWelcomeBody.
   ///
   /// In en, this message translates to:
-  /// **'Want a quick tour of the main features? It takes six steps.'**
-  String get tourWelcomeBody;
+  /// **'Want a quick tour of the main features? It takes {count} steps.'**
+  String tourWelcomeBody(int count);
 
   /// No description provided for @tourStart.
   ///
@@ -1397,8 +1397,20 @@ abstract class AppLocalizations {
   /// No description provided for @tourViewsBody.
   ///
   /// In en, this message translates to:
-  /// **'Pinned notes, the graph of notes linked by tags, task and note lists, the calendar, the diary and the settings, where you can replay this tour.'**
+  /// **'Pinned notes, the graph of notes linked by tags, task and note lists, the calendar and the diary.'**
   String get tourViewsBody;
+
+  /// No description provided for @tourSettingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Make the home yours'**
+  String get tourSettingsTitle;
+
+  /// No description provided for @tourSettingsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'In the settings, under Buttons at the top, choose which views stay up here and drag them into the order you like. There you\'ll also find the language, the palette and this tour, to replay it.'**
+  String get tourSettingsBody;
 
   /// No description provided for @guide.
   ///

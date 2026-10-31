@@ -753,8 +753,9 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
-  String get tourWelcomeBody =>
-      'Facciamo un giro veloce delle funzioni principali? Sono sei passi.';
+  String tourWelcomeBody(int count) {
+    return 'Facciamo un giro veloce delle funzioni principali? Sono $count passi.';
+  }
 
   @override
   String get tourStart => 'Inizia il tour';
@@ -816,7 +817,14 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get tourViewsBody =>
-      'Le note fissate, il grafo delle note unite dai tag, gli elenchi di task e note, il calendario, il diario e le impostazioni, dove puoi rivedere questo tour.';
+      'Le note fissate, il grafo delle note unite dai tag, gli elenchi di task e note, il calendario e il diario.';
+
+  @override
+  String get tourSettingsTitle => 'Fai tua la home';
+
+  @override
+  String get tourSettingsBody =>
+      'Nelle impostazioni, in Pulsanti in alto, scegli quali viste restano qui e trascinale nell\'ordine che preferisci. Lì trovi anche la lingua, la palette e questo tour, per rivederlo.';
 
   @override
   String get guide => 'Guida';

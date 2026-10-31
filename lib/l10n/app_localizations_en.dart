@@ -765,8 +765,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get tourWelcomeBody =>
-      'Want a quick tour of the main features? It takes six steps.';
+  String tourWelcomeBody(int count) {
+    return 'Want a quick tour of the main features? It takes $count steps.';
+  }
 
   @override
   String get tourStart => 'Start the tour';
@@ -828,7 +829,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tourViewsBody =>
-      'Pinned notes, the graph of notes linked by tags, task and note lists, the calendar, the diary and the settings, where you can replay this tour.';
+      'Pinned notes, the graph of notes linked by tags, task and note lists, the calendar and the diary.';
+
+  @override
+  String get tourSettingsTitle => 'Make the home yours';
+
+  @override
+  String get tourSettingsBody =>
+      'In the settings, under Buttons at the top, choose which views stay up here and drag them into the order you like. There you\'ll also find the language, the palette and this tour, to replay it.';
 
   @override
   String get guide => 'Guide';

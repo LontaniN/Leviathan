@@ -102,6 +102,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _searchKey = GlobalKey();
   final _taskManagerKey = GlobalKey();
   final _viewsKey = GlobalKey();
+  final _settingsKey = GlobalKey();
 
   /// La nota appena salvata, nel cui colore si illumina il tasto delle note;
   /// [_flashSeq] cambia a ogni salvataggio, così il bagliore riparte anche
@@ -328,6 +329,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         body: l.tourTaskManagerBody,
       ),
     (target: _viewsKey, title: l.tourViewsTitle, body: l.tourViewsBody),
+    // Per ultimo l'ingranaggio: da lì si sceglie quali pulsanti stanno in
+    // alto e in che ordine.
+    (
+      target: _settingsKey,
+      title: l.tourSettingsTitle,
+      body: l.tourSettingsBody,
+    ),
   ];
 
   void _flash(Note note) {
@@ -390,7 +398,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         title: l.tourWelcomeTitle(
                           widget.state.currentWorkspace ?? '',
                         ),
-                        body: l.tourWelcomeBody,
+                        body: l.tourWelcomeBody(_tourSteps(l).length),
                       )
                     : null,
                 onDone: _endTour,
@@ -415,6 +423,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 notes: _notes.notes,
                 buttons: widget.settings.homeButtons,
                 viewsKey: _viewsKey,
+                settingsKey: _settingsKey,
                 taskManagerKey: _taskManagerKey,
                 onOpen: _openView,
                 onSettings: () => _push(
@@ -562,6 +571,7 @@ class _Header extends StatelessWidget {
     required this.notes,
     required this.buttons,
     required this.viewsKey,
+    required this.settingsKey,
     required this.taskManagerKey,
     required this.onOpen,
     required this.onSettings,
@@ -574,9 +584,10 @@ class _Header extends StatelessWidget {
   /// vengono sempre dopo.
   final List<HomeButton> buttons;
 
-  /// Chiavi del gruppo di icone delle altre viste e del pulsante del task
-  /// manager, per il tour.
+  /// Chiavi del gruppo di icone delle altre viste e dei pulsanti del task
+  /// manager e delle impostazioni, per il tour.
   final GlobalKey viewsKey;
+  final GlobalKey settingsKey;
   final GlobalKey taskManagerKey;
   final ValueChanged<HomeButton> onOpen;
   final VoidCallback onSettings;
@@ -639,11 +650,14 @@ class _Header extends StatelessWidget {
                       onPressed: () => onOpen(button),
                     ),
                   ),
-                IconButton(
-                  key: const Key('settings-button'),
-                  tooltip: l.settings,
-                  icon: const Icon(Icons.settings_outlined),
-                  onPressed: onSettings,
+                KeyedSubtree(
+                  key: settingsKey,
+                  child: IconButton(
+                    key: const Key('settings-button'),
+                    tooltip: l.settings,
+                    icon: const Icon(Icons.settings_outlined),
+                    onPressed: onSettings,
+                  ),
                 ),
               ],
             ),
